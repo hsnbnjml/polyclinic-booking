@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Logic and front-end checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Slot engine, booking rules, reports
+        run: node tools/local-test.mjs
+
+      - name: Front-end wiring and Arabic templates
+        run: node tools/check-html.mjs
+
+      - name: The committed demo must match the sources it claims to run
+        run: |
+          node tools/build-demo.mjs
+          git diff --exit-code -- demo
+
+  xlsx:
+    name: Excel export is a real .xlsx
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Needs .NET's ZIP reader through PowerShell, so it runs on Windows.
+      - name: Validate the generated .xlsx byte by byte
+        run: node tools/check-xlsx.mjs

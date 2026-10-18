@@ -1,0 +1,40 @@
+name: Demo (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Publish the offline demo
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on for the repository if it is not enabled yet, so the first
+          # push needs no manual switch in the repository settings.
+          enablement: true
+
+      # The demo is generated from apps-script/ by tools/build-demo.mjs and
+      # committed, so what is published is exactly what CI verified.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
