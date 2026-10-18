@@ -98,6 +98,11 @@ which channel produced bookings.
 > Re-deploying: after any code change use **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**.
 > The URL stays the same. If you create a *New deployment* instead, the URL changes and every
 > printed/QR link breaks.
+>
+> Deploying with `clasp`? The command line can create the project, push every file and add versions —
+> but Google's API refuses to set a web app's **Who has access** ([google/clasp#1115](https://github.com/google/clasp/issues/1115)).
+> After a command-line deploy, open **Manage deployments**, edit that deployment and set **Anyone**
+> once. Version bumps through the same edit dialog keep both the URL and the access setting.
 
 ## 7. Test the whole loop
 
@@ -123,7 +128,7 @@ which channel produced bookings.
 |------|------|-----|
 | Holiday / leave | as needed | `Blackouts` row, or a calendar event titled `BLOCK [doctor:D1]` |
 | Add a doctor / reason / hours | as needed | new row in the relevant sheet |
-| Reports | monthly | staff screen → تصدير Excel, or `Report_KPIs` |
+| Reports | monthly | staff screen → تصدير Excel (a Drive file — the clinic's Google account must be signed in on that device; CSV downloads directly), or `Report_KPIs` |
 | Backups | automatic | Sunday 22:00 — verify the email arrives |
 | Staff code rotation | quarterly, or when staff leave | `Settings` → `staff_code`, tell reception |
 | Check logs | when something looks wrong | `Log` sheet, or Executions in the Apps Script editor |

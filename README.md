@@ -113,6 +113,10 @@ day (UTC−12, UTC, UTC+14), so an assertion that only holds at one time of day 
 5. **Deploy → New deployment → Web app** → *Execute as me*, *Anyone*.
 6. Patients use the `/exec` URL; reception uses `/exec?page=staff`.
 
+> `clasp` can push the files but cannot set a web app's *Who has access* — the Apps Script API
+> refuses it ([google/clasp#1115](https://github.com/google/clasp/issues/1115)). Set it once in
+> **Manage deployments**; that deployment then keeps its URL and access setting across version bumps.
+
 The runtime lives in the clinic's own Google account, so the data is theirs. This repository holds
 the code only — no patient data, no credentials.
 
@@ -142,7 +146,8 @@ database adapter, not a rewrite. Details and risks: `docs/technical-plan.md`.
 - [x] Shared calendar mirror, daily agenda e-mail, weekly backup
 - [x] Test suite, front-end checks, `.xlsx` validator, offline demo
 - [ ] Fill the real clinic data (see `docs/doctor-checklist.md`)
-- [ ] One live end-to-end run on a deployed web app, then a two-week pilot with one doctor
+- [x] One live end-to-end run on a deployed web app: book → reception board → cancel released the slot
+- [ ] A two-week pilot with one doctor
 - [ ] v1.1: yearly archive, `Patients` index sheet, range-limited reports
 
 ## Documents
