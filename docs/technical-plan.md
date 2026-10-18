@@ -42,9 +42,9 @@ calendar event titled `BLOCK [doctor:D1]`, which the nightly job converts into a
 | `I18n.gs` | every Arabic string, including the four WhatsApp templates |
 | `Catalog.gs` | the public, patient-safe view of the config (no patient data) |
 | `Availability.gs` | the slot engine — pure, no writes |
-| `Booking.gs` | the only patient write path: validate, lock, insert, event |
+| `BookingApi.gs` | the only patient write path: validate, lock, insert, event |
 | `Calendar.gs` | event create/move/delete, `BLOCK` → blackout sync |
-| `Staff.gs` | staff-code-gated actions: board, status, reschedule, block, lookup |
+| `StaffApi.gs` | staff-code-gated actions: board, status, reschedule, block, lookup |
 | `WhatsApp.gs` | wa.me links, template variables, add-to-calendar link |
 | `Reports.gs` | report rows, KPIs, CSV, real .xlsx via Drive export |
 | `Notify.gs` | internal only: daily agenda, weekly backup, trigger entry points |

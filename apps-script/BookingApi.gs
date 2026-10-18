@@ -1,5 +1,5 @@
 /**
- * Booking.gs — the only place a patient writes to the system.
+ * BookingApi.gs — the only place a patient writes to the system.
  *
  * Every rule is re-checked here under a script lock, because the client is
  * public and untrusted. The browser's idea of "available" means nothing.

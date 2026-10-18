@@ -20,7 +20,7 @@ const GS_DIR = path.join(here, '..', 'apps-script');
 
 const FILES = [
   'Config.gs', 'Util.gs', 'Db.gs', 'I18n.gs', 'Availability.gs', 'Catalog.gs',
-  'Calendar.gs', 'WhatsApp.gs', 'Booking.gs', 'Reports.gs', 'Staff.gs',
+  'Calendar.gs', 'WhatsApp.gs', 'BookingApi.gs', 'Reports.gs', 'StaffApi.gs',
   'Setup.gs', 'Notify.gs'
 ];
 

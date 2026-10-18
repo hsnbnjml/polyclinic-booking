@@ -1,5 +1,5 @@
 /**
- * Staff.gs — the reception desk.
+ * StaffApi.gs — the reception desk.
  *
  * Every function here requires the staff code from Settings. The web app is
  * deployed anonymously so patients can book without accounts, which also means

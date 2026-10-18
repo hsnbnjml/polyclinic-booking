@@ -216,7 +216,7 @@ function reasonPublic(reason, slotLen) {
   };
 }
 
-/** Authoritative yes/no for one exact slot. Used by Booking.gs under lock. */
+/** Authoritative yes/no for one exact slot. Used by BookingApi.gs under lock. */
 function findSlot(req, date, start) {
   const res = generateSlots(req);
   if (!res.ok) return null;

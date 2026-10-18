@@ -13,3 +13,7 @@ desktop.ini
 # Local environment — never commit real clinic credentials or codes
 .env
 *.local
+
+# clasp: the deployed project's ID and local auth
+.clasp.json
+.clasprc.json

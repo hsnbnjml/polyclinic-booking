@@ -1685,7 +1685,7 @@ function reasonPublic(reason, slotLen) {
   };
 }
 
-/** Authoritative yes/no for one exact slot. Used by Booking.gs under lock. */
+/** Authoritative yes/no for one exact slot. Used by BookingApi.gs under lock. */
 function findSlot(req, date, start) {
   const res = generateSlots(req);
   if (!res.ok) return null;
@@ -2006,7 +2006,7 @@ function markWhatsAppSent(bookingId, templateKey) {
 }
 
 /**
- * Booking.gs — the only place a patient writes to the system.
+ * BookingApi.gs — the only place a patient writes to the system.
  *
  * Every rule is re-checked here under a script lock, because the client is
  * public and untrusted. The browser's idea of "available" means nothing.
@@ -2580,7 +2580,7 @@ function exportXlsx(filters, label) {
 }
 
 /**
- * Staff.gs — the reception desk.
+ * StaffApi.gs — the reception desk.
  *
  * Every function here requires the staff code from Settings. The web app is
  * deployed anonymously so patients can book without accounts, which also means

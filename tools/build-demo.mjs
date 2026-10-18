@@ -24,7 +24,7 @@ const OUT = path.join(ROOT, 'demo');
 
 const SERVER_FILES = [
   'Config.gs', 'Util.gs', 'Db.gs', 'I18n.gs', 'Catalog.gs', 'Availability.gs',
-  'Calendar.gs', 'WhatsApp.gs', 'Booking.gs', 'Reports.gs', 'Staff.gs',
+  'Calendar.gs', 'WhatsApp.gs', 'BookingApi.gs', 'Reports.gs', 'StaffApi.gs',
   'Notify.gs', 'Setup.gs', 'Code.gs'
 ];
 

@@ -10,6 +10,7 @@
  *   4. every .gs file the test harness expects is present
  *   5. the Arabic WhatsApp templates' placeholders are all supplied
  *   6. every config.* field a view reads is actually returned by getPublicConfig()
+ *   7. no two .gs/.html files share a base name (Apps Script stores names without extensions)
  */
 
 import fs from 'node:fs';
@@ -23,7 +24,7 @@ const GS_DIR = path.join(here, '..', 'apps-script');
 const HTML_FILES = ['Booking.html', 'Staff.html', 'Styles.html', 'ClientJs.html'];
 const GS_FILES = [
   'Code.gs', 'Config.gs', 'Db.gs', 'Util.gs', 'I18n.gs', 'Catalog.gs',
-  'Availability.gs', 'Booking.gs', 'Calendar.gs', 'Staff.gs', 'WhatsApp.gs',
+  'Availability.gs', 'BookingApi.gs', 'Calendar.gs', 'StaffApi.gs', 'WhatsApp.gs',
   'Reports.gs', 'Notify.gs', 'Setup.gs'
 ];
 
@@ -41,6 +42,20 @@ HTML_FILES.forEach((f) => {
   else ok('apps-script/' + f);
 });
 if (!fs.existsSync(path.join(GS_DIR, 'appsscript.json'))) fail('missing appsscript.json');
+
+// Apps Script stores files under their name without the extension, so a project
+// cannot hold both Booking.gs and Booking.html — clasp push dies on the duplicate.
+const bases = new Map();
+fs.readdirSync(GS_DIR)
+  .filter((f) => /\.(gs|html)$/i.test(f))
+  .forEach((f) => {
+    const base = f.replace(/\.[^.]+$/, '').toLowerCase();
+    if (!bases.has(base)) bases.set(base, []);
+    bases.get(base).push(f);
+  });
+const clashes = [...bases.values()].filter((names) => names.length > 1);
+if (clashes.length) clashes.forEach((names) => fail(`duplicate Apps Script file name: ${names.join(' + ')}`));
+else ok(`all ${bases.size} file names are unique with the extension stripped`);
 
 console.log('\n2. Inline scripts parse');
 HTML_FILES.forEach((f) => {

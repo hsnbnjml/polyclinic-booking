@@ -20,9 +20,9 @@ Everything here happens once, inside the clinic's own Google account. No server,
    each file from the `apps-script/` folder of this repo:
 
 ```
-Code.gs          Catalog.gs       Staff.gs        Setup.gs
+Code.gs          Catalog.gs       StaffApi.gs      Setup.gs
 Config.gs        Availability.gs  WhatsApp.gs     Notify.gs
-Db.gs            Booking.gs       Reports.gs
+Db.gs            BookingApi.gs    Reports.gs
 Util.gs          Calendar.gs      I18n.gs
 ```
 
