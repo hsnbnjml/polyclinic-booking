@@ -395,8 +395,12 @@ for (let i = 0; i < 14; i++) {
   if ([0, 3].indexOf(api.weekdayIndex(day)) !== -1) windowDates.push(day);
 }
 const offersToday = slotsR1.days.some((d) => d.date === api.todayStr());
+// Today only belongs to this list when it is itself a Sunday or Wednesday, and it is
+// dropped only when its own notice period has already swallowed the day. On a Monday
+// neither applies, so nothing is subtracted.
+const todayInWindow = windowDates.indexOf(api.todayStr()) !== -1;
 check('every Sunday and Wednesday in the booking window is offered (today only while it is still ahead)',
-  slotsR1.days.length === windowDates.length - (offersToday ? 0 : 1) &&
+  slotsR1.days.length === windowDates.length - (todayInWindow && !offersToday ? 1 : 0) &&
   slotsR1.days.every((d) => windowDates.indexOf(d.date) !== -1),
   'offered ' + JSON.stringify(slotsR1.days.map((d) => d.date)) + ' of ' + JSON.stringify(windowDates));
 check('nine 45-minute slots per day between 09:00 and 16:00',
@@ -408,8 +412,17 @@ check('last slot ends at 15:45 + 45m <= 16:00', slotsR1.days[1].slots.slice(-1)[
 check('slot labels are Arabic 12-hour', slotsR1.days[1].slots[0].labelAr === '9:00 ص', slotsR1.days[1].slots[0].labelAr);
 
 const slotsR3 = api.generateSlots({ clinicId: 'C1', doctorId: 'D1', reasonId: 'R3' });
-check('a reason with its own window uses that window',
-  slotsR3.days.every((d) => d.slots[0].start === '16:00'), JSON.stringify(slotsR3.days[0].slots[0]));
+// R3 (متابعة) runs in its own evening window, Sundays 16:00–19:00, 15 minutes per patient.
+// Today is offered as soon as it still has a slot, so assert the window's own bounds rather
+// than its first remaining slot — that moves with the clock.
+check('a reason with its own window never leaves that window',
+  slotsR3.days.length > 0 &&
+  slotsR3.days.every((d) => d.slots.every((s) => s.start >= '16:00' && s.end <= '19:00')),
+  JSON.stringify(slotsR3.days.map((d) => d.date + ' ' + (d.slots[0] || {}).start + '..' + (d.slots.slice(-1)[0] || {}).end)));
+const fullR3 = slotsR3.days.filter((d) => d.date > api.todayStr())[0];
+check('a 15-minute day that has not started runs 16:00 to 18:45',
+  !!fullR3 && fullR3.slots[0].start === '16:00' && fullR3.slots.slice(-1)[0].start === '18:45',
+  JSON.stringify(fullR3 && [fullR3.slots[0].start, fullR3.slots.slice(-1)[0].start]));
 
 const wrongClinic = api.generateSlots({ clinicId: 'C2', doctorId: 'D1', reasonId: 'R1' });
 check('inactive clinic is refused', wrongClinic.ok === false && wrongClinic.error === 'CLINIC_NOT_FOUND');

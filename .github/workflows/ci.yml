@@ -7,13 +7,22 @@ on:
 
 jobs:
   checks:
-    name: Logic and front-end checks
+    name: Logic and front-end checks (TZ=${{ matrix.tz }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The booking rules depend on "now", so the suite must pass whatever the clock
+        # says. These three zones span the whole day, which exercises "today is still
+        # ahead", "today is half gone" and "the local date already rolled over".
+        tz: ['UTC', 'Etc/GMT+12', 'Pacific/Kiritimati']
+    env:
+      TZ: ${{ matrix.tz }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Slot engine, booking rules, reports
         run: node tools/local-test.mjs
@@ -30,10 +39,10 @@ jobs:
     name: Excel export is a real .xlsx
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
 
       # Needs .NET's ZIP reader through PowerShell, so it runs on Windows.
       - name: Validate the generated .xlsx byte by byte

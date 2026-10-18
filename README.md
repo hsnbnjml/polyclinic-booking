@@ -86,7 +86,7 @@ demo. CI fails too if the committed demo no longer matches the sources.
 ## Run the checks
 
 ```
-node tools/local-test.mjs     # 137 behavioural assertions
+node tools/local-test.mjs     # 138 behavioural assertions
 node tools/check-html.mjs     # front-end and wiring checks
 node tools/check-xlsx.mjs     # the Excel export is a real .xlsx (needs PowerShell)
 ```
@@ -96,6 +96,9 @@ There are no dependencies and nothing to install. The suite loads the actual App
 mail, drive, locks. It covers what would hurt in production — one patient per slot, double-tap
 idempotency, cancel freeing a slot, reschedule preserving history, blackout scoping, daily caps,
 phone normalisation of Arabic-Indic digits, and that the public catalogue never leaks patient data.
+
+Because those rules depend on "now", CI runs the same suite in three time zones spanning the whole
+day (UTC−12, UTC, UTC+14), so an assertion that only holds at one time of day fails the build.
 
 ## Deploy for a real clinic
 
