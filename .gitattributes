@@ -1,0 +1,3 @@
+# Keep the repository LF-only, on every platform. The demo pages are generated and
+# compared byte for byte by CI, so a line-ending conversion would produce false diffs.
+* text=auto eol=lf

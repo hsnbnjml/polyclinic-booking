@@ -1,0 +1,15 @@
+# Node
+node_modules/
+npm-debug.log*
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local environment — never commit real clinic credentials or codes
+.env
+*.local

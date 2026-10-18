@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض تجريبي — نظام حجز مواعيد العيادة</title>
+<style>
+  :root{
+    --primary:#0f6f6c; --primary-dark:#0a5350; --soft:#f4f7f7; --ink:#132a2a;
+    --muted:#5f7473; --line:#dbe6e5; --warn:#8a5a00; --warn-bg:#fff8e6;
+    --real:#0f6f6c; --fake:#8a5a00;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:#eef3f2; color:var(--ink);
+    font:16px/1.75 "Segoe UI",Tahoma,Arial,sans-serif;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 70px}
+  header.hero{
+    background:linear-gradient(135deg,var(--primary),#0c8f86); color:#fff;
+    border-radius:18px; padding:26px 24px; box-shadow:0 10px 26px rgba(15,111,108,.25);
+  }
+  header.hero h1{margin:0 0 6px; font-size:26px}
+  header.hero p{margin:0; opacity:.92; font-size:15px}
+  .pill{
+    display:inline-block; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35);
+    border-radius:999px; padding:3px 12px; font-size:13px; margin-bottom:12px;
+  }
+  section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-top:18px}
+  h2{font-size:19px;margin:0 0 4px}
+  h2 .sub{font-weight:400;color:var(--muted);font-size:14px}
+  .btns{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  a.big{
+    flex:1 1 240px; text-decoration:none; text-align:center; border-radius:14px; padding:16px 18px;
+    background:var(--primary); color:#fff; font-size:17px; font-weight:600;
+    box-shadow:0 6px 16px rgba(15,111,108,.22); transition:transform .12s,background .12s;
+  }
+  a.big:hover{background:var(--primary-dark); transform:translateY(-1px)}
+  a.big.alt{background:#fff;color:var(--primary);border:2px solid var(--primary);box-shadow:none}
+  a.big.alt:hover{background:var(--soft)}
+  a.big small{display:block;font-weight:400;font-size:13px;opacity:.85;margin-top:4px}
+  .code{
+    display:inline-block;background:var(--soft);border:1px dashed var(--primary);border-radius:8px;
+    padding:2px 10px;font-family:Consolas,monospace;direction:ltr;color:var(--primary-dark);
+  }
+  table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14.5px}
+  th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--soft);font-weight:600}
+  td.tag{white-space:nowrap;font-weight:600}
+  td.tag.real{color:var(--real)}
+  td.tag.fake{color:var(--fake)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  .note{background:var(--warn-bg);border:1px solid #f0dfae;border-radius:12px;padding:12px 14px;color:var(--warn);font-size:14.5px}
+  .empty{color:var(--muted);font-style:italic}
+  code.cmd{
+    display:block;background:#10201f;color:#d8f3ee;border-radius:10px;padding:10px 12px;margin:8px 0;
+    direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:14px;overflow-x:auto;
+  }
+  ul.tight{margin:8px 0 0;padding-inline-start:20px}
+  ul.tight li{margin:4px 0}
+  .dayblock{margin-top:14px}
+  .dayblock h3{margin:0 0 6px;font-size:15.5px;color:var(--primary-dark)}
+  .ev{
+    display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border:1px solid var(--line);
+    border-radius:10px;margin-bottom:6px;background:#fcfefd;font-size:14.5px;
+  }
+  .dot{width:12px;height:12px;border-radius:50%;margin-top:6px;flex:0 0 12px;border:1px solid rgba(0,0,0,.15)}
+  .ev .t{direction:ltr;color:var(--muted);font-size:13.5px;white-space:nowrap}
+  .row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+  button.reset{
+    background:#fff;border:2px solid #b23b3b;color:#b23b3b;border-radius:12px;padding:9px 16px;
+    font:inherit;font-weight:600;cursor:pointer
+  }
+  button.reset:hover{background:#b23b3b;color:#fff}
+  .status{font-size:14px;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:13.5px;margin-top:24px;line-height:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="pill">عرض تجريبي — البيانات وهمية</span>
+    <h1>نظام حجز مواعيد العيادة</h1>
+    <p>يعمل بالكامل على هذا الجهاز: بلا إنترنت، بلا حساب، بلا تسجيل، وبلا أي رسوم.</p>
+  </header>
+
+  <section>
+    <h2>ابدأ العرض <span class="sub">— افتح الصفحتين بالترتيب، ثم عُد إلى هذه الصفحة لرؤية التقويم</span></h2>
+    <div class="btns">
+      <a class="big" href="patient.html" target="_blank">
+        ١ — صفحة المريض
+        <small>الرابط الذي يُنشر على السوشيال ميديا</small>
+      </a>
+      <a class="big alt" href="reception.html" target="_blank">
+        ٢ — شاشة الاستقبال
+        <small>كود الدخول التجريبي: <span class="code">1234</span></small>
+      </a>
+    </div>
+    <p class="status" id="store-state" style="margin-top:12px">…</p>
+  </section>
+
+  <section>
+    <h2>ما هو حقيقي وما هو محاكاة <span class="sub">— اقرأ هذا قبل الاجتماع حتى لا تُبالغ في الوعد</span></h2>
+    <table>
+      <tr><th style="width:130px">الحالة</th><th>البند</th><th>التفصيل</th></tr>
+      <tr>
+        <td class="tag real">حقيقي</td>
+        <td>محرّك المواعيد وقواعده</td>
+        <td>نفس الكود الذي سيُرفع على Google: نوافذ الطبيب (يوم/ساعة/مدة الجلسة)، الحد الأقصى في اليوم، المهلة قبل الموعد، الإجازات والإغلاقات، منع الحجز مرتين في نفس الخانة.</td>
+      </tr>
+      <tr>
+        <td class="tag real">حقيقي</td>
+        <td>التحقق من بيانات المريض</td>
+        <td>رقم الجوال مطلوب ويُوحَّد تلقائياً، وتأكيد الرقم إلزامي، وحفظ المصدر (من أي رابط جاء المريض).</td>
+      </tr>
+      <tr>
+        <td class="tag real">حقيقي</td>
+        <td>إجراءات الاستقبال</td>
+        <td>حضر / لم يحضر / إلغاء / تغيير الموعد مع تسجيل من غيّره ومتى، حجب وقت، البحث بالجوال، وسجل المريض.</td>
+      </tr>
+      <tr>
+        <td class="tag real">حقيقي</td>
+        <td>رسائل الواتساب والتقارير</td>
+        <td>أربع رسائل واتساب جاهزة وروابط wa.me (التذكير فيه العنوان والموقع ورابط الخريطة)، وتصدير Excel (ملف xlsx حقيقي) و CSV، وتصفية التقرير بطبيب واحد أو عدة أطباء للمقارنة، ومؤشرات الأداء.</td>
+      </tr>
+      <tr>
+        <td class="tag fake">محاكاة</td>
+        <td>مكان تخزين البيانات</td>
+        <td>في العرض تُحفظ البيانات في ذاكرة المتصفح بدل Google Sheets. في النظام الحقيقي تذهب إلى الجدول لدى المجمع.</td>
+      </tr>
+      <tr>
+        <td class="tag fake">محاكاة</td>
+        <td>تقويم الطبيب</td>
+        <td>في العرض هو اللوحة أسفل هذه الصفحة. في النظام الحقيقي يُنشئ Apps Script حدثاً في تقويم Google مشترك بلون كل طبيب.</td>
+      </tr>
+      <tr>
+        <td class="tag fake">محاكاة</td>
+        <td>إرسال الرسائل وحفظ ملف Excel</td>
+        <td>الإرسال يبقى بيد الاستقبال بضغطة على الرابط (لا يوجد ربط مدفوع بالواتساب)، وملف Excel يُبنى داخل المتصفح بدل درايف المجمع — نفس الأعمدة ونفس التصفية ونفس اسم الملف.</td>
+      </tr>
+      <tr>
+        <td class="tag fake">محاكاة</td>
+        <td>الساعة والتاريخ</td>
+        <td id="clock-row">…</td>
+      </tr>
+    </table>
+    <p class="note" style="margin-top:14px">
+      في العرض: أرقام الجوال والأسماء وهمية، ومدة الإشعار (المهلة قبل الموعد) صفر حتى نرى مواعيد اليوم.
+      وأضفنا للطبيب الثاني نافذة عصر الأحد حتى يظهر يوم فيه أكثر من طبيب، فتُجرَّب أزرار تصفية الجدول.
+      لا يُدخل أي بيانات مرضى حقيقيين في هذه النسخة.
+    </p>
+  </section>
+
+  <section>
+    <h2>بيانات العرض <span class="sub">— نفس القيم الموجودة في جدول الإعداد، وكل قوس معقوف يُستبدل ببيانات العيادة بعد الاجتماع</span></h2>
+    <div class="cols">
+      <div>
+        <h3 style="font-size:15.5px;margin:0">الفروع</h3>
+        <ul class="tight" id="clinics"></ul>
+      </div>
+      <div>
+        <h3 style="font-size:15.5px;margin:0">الأطباء</h3>
+        <ul class="tight" id="doctors"></ul>
+      </div>
+      <div>
+        <h3 style="font-size:15.5px;margin:0">أسباب الزيارة</h3>
+        <ul class="tight" id="reasons"></ul>
+      </div>
+      <div>
+        <h3 style="font-size:15.5px;margin:0">نوافذ الحجز (القاعدة)</h3>
+        <ul class="tight" id="windows"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>التقويم المشترك <span class="sub">— كما يراه الطبيب، بلون كل طبيب</span></h2>
+    <div id="calendar"></div>
+  </section>
+
+  <section>
+    <h2>كيف تُشغّل العرض</h2>
+    <p style="margin:0">على الإنترنت: لا شيء — افتح «صفحة المريض» أو «شاشة الاستقبال» من الأزرار في الأعلى.</p>
+    <p style="margin:0">محلياً (يضمن انتقال الحجز من صفحة المريض إلى شاشة الاستقبال، ويصلح لعرضه على جوال الطبيب):</p>
+    <code class="cmd">node tools/serve-demo.mjs</code>
+    <p style="margin:0">ثم افتح: <span class="code">http://localhost:8787/demo/</span></p>
+    <p>أو ببساطة افتح <span class="code">demo/patient.html</span> بالنقر المزدوج — يعمل أيضاً بلا إنترنت (Chrome / Edge على ويندوز).</p>
+    <div class="row" style="margin-top:14px">
+      <button class="reset" onclick="resetDemo()">إعادة تعيين بيانات العرض</button>
+      <span class="status" id="reset-state"></span>
+    </div>
+  </section>
+
+  <footer>
+    هذه الصفحة تُبنى آلياً من ملفات النظام نفسها: <span class="code">node tools/build-demo.mjs</span><br>
+    عرض تجريبي فقط — لا يُستخدم لبيانات مرضى حقيقيين.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var KEY = 'polyclinic_demo_v3';
+  var WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  var MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  // Same palette as DOCTOR_COLOR_HEX in apps-script/Config.gs — the mirror must match
+  // the colours on the reception board. tools/build-demo.mjs fails the build if not.
+  var COLORS = {
+    red: '#d50000', orange: '#f4511e', yellow: '#f6bf26', green: '#0b8043',
+    teal: '#009688', blue: '#039be5', purple: '#8e24aa', gray: '#616161'
+  };
+  var STATUS_AR = {
+    confirmed: 'مؤكد', attended: 'حضر', no_show: 'لم يحضر',
+    cancelled: 'ملغي', rescheduled: 'أُعيد جدولته'
+  };
+
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function byId(id) { return document.getElementById(id); }
+  function rowsOf(state, name) {
+    var grid = state && state.sheets ? state.sheets[name] : null;
+    if (!grid || grid.length < 2) return [];
+    var head = grid[0];
+    return grid.slice(1).filter(function (r) {
+      return r.some(function (c) { return String(c === undefined ? '' : c) !== ''; });
+    }).map(function (r) {
+      var o = {};
+      head.forEach(function (h, i) { o[h] = r[i] === undefined ? '' : r[i]; });
+      return o;
+    });
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function dayLabel(d) {
+    return WEEKDAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  function clockLabel(ms) {
+    var d = new Date(ms);
+    var h = d.getHours();
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return dayLabel(d) + ' — ' + h12 + ':' + pad(d.getMinutes()) + (h < 12 ? ' ص' : ' م');
+  }
+  function hhmm(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+    if (!m) return String(t || '');
+    var h = Number(m[1]);
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + m[2] + (h < 12 ? ' ص' : ' م');
+  }
+  function readState() {
+    try { return JSON.parse(window.localStorage.getItem(KEY) || 'null'); }
+    catch (e) { return null; }
+  }
+
+  var state = readState();
+  var ready = !!(state && state.sheets);
+
+  /* ---------------- status + clock ---------------- */
+  function renderStatus(st) {
+    var ok = !!(st && st.sheets);
+    if (!ok) {
+      byId('store-state').innerHTML =
+        'الحالة: لا توجد بيانات بعد — افتح <b>صفحة المريض</b> أول مرة لتُهيَّأ بيانات العرض تلقائياً.';
+      byId('clock-row').textContent = 'لم تُهيَّأ بعد. ساعة العرض تُثبَّت عند أول فتح.';
+      return;
+    }
+    var bookings = rowsOf(st, 'Bookings');
+    var active = bookings.filter(function (b) {
+      return b.status === 'confirmed' || b.status === 'attended';
+    });
+    byId('store-state').innerHTML =
+      'الحالة: البيانات جاهزة — <b>' + bookings.length + '</b> حجز محفوظ، منها <b>' + active.length +
+      '</b> نشط، و<b>' + (st.events || []).length + '</b> حدث في التقويم.';
+    byId('clock-row').innerHTML =
+      'ساعة العرض مثبّتة على <b>' + esc(clockLabel(st.mockNow)) + '</b> حتى نرى مواعيد اليوم. ' +
+      'النظام الحقيقي يستخدم الساعة الفعلية وتاريخ اليوم.';
+  }
+  renderStatus(state);
+
+  /* ---------------- the seeded configuration ---------------- */
+  function li(text) { return '<li>' + text + '</li>'; }
+  function activeOnly(r) { return String(r.active).toUpperCase() !== 'FALSE'; }
+
+  if (ready) {
+    var clinics = rowsOf(state, 'Clinics').filter(activeOnly);
+    var doctors = rowsOf(state, 'Doctors').filter(activeOnly);
+    var reasons = rowsOf(state, 'Reasons').filter(activeOnly);
+    var avail = rowsOf(state, 'Availability').filter(activeOnly);
+    var blackouts = rowsOf(state, 'Blackouts');
+    var settings = {};
+    rowsOf(state, 'Settings').forEach(function (r) { settings[r.key] = r.value; });
+
+    byId('clinics').innerHTML = clinics.map(function (c) {
+      return li('<b>' + esc(c.name_ar) + '</b><br><span style="color:#5f7473;font-size:13.5px">' +
+        esc(c.address_ar) + ' — ' + esc(c.working_hours_ar) + '</span>');
+    }).join('') || '<li class="empty">لا يوجد</li>';
+
+    var doctorById = {};
+    doctors.forEach(function (d) { doctorById[d.doctor_id] = d; });
+    byId('doctors').innerHTML = doctors.map(function (d) {
+      return li('<span class="dot" style="display:inline-block;vertical-align:middle;margin:0 0 0 6px;background:' +
+        (COLORS[d.color] || '#999') + '"></span> <b>' + esc(d.name_ar) + '</b>' +
+        '<br><span style="color:#5f7473;font-size:13.5px">' + esc(d.specialty_ar) +
+        ' — تقويم بلون ' + esc(d.color) + '</span>');
+    }).join('') || '<li class="empty">لا يوجد</li>';
+
+    byId('reasons').innerHTML = reasons.map(function (r) {
+      return li('<b>' + esc(r.name_ar) + '</b> — ' + esc(r.duration_min) + ' دقيقة' +
+        '<br><span style="color:#5f7473;font-size:13.5px">حتى ' + esc(r.max_per_day) +
+        ' في اليوم، ويُحجز قبل ' + esc(r.book_days_ahead) + ' يوم كحد أقصى</span>');
+    }).join('') || '<li class="empty">لا يوجد</li>';
+
+    byId('windows').innerHTML = avail.map(function (a) {
+      var doc = doctorById[a.doctor_id];
+      var label = WEEKDAYS[Number(a.weekday)] || a.weekday;
+      var cap = String(a.max_per_day_override) ? ' — بحد أقصى ' + esc(a.max_per_day_override) + ' مواعيد' : '';
+      return li('<b>' + esc(label) + '</b> من ' + esc(hhmm(a.from_time)) + ' إلى ' + esc(hhmm(a.to_time)) +
+        '<br><span style="color:#5f7473;font-size:13.5px">' + esc(doc ? doc.name_ar : a.doctor_id) +
+        ' — مدة الجلسة ' + esc(a.slot_min) + ' دقيقة' + cap + '</span>');
+    }).join('') || '<li class="empty">لا يوجد</li>';
+
+    if (blackouts.length) {
+      byId('windows').innerHTML += li('<b style="color:#8a5a00">إغلاقات / إجازات</b><br>' +
+        '<span style="color:#5f7473;font-size:13.5px">' +
+        blackouts.map(function (b) {
+          return esc(b.date) + ' (' + esc(b.scope_type) + ') ' + esc(b.note);
+        }).join('<br>') + '</span>');
+    }
+
+    renderCalendar(state);
+  }
+
+  /* ---------------- the calendar mirror ---------------- */
+  function renderCalendar(st) {
+    var cal = byId('calendar');
+    var events = ((st && st.events) || []).slice().sort(function (a, b) {
+      return new Date(a.start) - new Date(b.start);
+    });
+    if (!events.length) {
+      cal.innerHTML = '<p class="empty">لا توجد أحداث بعد — احجز موعداً من صفحة المريض وسيظهر هنا مباشرة.</p>';
+      return;
+    }
+    var today = st && st.mockNow ? iso(new Date(st.mockNow)) : '';
+    var groups = {};
+    var order = [];
+    events.forEach(function (e) {
+      var d = new Date(e.start);
+      var key = iso(d);
+      if (!groups[key]) { groups[key] = { date: d, events: [] }; order.push(key); }
+      groups[key].events.push(e);
+    });
+    cal.innerHTML = order.map(function (key) {
+      var g = groups[key];
+      var items = g.events.map(function (e) {
+        var s = new Date(e.start);
+        var en = new Date(e.end);
+        var t = s.getHours() + ':' + pad(s.getMinutes()) + ' – ' + en.getHours() + ':' + pad(en.getMinutes());
+        return '<div class="ev"><span class="dot" style="background:' + (COLORS[e.color] || '#999') + '"></span>' +
+          '<span class="t">' + esc(t) + '</span><span>' + esc(e.title) + '</span></div>';
+      }).join('');
+      return '<div class="dayblock"><h3>' + esc(dayLabel(g.date)) +
+        ' <span style="color:#5f7473;font-weight:400">(' + g.events.length + ')</span>' +
+        (key === today ? ' <span class="pill" style="background:#0f6f6c;color:#fff;border:0;margin:0">اليوم</span>' : '') +
+        '</h3>' + items + '</div>';
+    }).join('');
+  }
+
+  window.resetDemo = function () {
+    try {
+      window.localStorage.removeItem(KEY);
+      window.localStorage.removeItem('polyclinic_staff_code');
+    } catch (e) {}
+    byId('reset-state').textContent = 'تُمحيت بيانات العرض — افتح صفحة المريض من جديد.';
+    setTimeout(function () { window.location.reload(); }, 900);
+  };
+
+  // Keep the mirror honest: the presenter switches tabs, so re-read storage and
+  // redraw the calendar and the counters every couple of seconds.
+  setInterval(function () {
+    var st = readState();
+    if (!st || !st.sheets) return;
+    renderStatus(st);
+    renderCalendar(st);
+  }, 2500);
+})();
+</script>
+</body>
+</html>

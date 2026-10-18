@@ -1,0 +1,4315 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<title>عرض تجريبي — صفحة حجز المريض</title>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, system-ui, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+  header.top {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    padding: 20px 16px 22px;
+    border-radius: 0 0 20px 20px;
+  }
+  header.top .inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  header.top img.logo { height: 46px; width: auto; border-radius: 10px; background: #fff; padding: 4px; }
+  header.top h1 { font-size: 20px; margin: 0; font-weight: 700; }
+  header.top p { margin: 2px 0 0; font-size: 13px; opacity: .92; }
+
+  .steps { display: flex; gap: 6px; justify-content: center; margin: 16px 0 8px; }
+  .steps i {
+    width: 26px; height: 5px; border-radius: 3px; background: var(--line);
+    display: block; transition: background .2s;
+  }
+  .steps i.on { background: var(--primary); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  }
+  .card h2 { font-size: 17px; margin: 0 0 4px; }
+  .card .hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+
+  button.choice {
+    display: block; width: 100%; text-align: right; background: var(--card);
+    border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 10px; font-size: 15px; font-family: inherit; color: inherit;
+    cursor: pointer; transition: border-color .15s, transform .05s;
+  }
+  button.choice:hover { border-color: var(--primary); }
+  button.choice:active { transform: scale(.995); }
+  button.choice.selected { border-color: var(--primary); border-width: 2px; background: var(--soft); }
+  button.choice .sub { display: block; font-size: 13px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  button.choice .badge { float: left; font-size: 12px; color: var(--primary); font-weight: 700; }
+
+  .btn {
+    display: inline-block; border: 0; border-radius: 12px; padding: 13px 20px;
+    font-size: 15px; font-family: inherit; font-weight: 700; cursor: pointer;
+    background: var(--primary); color: #fff;
+  }
+  .btn.wide { display: block; width: 100%; }
+  .btn.ghost { background: transparent; color: var(--primary); border: 1px solid var(--line); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.link { background: none; color: var(--primary); text-decoration: underline; padding: 6px 0; font-weight: 400; }
+
+  .daybar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+  .daybar button {
+    flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px 12px; font-family: inherit; font-size: 13px; cursor: pointer; text-align: center; color: inherit;
+  }
+  .daybar button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .daybar button .d { display: block; font-weight: 700; font-size: 14px; }
+
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+  .slots button {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 6px; font-family: inherit; font-size: 14px; cursor: pointer; color: inherit;
+  }
+  .slots button:hover { border-color: var(--primary); background: var(--soft); }
+  .slots button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  label.field { display: block; margin-bottom: 14px; font-size: 14px; font-weight: 600; }
+  label.field input, label.field textarea {
+    display: block; width: 100%; margin-top: 6px; padding: 12px 14px; font-size: 16px;
+    font-family: inherit; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--text);
+  }
+  label.field input:focus, label.field textarea:focus { outline: 2px solid var(--primary); outline-offset: 0; border-color: var(--primary); }
+  label.field .why { font-weight: 400; font-size: 12.5px; color: var(--muted); display: block; margin-top: 4px; }
+  .phone-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .phone-row { grid-template-columns: 1fr; } }
+
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; font-weight: 400; background: var(--soft); padding: 12px; border-radius: 12px; }
+  .consent input { width: 20px; height: 20px; margin-top: 2px; flex: 0 0 auto; }
+
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  .msg { border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-bottom: 12px; }
+  .msg.err { background: #fdecea; color: #8a1c10; border: 1px solid #f5c2bb; }
+  .msg.ok { background: #e8f5e9; color: #14532d; border: 1px solid #b7e0bb; }
+  .msg.info { background: var(--soft); color: var(--text); border: 1px solid var(--line); }
+
+  .summary { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 14.5px; }
+  .summary dt { color: var(--muted); }
+  .summary dd { margin: 0; font-weight: 600; }
+
+  .ref { font-family: ui-monospace, Consolas, monospace; direction: ltr; text-align: right; font-size: 13px; color: var(--muted); }
+  .spinner { text-align: center; padding: 28px; color: var(--muted); font-size: 14px; }
+  .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 22px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .actions .btn { flex: 1 1 auto; text-align: center; text-decoration: none; }
+  /* The reception number for changing an appointment: the loudest thing on the
+     confirmation card, because it is the one a patient actually needs. */
+  .call-strip {
+    flex: 2 1 230px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; background: var(--primary); color: #fff; text-decoration: none;
+    border-radius: 12px; padding: 12px 16px; font-weight: 700; font-size: 15px;
+    box-shadow: 0 6px 16px rgba(15, 111, 108, .22);
+  }
+  .call-strip small { display: block; font-weight: 400; font-size: 12.5px; opacity: .92; margin-top: 3px; }
+  .call-strip .num { direction: ltr; font-size: 18px; font-weight: 800; letter-spacing: .4px; white-space: nowrap; }
+
+  #toast {
+    position: fixed; bottom: 20px; right: 50%; transform: translateX(50%);
+    background: #101828; color: #fff; padding: 12px 18px; border-radius: 12px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50;
+    max-width: 90vw; text-align: center;
+  }
+  #toast.show { opacity: .96; }
+</style>
+
+  <style>
+    :root {
+      --primary: #0f6f6c;
+      --primary-dark: #0f6f6c;
+      --soft: #f4f7f7;
+      --bg: #f7f9f9;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e4e7ec;
+    }
+  </style>
+</head>
+<body>
+<script>
+/**
+ * demo-runtime.js — the offline demo's browser runtime.
+ *
+ * This file is inlined into demo/patient.html and demo/reception.html by
+ * tools/build-demo.mjs, with three tokens substituted:
+ *
+ *   /*__SERVER_SOURCE__*\/  →  every real .gs file, concatenated
+ *   /*__XLSX_WRITER__*\/    →  tools/xlsx-writer.js, for the Excel export
+ *   /*__PAGE__*\/           →  'patient' or 'reception'
+ *
+ * The point: the demo runs the *actual* slot engine, booking rules, staff
+ * actions and reports. Only Google's storage layer is faked (spreadsheet,
+ * calendar, lock, mail, drive). So the demo cannot disagree with the product.
+ */
+
+(function () {
+  /**
+ * xlsx-writer.js — a tiny, dependency-free .xlsx writer for the offline demo.
+ *
+ * The live system builds its Excel file with Drive's export endpoint (Reports.gs →
+ * exportXlsx). Offline there is no Drive, so the demo used to hand the patient a CSV
+ * and apologise for it. This writes the real thing in the browser instead: an
+ * uncompressed (stored) ZIP containing the same five parts Excel expects, with the
+ * rows as inline strings, so Arabic survives without a font or a code page.
+ *
+ * Deliberately minimal — no sharedStrings, no styles, no docProps. The live export is
+ * a converted Google Sheet, and the parts Excel actually needs are exactly these.
+ *
+ * Usable from the browser (window.POLYCLINIC_XLSX) and from Node (module.exports),
+ * which is what tools/check-xlsx.mjs uses to validate the bytes with a real ZIP reader.
+ */
+
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else if (root) root.POLYCLINIC_XLSX = factory();
+})(typeof self !== 'undefined' ? self : (typeof globalThis !== 'undefined' ? globalThis : this), function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * Bytes
+   * ------------------------------------------------------------------ */
+
+  var encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+
+  /** UTF-8 bytes of a string. */
+  function utf8(text) {
+    var s = String(text === null || text === undefined ? '' : text);
+    if (encoder) return encoder.encode(s);
+    var out = [];
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c < 0x80) {
+        out.push(c);
+      } else if (c < 0x800) {
+        out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+      } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+        var next = s.charCodeAt(i + 1);
+        var cp = 0x10000 + ((c - 0xd800) << 10) + (next - 0xdc00);
+        out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
+        i++;
+      } else {
+        out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+      }
+    }
+    return new Uint8Array(out);
+  }
+
+  function u16(v) { return [v & 0xff, (v >>> 8) & 0xff]; }
+  function u32(v) { return [v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]; }
+
+  function concat(parts) {
+    var total = 0;
+    parts.forEach(function (p) { total += p.length; });
+    var out = new Uint8Array(total);
+    var at = 0;
+    parts.forEach(function (p) { out.set(p, at); at += p.length; });
+    return out;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * CRC-32 (the ZIP checksum)
+   * ------------------------------------------------------------------ */
+
+  var CRC_TABLE = (function () {
+    var table = new Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+
+  function crc32(bytes) {
+    var crc = 0xffffffff;
+    for (var i = 0; i < bytes.length; i++) {
+      crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ bytes[i]) & 0xff];
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * ZIP (stored, no compression — the files are tiny)
+   * ------------------------------------------------------------------ */
+
+  function dosStamp(date) {
+    var time = ((date.getHours() & 31) << 11) | ((date.getMinutes() & 63) << 5) | ((date.getSeconds() / 2) & 31);
+    var day = (((date.getFullYear() - 1980) & 127) << 9) | (((date.getMonth() + 1) & 15) << 5) | (date.getDate() & 31);
+    return { time: time, day: day };
+  }
+
+  function zip(entries, now) {
+    var stamp = dosStamp(now || new Date());
+    var parts = [];
+    var central = [];
+    var offset = 0;
+
+    entries.forEach(function (entry) {
+      var nameBytes = utf8(entry.name);
+      var data = entry.data;
+      var crc = crc32(data);
+
+      var local = [].concat(
+        u32(0x04034b50), u16(20), u16(0), u16(0),
+        u16(stamp.time), u16(stamp.day),
+        u32(crc), u32(data.length), u32(data.length),
+        u16(nameBytes.length), u16(0)
+      );
+
+      parts.push(new Uint8Array(local), nameBytes, data);
+      central.push({ nameBytes: nameBytes, crc: crc, size: data.length, offset: offset });
+      offset += local.length + nameBytes.length + data.length;
+    });
+
+    var centralStart = offset;
+    var centralParts = [];
+
+    central.forEach(function (e) {
+      var header = [].concat(
+        u32(0x02014b50), u16(20), u16(20), u16(0), u16(0),
+        u16(stamp.time), u16(stamp.day),
+        u32(e.crc), u32(e.size), u32(e.size),
+        u16(e.nameBytes.length), u16(0), u16(0), u16(0), u16(0),
+        u32(0), u32(e.offset)
+      );
+      centralParts.push(new Uint8Array(header), e.nameBytes);
+      offset += header.length + e.nameBytes.length;
+    });
+
+    var end = [].concat(
+      u32(0x06054b50), u16(0), u16(0),
+      u16(central.length), u16(central.length),
+      u32(offset - centralStart), u32(centralStart), u16(0)
+    );
+
+    return concat(parts.concat(centralParts, [new Uint8Array(end)]));
+  }
+
+  /* ------------------------------------------------------------------ *
+   * The XLSX parts
+   * ------------------------------------------------------------------ */
+
+  function xmlEscape(v) {
+    return String(v === null || v === undefined ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      // Control characters are illegal in XML and would make Excel refuse the file.
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+  }
+
+  var XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+
+  /** 0 -> A, 25 -> Z, 26 -> AA */
+  function columnName(index) {
+    var name = '';
+    var n = index;
+    while (n >= 0) {
+      name = String.fromCharCode(65 + (n % 26)) + name;
+      n = Math.floor(n / 26) - 1;
+    }
+    return name;
+  }
+
+  function isNumber(v) {
+    return typeof v === 'number' && isFinite(v);
+  }
+
+  function sheetXml(rows) {
+    var out = [XML_HEAD,
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'];
+
+    var lastCol = 0;
+    rows.forEach(function (r) { lastCol = Math.max(lastCol, (r || []).length); });
+    var dimension = 'A1:' + columnName(Math.max(lastCol - 1, 0)) + Math.max(rows.length, 1);
+    out.push('<dimension ref="' + dimension + '"/>');
+    // rightToLeft so the doctor opens a file that reads the Arabic way round.
+    out.push('<sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews>');
+    out.push('<sheetFormatPr defaultRowHeight="15"/>');
+    out.push('<sheetData>');
+
+    rows.forEach(function (row, r) {
+      var cells = row || [];
+      var line = '<row r="' + (r + 1) + '">';
+      cells.forEach(function (value, c) {
+        if (value === null || value === undefined || value === '') return;
+        var ref = columnName(c) + (r + 1);
+        if (isNumber(value)) line += '<c r="' + ref + '"><v>' + value + '</v></c>';
+        else line += '<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEscape(value) + '</t></is></c>';
+      });
+      out.push(line + '</row>');
+    });
+
+    out.push('</sheetData></worksheet>');
+    return out.join('');
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Public API
+   * ------------------------------------------------------------------ */
+
+  /**
+   * @param {Array<Array<string|number>>} rows  first row = the header
+   * @param {string} [sheetName]
+   * @returns {Uint8Array} the bytes of a real .xlsx
+   */
+  function build(rows, sheetName) {
+    var name = String(sheetName || 'Bookings').replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31) || 'Bookings';
+
+    var contentTypes = XML_HEAD +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '</Types>';
+
+    var rootRels = XML_HEAD +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>';
+
+    var workbook = XML_HEAD +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' +
+      ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<sheets><sheet name="' + xmlEscape(name) + '" sheetId="1" r:id="rId1"/></sheets>' +
+      '</workbook>';
+
+    var workbookRels = XML_HEAD +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      '</Relationships>';
+
+    return zip([
+      { name: '[Content_Types].xml', data: utf8(contentTypes) },
+      { name: '_rels/.rels', data: utf8(rootRels) },
+      { name: 'xl/workbook.xml', data: utf8(workbook) },
+      { name: 'xl/_rels/workbook.xml.rels', data: utf8(workbookRels) },
+      { name: 'xl/worksheets/sheet1.xml', data: utf8(sheetXml(rows || [])) }
+    ]);
+  }
+
+  return { build: build, utf8: utf8, crc32: crc32, columnName: columnName, zip: zip };
+});
+
+
+  var PAGE = "patient";
+  var STORE_KEY = 'polyclinic_demo_v3';
+  var STAFF_CODE = '1234';
+
+  /* ------------------------------------------------------------------ *
+   * Storage: localStorage when available, memory when it is not
+   * ------------------------------------------------------------------ */
+
+  var memory = {};
+  function readRaw(key) {
+    try { return window.localStorage.getItem(key); } catch (e) { return memory[key] || null; }
+  }
+  function writeRaw(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (e) { memory[key] = value; }
+  }
+  function dropRaw(key) {
+    try { window.localStorage.removeItem(key); } catch (e) { delete memory[key]; }
+  }
+
+  var persisted = null;
+  try { persisted = JSON.parse(readRaw(STORE_KEY) || 'null'); } catch (e) { persisted = null; }
+
+  /* ------------------------------------------------------------------ *
+   * Demo clock
+   *
+   * The clinic's real rule is "examinations on Sundays and Wednesdays". A demo
+   * on a Thursday would show an empty calendar, so the demo pins "now" to the
+   * next Sunday at 08:00 unless the presenter picks another date.
+   * ------------------------------------------------------------------ */
+
+  var RealDate = window.Date;
+
+  /**
+   * Pin "now" to the next Sunday 08:00 — the demo's "today".
+   *
+   * Why Sunday: the seeded clinic rule makes Sundays and Wednesdays bookable for
+   * examinations, so a demo on any other day would open with an empty calendar.
+   * bootstrapDemo() also zeroes the seeded minimum-notice values (demo data only),
+   * otherwise a 12-hour lead time would hide today's own slots and the reception
+   * board would look empty in front of the doctor.
+   */
+  function demoStart() {
+    var d = new RealDate();
+    var add = (7 - d.getDay()) % 7;
+    d.setDate(d.getDate() + add);
+    d.setHours(8, 0, 0, 0);
+    return d.getTime();
+  }
+
+  var mockNow = Number(persisted && persisted.mockNow) || demoStart();
+
+  function DemoDate() {
+    if (arguments.length === 0) return new RealDate(mockNow);
+    return new (Function.prototype.bind.apply(
+      RealDate, [null].concat(Array.prototype.slice.call(arguments))
+    ))();
+  }
+  DemoDate.now = function () { return mockNow; };
+  DemoDate.parse = RealDate.parse;
+  DemoDate.UTC = RealDate.UTC;
+  DemoDate.prototype = RealDate.prototype;
+  window.Date = DemoDate;
+
+  function mockNowLabel() {
+    var d = new RealDate(mockNow);
+    var days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    var months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    var h = d.getHours();
+    var suffix = h < 12 ? 'ص' : 'م';
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() +
+      ' — ' + h12 + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes() + ' ' + suffix;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Fake spreadsheet, modelled on the Range/Sheet calls Db.gs actually makes
+   * ------------------------------------------------------------------ */
+
+  function FakeRange(sheet, row, col, numRows, numCols) {
+    this.sheet = sheet; this.row = row; this.col = col;
+    this.numRows = numRows; this.numCols = numCols;
+  }
+  FakeRange.prototype.getValues = function () {
+    var out = [];
+    for (var r = 0; r < this.numRows; r++) {
+      var line = [];
+      for (var c = 0; c < this.numCols; c++) line.push(this.sheet.get(this.row + r, this.col + c));
+      out.push(line);
+    }
+    return out;
+  };
+  FakeRange.prototype.setValues = function (values) {
+    for (var r = 0; r < values.length; r++) {
+      for (var c = 0; c < values[r].length; c++) this.sheet.set(this.row + r, this.col + c, values[r][c]);
+    }
+    return this;
+  };
+  FakeRange.prototype.getValue = function () { return this.getValues()[0][0]; };
+  FakeRange.prototype.setValue = function (v) { this.sheet.set(this.row, this.col, v); return this; };
+  FakeRange.prototype.clearContent = function () { return this.fill(''); };
+  FakeRange.prototype.clear = function () { return this.fill(''); };
+  FakeRange.prototype.fill = function (v) {
+    for (var r = 0; r < this.numRows; r++) {
+      for (var c = 0; c < this.numCols; c++) this.sheet.set(this.row + r, this.col + c, v);
+    }
+    return this;
+  };
+  FakeRange.prototype.setNumberFormat = function () { return this; };
+  FakeRange.prototype.setFontWeight = function () { return this; };
+  FakeRange.prototype.setNote = function () { return this; };
+  FakeRange.prototype.autoResizeColumns = function () { return this; };
+
+  function FakeSheet(name, rows) {
+    this.name = name;
+    this.grid = [];
+    if (rows) {
+      for (var r = 0; r < rows.length; r++) {
+        for (var c = 0; c < rows[r].length; c++) this.set(r + 1, c + 1, rows[r][c]);
+      }
+    }
+  }
+  FakeSheet.prototype.grow = function (r, c) {
+    while (this.grid.length < r) this.grid.push([]);
+    for (var i = 0; i < this.grid.length; i++) {
+      while (this.grid[i].length < c) this.grid[i].push('');
+    }
+  };
+  FakeSheet.prototype.get = function (r, c) {
+    this.grow(r, c);
+    var v = this.grid[r - 1][c - 1];
+    return v === undefined || v === null ? '' : v;
+  };
+  FakeSheet.prototype.set = function (r, c, v) {
+    this.grow(r, c);
+    this.grid[r - 1][c - 1] = v === undefined || v === null ? '' : v;
+  };
+  FakeSheet.prototype.getLastRow = function () {
+    for (var r = this.grid.length; r >= 1; r--) {
+      var row = this.grid[r - 1];
+      for (var c = 0; c < row.length; c++) {
+        if (row[c] !== '' && row[c] !== undefined && row[c] !== null) return r;
+      }
+    }
+    return 0;
+  };
+  FakeSheet.prototype.getLastColumn = function () {
+    var max = 0;
+    this.grid.forEach(function (row) { if (row.length > max) max = row.length; });
+    return max;
+  };
+  FakeSheet.prototype.getMaxRows = function () { return Math.max(this.grid.length, 50); };
+  FakeSheet.prototype.getMaxColumns = function () { return Math.max(this.getLastColumn(), 20); };
+  FakeSheet.prototype.getName = function () { return this.name; };
+  FakeSheet.prototype.setFrozenRows = function () { return this; };
+  FakeSheet.prototype.setColumnWidth = function () { return this; };
+  FakeSheet.prototype.autoResizeColumns = function () { return this; };
+  FakeSheet.prototype.getRange = function (row, col, nRows, nCols) {
+    return new FakeRange(this, row, col, nRows === undefined ? 1 : nRows, nCols === undefined ? 1 : nCols);
+  };
+  FakeSheet.prototype.copy = function () { return new FakeSheet(this.name, this.grid); };
+
+  var sheets = {};
+  var events = [];
+  var mail = [];
+  var eventSeq = 0;
+  var calendar = null;
+
+  function activeSheet(name) { return sheets[name] || null; }
+
+  var spreadsheet = {
+    getId: function () { return 'demo-sheet'; },
+    getUrl: function () { return 'about:blank#demo-sheet'; },
+    getName: function () { return 'PolyClinic — عرض تجريبي'; },
+    getSheetByName: activeSheet,
+    insertSheet: function (name) {
+      var sh = new FakeSheet(name);
+      sheets[name] = sh;
+      return sh;
+    },
+    getSheets: function () { return Object.keys(sheets).map(function (k) { return sheets[k]; }); }
+  };
+
+  /* ------------------------------------------------------------------ *
+   * Fake calendar
+   * ------------------------------------------------------------------ */
+
+  function makeEvent(title, start, end, opts) {
+    eventSeq++;
+    var ev = {
+      id: 'evt-' + eventSeq,
+      title: title,
+      start: start,
+      end: end,
+      color: (opts && opts.color) || 'teal',
+      description: (opts && opts.description) || '',
+      location: (opts && opts.location) || ''
+    };
+    return {
+      getId: function () { return ev.id; },
+      getTitle: function () { return ev.title; },
+      setTitle: function (t) { ev.title = t; },
+      setTime: function (s, e) { ev.start = s; ev.end = e; },
+      setColor: function (c) { ev.color = c; },
+      deleteEvent: function () {
+        for (var i = 0; i < events.length; i++) if (events[i].id === ev.id) { events.splice(i, 1); return; }
+      },
+      getStartTime: function () { return ev.start; },
+      getEndTime: function () { return ev.end; },
+      _demo: ev
+    };
+  }
+
+  var CalendarApp = {
+    Color: {
+      RED: 'red', ORANGE: 'orange', YELLOW: 'yellow', GREEN: 'green',
+      TEAL: 'teal', BLUE: 'blue', PURPLE: 'purple', GRAY: 'gray'
+    },
+    getCalendarById: function (id) {
+      return calendar && calendar.id === id ? calendar : null;
+    },
+    createCalendar: function (name) {
+      calendar = buildCalendar(name);
+      return calendar;
+    },
+    getEventById: function (id) {
+      for (var i = 0; i < events.length; i++) {
+        if (events[i].id !== id) continue;
+        var e = events[i];
+        return {
+          getTitle: function () { return e.title; },
+          setTitle: function (t) { e.title = t; },
+          setTime: function (s, en) { e.start = s; e.end = en; },
+          setColor: function (c) { e.color = c; },
+          deleteEvent: function () { events.splice(events.indexOf(e), 1); },
+          getStartTime: function () { return e.start; },
+          getEndTime: function () { return e.end; }
+        };
+      }
+      return null;
+    }
+  };
+
+  /** Also used when restoring a persisted world, so booking keeps working. */
+  function buildCalendar(name) {
+    return {
+      id: 'demo-calendar',
+      getName: function () { return name; },
+      getId: function () { return 'demo-calendar'; },
+      createEvent: function (title, start, end, opts) {
+        var ev = makeEvent(title, start, end, opts);
+        events.push(ev._demo);
+        return ev;
+      },
+      getEvents: function () {
+        return events.map(function (e) {
+          return {
+            getTitle: function () { return e.title; },
+            getId: function () { return e.id; },
+            getStartTime: function () { return e.start; },
+            getEndTime: function () { return e.end; }
+          };
+        });
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * The other Google services the server code touches
+   * ------------------------------------------------------------------ */
+
+  window.SpreadsheetApp = {
+    getActiveSpreadsheet: function () { return spreadsheet; },
+    create: function (name) {
+      var one = new FakeSheet('Sheet1');
+      return {
+        getId: function () { return 'demo-temp'; },
+        getUrl: function () { return 'about:blank#export'; },
+        getSheets: function () { return [one]; },
+        getSheetByName: function (n) { return n === 'Sheet1' ? one : null; },
+        insertSheet: function () { return one; }
+      };
+    }
+  };
+  window.CalendarApp = CalendarApp;
+  window.LockService = { getScriptLock: function () { return { tryLock: function () { return true; }, releaseLock: function () {} }; } };
+  window.MailApp = { sendEmail: function (msg) { mail.push(msg); } };
+  window.DriveApp = {
+    createFolder: function (name) { return { getId: function () { return 'demo-folder'; }, getName: function () { return name; } }; },
+    createFile: function () { return { getUrl: function () { return 'about:blank#drive'; } }; },
+    getFolderById: function () {
+      return {
+        createFile: function () { return { getUrl: function () { return 'about:blank#drive'; } }; },
+        getFilesByName: function () { return { hasNext: function () { return true; } }; }
+      };
+    },
+    getFileById: function () { return { makeCopy: function () { return { getUrl: function () { return 'about:blank#master'; } }; }, setTrashed: function () {} }; }
+  };
+  window.ScriptApp = {
+    getOAuthToken: function () { return 'demo'; },
+    getService: function () { return { getUrl: function () { return 'demo://export'; } }; },
+    getProjectTriggers: function () { return []; },
+    deleteTrigger: function () {},
+    newTrigger: function () { return { timeBased: function () { return { atHour: function () { return { everyDays: function () { return { create: function () {} }; } }; }, onWeekDay: function () { return { atHour: function () { return { create: function () {} }; } }; } }; } }; }
+  };
+  window.UrlFetchApp = { fetch: function () { return { getBlob: function () { return { setName: function () { return {}; } }; } }; } };
+  window.PropertiesService = {
+    getScriptProperties: function () {
+      var store = {};
+      return { getProperty: function (k) { return store[k] || null; }, setProperty: function (k, v) { store[k] = v; } };
+    }
+  };
+  window.Logger = { log: function () { /* quiet in the demo */ } };
+  window.Utilities = { getUuid: function () { return 'demo-' + Math.random().toString(36).slice(2); } };
+
+  /* ------------------------------------------------------------------ *
+   * The real server code
+   * ------------------------------------------------------------------ */
+
+  var SERVER = (function () {
+/**
+ * Config.gs — sheet names, column headers, statuses, settings access.
+ *
+ * Everything the clinic team is expected to change lives in the spreadsheet,
+ * not in this file. This file only describes the shape of that spreadsheet.
+ */
+
+const SHEET = {
+  CLINICS: 'Clinics',
+  DOCTORS: 'Doctors',
+  REASONS: 'Reasons',
+  AVAILABILITY: 'Availability',
+  BLACKOUTS: 'Blackouts',
+  BOOKINGS: 'Bookings',
+  SETTINGS: 'Settings',
+  LOG: 'Log'
+};
+
+/**
+ * Column order matters: it is the physical layout of each sheet.
+ * Columns holding dates or times are stored as *plain text* so that Sheets can
+ * never reinterpret them. See Setup.gs (setNumberFormat('@')).
+ */
+const HEADERS = {
+  [SHEET.CLINICS]: [
+    'clinic_id', 'name_ar', 'address_ar', 'map_link', 'phone', 'working_hours_ar', 'active'
+  ],
+  [SHEET.DOCTORS]: [
+    'doctor_id', 'name_ar', 'specialty_ar', 'clinic_ids', 'color', 'active',
+    // Appended last on purpose: inserting a column anywhere else would shift the
+    // data in an existing sheet. Used to build the booking reference (AE-20261018-1).
+    'code'
+  ],
+  [SHEET.REASONS]: [
+    'reason_id', 'name_ar', 'description_ar', 'duration_min', 'lead_hours',
+    'book_days_ahead', 'max_per_day', 'active', 'sort_order'
+  ],
+  [SHEET.AVAILABILITY]: [
+    'availability_id', 'doctor_id', 'clinic_id', 'reason_id', 'weekday',
+    'from_time', 'to_time', 'slot_min', 'max_per_day_override',
+    'valid_from', 'valid_to', 'active'
+  ],
+  [SHEET.BLACKOUTS]: [
+    'blackout_id', 'date', 'scope_type', 'scope_id', 'from_time', 'to_time', 'note'
+  ],
+  [SHEET.BOOKINGS]: [
+    'booking_id', 'created_at', 'clinic_id', 'doctor_id', 'reason_id',
+    'date', 'start_time', 'end_time',
+    'name', 'phone_raw', 'phone_norm', 'email', 'extra_json',
+    'status', 'status_at', 'status_by', 'rescheduled_from',
+    'staff_note', 'wa_sent_at', 'wa_template', 'event_id', 'source'
+  ],
+  [SHEET.SETTINGS]: ['key', 'value', 'note'],
+  [SHEET.LOG]: ['timestamp', 'level', 'context', 'message']
+};
+
+/** Sheets whose data is generated by patients / staff — never edit by hand mid-flight. */
+const DATA_SHEETS = [SHEET.BOOKINGS, SHEET.LOG];
+
+const STATUS = {
+  CONFIRMED: 'confirmed',
+  CANCELLED: 'cancelled',
+  RESCHEDULED: 'rescheduled',
+  ATTENDED: 'attended',
+  NO_SHOW: 'no_show'
+};
+
+/** Statuses that hold a slot. */
+const OCCUPYING_STATUSES = [STATUS.CONFIRMED, STATUS.ATTENDED];
+
+/** Statuses staff may set after the fact. */
+const STAFF_STATUS_CHOICES = [STATUS.ATTENDED, STATUS.NO_SHOW, STATUS.CANCELLED];
+
+/** Colors offered to doctors in the Doctors sheet; mapped to Calendar colors in Calendar.gs. */
+const DOCTOR_COLOR_CHOICES = [
+  'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'gray'
+];
+
+/**
+ * The same palette as hex, so the reception board can colour-code the shared
+ * schedule without duplicating the list in the browser. Keep the two in step.
+ */
+const DOCTOR_COLOR_HEX = {
+  red: '#d50000', orange: '#f4511e', yellow: '#f6bf26', green: '#0b8043',
+  teal: '#009688', blue: '#039be5', purple: '#8e24aa', gray: '#616161'
+};
+
+/**
+ * Settings keys. Values are seeded by Setup.gs and edited in the Settings sheet.
+ */
+const SETTING = {
+  CLINIC_NAME: 'clinic_name',
+  BRAND_PRIMARY: 'brand_primary',
+  BRAND_SECONDARY: 'brand_secondary',
+  LOGO_URL: 'logo_url',
+  WHATSAPP_NUMBER: 'whatsapp_number',
+  SUPPORT_PHONE: 'support_phone',
+  COUNTRY_CODE: 'country_code',
+  TIMEZONE: 'timezone',
+  CALENDAR_ID: 'shared_calendar_id',
+  CALENDAR_NAME: 'shared_calendar_name',
+  REPORT_EMAIL: 'report_email',
+  BACKUP_FOLDER_ID: 'backup_folder_id',
+  STAFF_CODE: 'staff_code',
+  CONSENT_TEXT_AR: 'consent_text_ar',
+  SUCCESS_TEXT_AR: 'success_text_ar',
+  BOOKING_WINDOW_DAYS: 'booking_window_days',
+  MIN_LEAD_HOURS: 'min_lead_hours'
+};
+
+/** Defaults used when a Settings row is missing. Bracket text = placeholder to replace. */
+const SETTING_DEFAULTS = {
+  [SETTING.CLINIC_NAME]: '[اسم المجمع الطبي]',
+  [SETTING.BRAND_PRIMARY]: '#0f6f6c',
+  [SETTING.BRAND_SECONDARY]: '#f4f7f7',
+  [SETTING.LOGO_URL]: '',
+  [SETTING.WHATSAPP_NUMBER]: '+200000000000',
+  [SETTING.SUPPORT_PHONE]: '[رقم الاستقبال]',
+  [SETTING.COUNTRY_CODE]: '+20',
+  [SETTING.TIMEZONE]: 'Africa/Cairo',
+  [SETTING.CALENDAR_ID]: '',
+  [SETTING.CALENDAR_NAME]: '[تقويم المجمع]',
+  [SETTING.REPORT_EMAIL]: '[بريد المجمع]',
+  [SETTING.BACKUP_FOLDER_ID]: '',
+  [SETTING.STAFF_CODE]: 'CHANGE-ME-0000',
+  [SETTING.CONSENT_TEXT_AR]:
+    'أوافق على استخدام اسمي ورقم هاتفي وسبب الزيارة لحجز الموعد والتواصل معي بشأنه فقط.',
+  [SETTING.SUCCESS_TEXT_AR]: 'تم حجز موعدك بنجاح. سنتواصل معك على واتساب للتأكيد.',
+  [SETTING.BOOKING_WINDOW_DAYS]: '14',
+  [SETTING.MIN_LEAD_HOURS]: '4'
+};
+
+/** Human-readable notes shown next to each Settings row. */
+const SETTING_NOTES = {
+  [SETTING.CLINIC_NAME]: 'الاسم الظاهر للمرضى في صفحة الحجز',
+  [SETTING.BRAND_PRIMARY]: 'اللون الأساسي (hex)',
+  [SETTING.BRAND_SECONDARY]: 'اللون الثانوي (hex)',
+  [SETTING.LOGO_URL]: 'رابط صورة الشعار (اختياري)',
+  [SETTING.WHATSAPP_NUMBER]: 'رقم واتساب المجمع الذي يردّ عليه المرضى',
+  [SETTING.SUPPORT_PHONE]: 'رقم الاستقبال للمكالمات',
+  [SETTING.COUNTRY_CODE]: 'كود الدولة لتصحيح أرقام المرضى (مثال +20)',
+  [SETTING.TIMEZONE]: 'المنطقة الزمنية',
+  [SETTING.CALENDAR_ID]: 'لا تعدّله يدوياً — يُنشأ تلقائياً',
+  [SETTING.CALENDAR_NAME]: 'اسم التقويم المشترك',
+  [SETTING.REPORT_EMAIL]: 'البريد الذي تصل إليه التقارير والنسخ الاحتياطية',
+  [SETTING.BACKUP_FOLDER_ID]: 'مجلد درايف للنسخ الاحتياطية — يُنشأ تلقائياً',
+  [SETTING.STAFF_CODE]: 'كود دخول شاشة الاستقبال — غيّره فوراً',
+  [SETTING.CONSENT_TEXT_AR]: 'نص الموافقة الظاهر أسفل صفحة الحجز',
+  [SETTING.SUCCESS_TEXT_AR]: 'نص رسالة النجاح بعد الحجز',
+  [SETTING.BOOKING_WINDOW_DAYS]: 'أقصى عدد أيام يمكن الحجز فيها مسبقاً',
+  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها'
+};
+
+let _settingsCache = null;
+
+function getSettings() {
+  if (_settingsCache) return _settingsCache;
+  const out = Object.assign({}, SETTING_DEFAULTS);
+  try {
+    Db.rows(SHEET.SETTINGS).forEach(function (r) {
+      if (r.key) out[String(r.key)] = String(r.value);
+    });
+  } catch (err) {
+    logWarn('getSettings', 'Settings sheet unreadable, using defaults: ' + err);
+  }
+  _settingsCache = out;
+  return out;
+}
+
+function getSetting(key) {
+  return getSettings()[key];
+}
+
+function setSetting(key, value) {
+  const rows = Db.rows(SHEET.SETTINGS);
+  const idx = rows.map(function (r) { return String(r.key); }).indexOf(String(key));
+  if (idx >= 0) {
+    Db.update(SHEET.SETTINGS, 'key', key, { value: value });
+  } else {
+    Db.append(SHEET.SETTINGS, {
+      key: key,
+      value: value,
+      note: SETTING_NOTES[key] || ''
+    });
+  }
+  _settingsCache = null;
+}
+
+function invalidateSettingsCache() {
+  _settingsCache = null;
+}
+
+/**
+ * Util.gs — dates, times, phone numbers, ids.
+ *
+ * Design rule: dates are 'yyyy-MM-dd' strings and times are 'HH:mm' strings,
+ * everywhere. Times are compared as minutes-since-midnight. Date objects only
+ * appear at the very edge (calendar events, "now").
+ */
+
+const AR_WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+const AR_MONTHS = [
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+];
+
+function pad2(n) {
+  return (n < 10 ? '0' : '') + n;
+}
+
+function todayStr() {
+  return formatDateStr(new Date());
+}
+
+function formatDateStr(d) {
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+/** 'yyyy-MM-dd' -> Date at local midnight (never UTC, to avoid off-by-one days). */
+function parseDateStr(s) {
+  const parts = String(s).split('-');
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+function addDaysStr(dateStr, days) {
+  const d = parseDateStr(dateStr);
+  d.setDate(d.getDate() + days);
+  return formatDateStr(d);
+}
+
+function daysBetweenStr(a, b) {
+  const ms = parseDateStr(b).getTime() - parseDateStr(a).getTime();
+  return Math.round(ms / 86400000);
+}
+
+/** 0 = Sunday … 6 = Saturday (Egyptian week). */
+function weekdayIndex(dateStr) {
+  return parseDateStr(dateStr).getDay();
+}
+
+function weekdayAr(dateStr) {
+  return AR_WEEKDAYS[weekdayIndex(dateStr)];
+}
+
+/** '2026-10-18' -> 'الأحد 18 أكتوبر 2026' */
+function formatDateAr(dateStr) {
+  const d = parseDateStr(dateStr);
+  return weekdayAr(dateStr) + ' ' + d.getDate() + ' ' + AR_MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+/**
+ * 'اليوم' / 'غداً' / 'بعد غد' for a date near today, otherwise the full Arabic date.
+ *
+ * The reminder is sent whenever the reception gets to it — the day before, or two days
+ * before a holiday — so the message must not claim "tomorrow" by itself.
+ */
+function relativeDayAr(dateStr) {
+  const days = daysBetweenStr(todayStr(), str(dateStr));
+  if (days === 0) return 'اليوم';
+  if (days === 1) return 'غداً';
+  if (days === 2) return 'بعد غد';
+  return formatDateAr(dateStr);
+}
+
+/** '14:30' -> 870. Tolerates '9:00', '09:00', '' and numbers. */
+function parseTimeToMin(t) {
+  if (t === null || t === undefined || t === '') return null;
+  if (typeof t === 'number') return Math.round(t * 24 * 60); // Sheets time serial, if it ever happens
+  const s = String(t).trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function minToTime(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return pad2(h) + ':' + pad2(m);
+}
+
+/** 900 -> '3:00 م' (12-hour, Arabic meridiem). */
+function minToTimeAr(min) {
+  const h24 = Math.floor(min / 60);
+  const m = min % 60;
+  const suffix = h24 < 12 ? 'ص' : 'م';
+  let h = h24 % 12;
+  if (h === 0) h = 12;
+  return h + ':' + pad2(m) + ' ' + suffix;
+}
+
+function timeToAr(t) {
+  const min = parseTimeToMin(t);
+  return min === null ? String(t || '') : minToTimeAr(min);
+}
+
+function nowMinutes() {
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
+}
+
+function overlaps(aStart, aEnd, bStart, bEnd) {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+/**
+ * Normalize to a dialable international number, digits only with a leading '+'.
+ * Keeps the raw value in the sheet too, so a bad rule is always recoverable.
+ */
+function normalizePhone(raw, countryCode) {
+  const cc = String(countryCode || '+20').replace(/[^\d+]/g, '');
+  const ccDigits = cc.replace(/\D/g, '');
+  let s = String(raw || '').trim();
+  // Arabic-Indic digits -> ASCII
+  s = s.replace(/[\u0660-\u0669]/g, function (ch) { return String.fromCharCode(ch.charCodeAt(0) - 0x0660 + 48); });
+  s = s.replace(/[\u06f0-\u06f9]/g, function (ch) { return String.fromCharCode(ch.charCodeAt(0) - 0x06f0 + 48); });
+  const hadPlus = s.indexOf('+') === 0;
+  let digits = s.replace(/\D/g, '');
+  digits = digits.replace(/^00/, '');
+  if (!digits) return '';
+  if (digits.indexOf(ccDigits) === 0 && (hadPlus || digits.length > 9)) {
+    return '+' + digits;
+  }
+  digits = digits.replace(/^0+/, '');
+  return '+' + ccDigits + digits;
+}
+
+/** Loose validity check: enough digits to be a real mobile number. */
+function isPlausiblePhone(raw, countryCode) {
+  const n = normalizePhone(raw, countryCode);
+  const digits = n.replace(/\D/g, '');
+  return digits.length >= 9 && digits.length <= 15;
+}
+
+/** 'x' -> falsey-safe trimmed string. */
+function str(v) {
+  return v === null || v === undefined ? '' : String(v).trim();
+}
+
+function isTrue(v) {
+  const s = String(v).trim().toLowerCase();
+  return s === 'true' || s === 'yes' || s === '1' || s === 'نعم' || s === 'y';
+}
+
+function isFalseOrBlank(v) {
+  const s = String(v).trim().toLowerCase();
+  return s === '' || s === 'false' || s === 'no' || s === '0' || s === 'لا';
+}
+
+function newId(prefix) {
+  const d = new Date();
+  const stamp = formatDateStr(d).replace(/-/g, '') + '-' + pad2(d.getHours()) + pad2(d.getMinutes());
+  const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return prefix + '-' + stamp + '-' + rnd;
+}
+
+function escapeHtml(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Arabic-friendly CSV: BOM so Excel renders the text correctly. */
+function csvFromRows(header, rows) {
+  const esc = function (v) {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [header.map(esc).join(',')];
+  rows.forEach(function (r) { lines.push(r.map(esc).join(',')); });
+  return '\ufeff' + lines.join('\r\n');
+}
+
+function logInfo(context, message) {
+  logLine('INFO', context, message);
+}
+
+function logWarn(context, message) {
+  logLine('WARN', context, message);
+}
+
+function logError(context, message) {
+  logLine('ERROR', context, message);
+}
+
+/** Doctor's colour as a hex value the browser can paint directly. */
+function doctorColorHex(colorName) {
+  return DOCTOR_COLOR_HEX[str(colorName).toLowerCase()] || '#0f6f6c';
+}
+
+/**
+ * A phone number a patient can actually dial, or ''. Stops placeholder text like
+ * '[هاتف الفرع]' from reaching the confirmation screen as a broken tel: link.
+ */
+function callablePhone(raw) {
+  const s = str(raw);
+  return s.replace(/\D/g, '').length >= 7 ? s : '';
+}
+
+function logLine(level, context, message) {
+  try {
+    Logger.log('[' + level + '] ' + context + ': ' + message);
+    Db.append(SHEET.LOG, {
+      timestamp: new Date().toISOString(),
+      level: level,
+      context: context,
+      message: String(message).slice(0, 900)
+    });
+  } catch (err) {
+    Logger.log('logLine failed: ' + err);
+  }
+}
+
+/**
+ * Db.gs — a very small object layer over the spreadsheet.
+ *
+ * Deliberately dumb: every read pulls the whole sheet. At polyclinic scale
+ * (hundreds to low thousands of rows) this is faster and far simpler than
+ * index bookkeeping, and it keeps the slot engine pure and testable.
+ */
+
+const Db = (function () {
+  let _ss = null;
+
+  function ss() {
+    if (!_ss) {
+      _ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (!_ss) throw new Error('No active spreadsheet. Bind the script to the clinic sheet.');
+    }
+    return _ss;
+  }
+
+  function sheet(name) {
+    const sh = ss().getSheetByName(name);
+    if (!sh) throw new Error('Missing sheet: ' + name + '. Run Setup.createAllSheets() first.');
+    return sh;
+  }
+
+  function headers(name) {
+    const sh = sheet(name);
+    const width = Math.max(sh.getLastColumn(), 1);
+    return sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h); });
+  }
+
+  /** All data rows of a sheet as plain objects keyed by header. Empty rows are skipped. */
+  function rows(name) {
+    const sh = sheet(name);
+    const lastRow = sh.getLastRow();
+    const hdr = headers(name);
+    if (lastRow < 2) return [];
+    const lastCol = Math.max(sh.getLastColumn(), hdr.length);
+    const values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    const out = [];
+    for (let i = 0; i < values.length; i++) {
+      const raw = values[i];
+      let blank = true;
+      const obj = {};
+      for (let c = 0; c < hdr.length; c++) {
+        const v = raw[c];
+        if (v !== '' && v !== null && v !== undefined) blank = false;
+        obj[hdr[c]] = v === null || v === undefined ? '' : v;
+      }
+      if (!blank) {
+        obj._row = i + 2; // 1-based physical row, handy for debugging
+        out.push(obj);
+      }
+    }
+    return out;
+  }
+
+  function findById(name, idField, idValue) {
+    const hit = rows(name).filter(function (r) {
+      return String(r[idField]) === String(idValue);
+    });
+    return hit.length ? hit[0] : null;
+  }
+
+  function append(name, obj) {
+    const sh = sheet(name);
+    const hdr = headers(name);
+    const line = hdr.map(function (h) {
+      const v = obj[h];
+      return v === undefined || v === null ? '' : v;
+    });
+    sh.getRange(sh.getLastRow() + 1, 1, 1, hdr.length).setValues([line]);
+    return line;
+  }
+
+  /** Patch one row, identified by a unique field. Returns true when a row was updated. */
+  function update(name, idField, idValue, patch) {
+    const sh = sheet(name);
+    const hdr = headers(name);
+    const all = rows(name);
+    for (let i = 0; i < all.length; i++) {
+      if (String(all[i][idField]) !== String(idValue)) continue;
+      const line = hdr.map(function (h) {
+        return Object.prototype.hasOwnProperty.call(patch, h)
+          ? (patch[h] === undefined || patch[h] === null ? '' : patch[h])
+          : (all[i][h] === undefined ? '' : all[i][h]);
+      });
+      sh.getRange(all[i]._row, 1, 1, hdr.length).setValues([line]);
+      return true;
+    }
+    return false;
+  }
+
+  /** Append many rows at once (used by seeding and backups). */
+  function appendMany(name, objects) {
+    if (!objects || !objects.length) return 0;
+    const sh = sheet(name);
+    const hdr = headers(name);
+    const block = objects.map(function (obj) {
+      return hdr.map(function (h) {
+        const v = obj[h];
+        return v === undefined || v === null ? '' : v;
+      });
+    });
+    sh.getRange(sh.getLastRow() + 1, 1, block.length, hdr.length).setValues(block);
+    return block.length;
+  }
+
+  /** Remove every row of a data sheet except the header (used only by seeding/backup tools). */
+  function truncate(name) {
+    const sh = sheet(name);
+    const lastRow = sh.getLastRow();
+    if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, Math.max(sh.getLastColumn(), 1)).clearContent();
+  }
+
+  function reset() { _ss = null; }
+
+  return {
+    rows: rows,
+    headers: headers,
+    findById: findById,
+    append: append,
+    appendMany: appendMany,
+    update: update,
+    truncate: truncate,
+    sheet: sheet,
+    reset: reset
+  };
+})();
+
+/**
+ * I18n.gs — every Arabic string in one place.
+ *
+ * The clinic will want to change wording. That must be a copy edit here (or in
+ * the Settings sheet) and never a code change. Get a native review pass before
+ * launch: especially the consent line and the WhatsApp templates.
+ */
+
+const AR = {
+  pageTitle: 'حجز موعد',
+  step: 'خطوة',
+  of: 'من',
+  chooseClinic: 'اختر الفرع',
+  chooseDoctor: 'اختر الطبيب',
+  chooseReason: 'سبب الزيارة',
+  chooseTime: 'اختر الموعد المناسب',
+  yourDetails: 'بياناتك',
+  name: 'الاسم',
+  nameHint: 'اختياري — يساعد الطاقم على تنظيم الاستقبال',
+  phone: 'رقم الجوال',
+  phoneHint: 'مطلوب — سنتواصل معك على واتساب على هذا الرقم',
+  phoneConfirm: 'تأكيد رقم الجوال',
+  phoneConfirmHint: 'أعد كتابة الرقم للتأكد',
+  extra: 'ملاحظة للطبيب (اختياري)',
+  consent: 'الموافقة',
+  submit: 'تأكيد الحجز',
+  next: 'التالي',
+  back: 'رجوع',
+  loading: 'جاري التحميل…',
+  noSlots: 'لا توجد مواعيد متاحة حالياً لهذا الاختيار. جرّب طبيباً آخر أو عد لاحقاً.',
+  slotTaken: 'للأسف تم حجز هذا الموعد للتو. اختر موعداً آخر من القائمة.',
+  summary: 'ملخص الموعد',
+  doctor: 'الطبيب',
+  clinic: 'الفرع',
+  reason: 'سبب الزيارة',
+  date: 'التاريخ',
+  time: 'الوقت',
+  duration: 'المدة',
+  minutes: 'دقيقة',
+  address: 'العنوان',
+  openMap: 'افتح الموقع على الخريطة',
+  callClinic: 'اتصل بالاستقبال',
+  whatsappClinic: 'تواصل واتساب',
+  bookingRef: 'رقم الحجز',
+  addToCalendar: 'أضف الموعد إلى تقويمك',
+  errors: {
+    MISSING_FIELDS: 'من فضلك أكمل كل الخطوات.',
+    CONSENT_REQUIRED: 'لا يمكن إتمام الحجز بدون الموافقة.',
+    PHONE_REQUIRED: 'رقم الجوال مطلوب.',
+    PHONE_INVALID: 'رقم الجوال غير صحيح. اكتبه بالصيغة 01xxxxxxxxx.',
+    PHONE_MISMATCH: 'رقم الجوال وتأكيده غير متطابقين.',
+    SLOT_TAKEN: 'للأسف تم حجز هذا الموعد للتو. اختر موعداً آخر.',
+    TOO_MANY_ACTIVE: 'لديك الحد الأقصى من المواعيد المحجوزة. تواصل مع الاستقبال.',
+    BUSY: 'النظام مشغول، حاول مرة أخرى بعد لحظات.',
+    REJECTED: 'تعذّر إتمام الحجز. تواصل مع الاستقبال.',
+    DOCTOR_NOT_IN_CLINIC: 'هذا الطبيب لا يعمل في الفرع المختار.',
+    NOT_FOUND: 'لم يتم العثور على البيانات.',
+    STAFF_CODE: 'كود الاستقبال غير صحيح.',
+    STAFF_ONLY: 'هذه العملية متاحة للاستقبال فقط.',
+    GENERIC: 'حدث خطأ غير متوقع. حاول مرة أخرى أو اتصل بالاستقبال.'
+  }
+};
+
+/** WhatsApp templates. {placeholders} are filled by renderTemplate(). */
+const WA_TEMPLATES = {
+  confirm: {
+    labelAr: 'تأكيد الحجز',
+    text:
+      'مرحباً {name} 👋\n' +
+      'تم تأكيد موعدك في {clinic}.\n\n' +
+      '👨‍⚕️ الطبيب: {doctor}\n' +
+      '🗓️ {dateAr}\n' +
+      '⏰ {timeAr}\n' +
+      '📋 {reason}\n\n' +
+      'لتعديل أو إلغاء الموعد، ردّ على هذه الرسالة.\n' +
+      'رقم الحجز: {bookingId}'
+  },
+  /**
+   * One message, one tap: the reminder the reception sends the day before now carries
+   * the clinic's address and the map link too, so a patient asking "where exactly are
+   * you?" gets the same button. {addressBlock} disappears entirely when the clinic has
+   * not filled its address in — no dangling "📍" line.
+   */
+  remind24: {
+    labelAr: 'تذكير بالموعد والموقع',
+    text:
+      'تذكير بموعدك {whenAr} في {clinic} 🌟\n\n' +
+      '🗓️ {dateAr}\n' +
+      '⏰ {timeAr}\n' +
+      '👨‍⚕️ {doctor}\n\n' +
+      '{addressBlock}' +
+      'برجاء الوصول قبل الموعد بعشر دقائق. لو مش هتقدر تجي، بلّغنا من فضلك.'
+  },
+  reschedule: {
+    labelAr: 'تغيير الموعد',
+    text:
+      'مرحباً {name}، تم تغيير موعدك في {clinic} 🔁\n\n' +
+      'الموعد الجديد:\n🗓️ {dateAr}\n⏰ {timeAr}\n👨‍⚕️ {doctor}\n\n' +
+      'رقم الحجز: {bookingId}'
+  },
+  cancel: {
+    labelAr: 'إلغاء الموعد',
+    text:
+      'مرحباً {name}، تم إلغاء موعدك في {clinic} بتاريخ {dateAr} ⏰ {timeAr}.\n\n' +
+      'لو تحب تحجز موعداً آخر، تفضل بالدخول على رابط الحجز أو كلّمنا على هذا الرقم.\n\n' +
+      'رقم الحجز: {bookingId}'
+  }
+};
+
+function renderTemplate(text, vars) {
+  return String(text).replace(/\{(\w+)\}/g, function (match, key) {
+    return vars[key] === undefined || vars[key] === null ? '' : String(vars[key]);
+  });
+}
+
+/**
+ * Arabic label for a stored `wa_template` key, so the reception and the doctor read
+ * "تذكير بالموعد والموقع" instead of a code. Unknown keys (an older row) are shown
+ * unchanged rather than blanked out.
+ */
+function waTemplateLabelAr(key) {
+  const k = str(key);
+  if (!k) return '';
+  return WA_TEMPLATES[k] ? WA_TEMPLATES[k].labelAr : k;
+}
+
+function errorMessageAr(code) {
+  return AR.errors[code] || AR.errors.GENERIC;
+}
+
+/**
+ * Catalog.gs — the public data the booking page is allowed to see.
+ *
+ * Nothing here is patient data. This is what a stranger with the link can read,
+ * so keep it to names, hours and colors.
+ */
+
+function getPublicConfig() {
+  const s = getSettings();
+  return {
+    clinicName: s[SETTING.CLINIC_NAME],
+    brandPrimary: s[SETTING.BRAND_PRIMARY],
+    brandSecondary: s[SETTING.BRAND_SECONDARY],
+    logoUrl: s[SETTING.LOGO_URL],
+    whatsappNumber: s[SETTING.WHATSAPP_NUMBER],
+    supportPhone: s[SETTING.SUPPORT_PHONE],
+    consentText: s[SETTING.CONSENT_TEXT_AR],
+    successText: s[SETTING.SUCCESS_TEXT_AR],
+    windowDays: Number(s[SETTING.BOOKING_WINDOW_DAYS]) || 14
+  };
+}
+
+function getBootstrap() {
+  const config = getPublicConfig();
+  const clinics = Db.rows(SHEET.CLINICS)
+    .filter(isActive)
+    .map(function (c) {
+      return { id: str(c.clinic_id), nameAr: str(c.name_ar), addressAr: str(c.address_ar) };
+    });
+
+  const doctors = Db.rows(SHEET.DOCTORS).filter(isActive).map(function (d) {
+    return {
+      id: str(d.doctor_id),
+      nameAr: str(d.name_ar),
+      specialtyAr: str(d.specialty_ar),
+      clinicIds: str(d.clinic_ids).split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+    };
+  });
+
+  const availability = Db.rows(SHEET.AVAILABILITY).filter(isActive);
+  const reasons = Db.rows(SHEET.REASONS).filter(isActive)
+    .sort(function (a, b) { return (Number(a.sort_order) || 99) - (Number(b.sort_order) || 99); })
+    .map(function (r) {
+      return {
+        id: str(r.reason_id),
+        nameAr: str(r.name_ar),
+        descriptionAr: str(r.description_ar),
+        durationMin: Number(r.duration_min) || 30,
+        // which doctors can serve this reason, and where
+        links: availability
+          .filter(function (a) { return str(a.reason_id) === str(r.reason_id); })
+          .map(function (a) { return { doctorId: str(a.doctor_id), clinicId: str(a.clinic_id) }; })
+          .filter(function (v, i, arr) {
+            return arr.findIndex(function (x) {
+              return x.doctorId === v.doctorId && x.clinicId === v.clinicId;
+            }) === i;
+          })
+      };
+    });
+
+  return { ok: true, config: config, clinics: clinics, doctors: doctors, reasons: reasons };
+}
+
+/**
+ * Availability.gs — the slot engine.
+ *
+ * Pure function of the spreadsheet's contents. It never writes anything, which
+ * is what makes it safe to call from the public booking page and easy to test
+ * locally (see tools/local-test.mjs).
+ *
+ * Rules, in order:
+ *   1. the doctor must handle this clinic, and have an Availability row for this reason
+ *   2. the date must be inside the doctor's booking window (book_days_ahead)
+ *   3. the slot must respect the minimum lead time
+ *   4. the slot must not fall inside a Blackout
+ *   5. the slot must not already be taken (one patient per slot)
+ *   6. the day must not exceed max_per_day (reason level, or the Availability override)
+ */
+
+const MAX_SLOT_DAYS = 90;
+
+function generateSlots(req) {
+  req = req || {};
+  const settings = getSettings();
+  const clinicId = str(req.clinicId);
+  const doctorId = str(req.doctorId);
+  const reasonId = str(req.reasonId);
+
+  const windowDays = Math.min(
+    Math.max(Number(req.days) || Number(settings[SETTING.BOOKING_WINDOW_DAYS]) || 14, 1),
+    MAX_SLOT_DAYS
+  );
+
+  const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', clinicId);
+  const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', doctorId);
+  const reason = Db.findById(SHEET.REASONS, 'reason_id', reasonId);
+
+  if (!clinic || !isActive(clinic)) return { ok: false, error: 'CLINIC_NOT_FOUND' };
+  if (!doctor || !isActive(doctor)) return { ok: false, error: 'DOCTOR_NOT_FOUND' };
+  if (!reason || !isActive(reason)) return { ok: false, error: 'REASON_NOT_FOUND' };
+
+  const clinicIds = str(doctor.clinic_ids).split(',').map(function (s) { return s.trim(); });
+  if (clinicIds.indexOf(clinicId) === -1) return { ok: false, error: 'DOCTOR_NOT_IN_CLINIC' };
+
+  const slotLen = Number(reason.duration_min) || 30;
+  const reasonMaxPerDay = Number(reason.max_per_day) || 0; // 0 = unlimited
+  const leadMinutes = Math.max(
+    Number(reason.lead_hours) >= 0 && str(reason.lead_hours) !== ''
+      ? Number(reason.lead_hours) * 60
+      : Number(settings[SETTING.MIN_LEAD_HOURS]) * 60,
+    0
+  );
+  const reasonDaysAhead = Number(reason.book_days_ahead) || windowDays;
+  const horizon = Math.min(windowDays, reasonDaysAhead);
+
+  const avail = Db.rows(SHEET.AVAILABILITY).filter(function (a) {
+    return isActive(a) &&
+      str(a.doctor_id) === doctorId &&
+      str(a.clinic_id) === clinicId &&
+      str(a.reason_id) === reasonId;
+  });
+
+  if (!avail.length) {
+    return {
+      ok: true,
+      empty: true,
+      reason: reasonPublic(reason, slotLen),
+      doctor: doctorPublic(doctor),
+      clinic: clinicPublic(clinic),
+      days: []
+    };
+  }
+
+  const blackouts = Db.rows(SHEET.BLACKOUTS);
+  const occupancy = buildOccupancy(doctorId);
+  const today = todayStr();
+  const nowMin = nowMinutes();
+  const cutoffMin = nowMin + leadMinutes;
+
+  const days = [];
+  for (let i = 0; i < horizon; i++) {
+    const date = addDaysStr(today, i);
+    if (date < today) continue;
+    const wd = weekdayIndex(date);
+
+    const dayRows = avail.filter(function (a) {
+      return Number(a.weekday) === wd && withinValidRange(a, date);
+    });
+    if (!dayRows.length) continue;
+
+    const dayCount = (occupancy.byDoctorDate[doctorId + '|' + date] || 0);
+    const reasonCount = (occupancy.byDoctorDateReason[doctorId + '|' + date + '|' + reasonId] || 0);
+    const slots = [];
+
+    dayRows.forEach(function (a) {
+      const maxPerDay = Number(a.max_per_day_override) || reasonMaxPerDay;
+      const from = parseTimeToMin(a.from_time);
+      const to = parseTimeToMin(a.to_time);
+      if (from === null || to === null || to <= from) {
+        logWarn('generateSlots', 'Bad availability window ignored: ' + JSON.stringify(a));
+        return;
+      }
+      const step = Number(a.slot_min) || slotLen;
+
+      for (let start = from; start + step <= to; start += step) {
+        const end = start + step;
+        if (date === today && start < cutoffMin) continue;
+        if (isBlackedOut(blackouts, date, start, end, clinicId, doctorId)) continue;
+        const taken = occupancy.byDoctorDateStart[doctorId + '|' + date + '|' + minToTime(start)];
+        if (taken) continue;
+        if (maxPerDay > 0 && (dayCount + slots.length) >= maxPerDay) continue;
+        if (reasonMaxPerDay > 0 && (reasonCount + slots.length) >= reasonMaxPerDay) continue;
+        slots.push({
+          start: minToTime(start),
+          end: minToTime(end),
+          labelAr: minToTimeAr(start)
+        });
+      }
+    });
+
+    if (slots.length) {
+      days.push({
+        date: date,
+        weekdayAr: weekdayAr(date),
+        labelAr: formatDateAr(date),
+        isToday: date === today,
+        slots: slots
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    empty: days.length === 0,
+    reason: reasonPublic(reason, slotLen),
+    doctor: doctorPublic(doctor),
+    clinic: clinicPublic(clinic),
+    days: days
+  };
+}
+
+/** Collect the occupancy data the engine needs, in one pass. */
+function buildOccupancy(doctorId) {
+  const out = { byDoctorDate: {}, byDoctorDateReason: {}, byDoctorDateStart: {} };
+  Db.rows(SHEET.BOOKINGS).forEach(function (b) {
+    if (str(b.doctor_id) !== doctorId) return;
+    if (OCCUPYING_STATUSES.indexOf(str(b.status)) === -1) return;
+    const date = str(b.date);
+    const start = str(b.start_time);
+    if (!date || !start) return;
+    const dKey = doctorId + '|' + date;
+    out.byDoctorDate[dKey] = (out.byDoctorDate[dKey] || 0) + 1;
+    const rKey = dKey + '|' + str(b.reason_id);
+    out.byDoctorDateReason[rKey] = (out.byDoctorDateReason[rKey] || 0) + 1;
+    out.byDoctorDateStart[dKey + '|' + start] = true;
+  });
+  return out;
+}
+
+/** Blackout.scope_type is 'all', 'clinic' or 'doctor'. date may be 'YYYY-MM-DD' or 'start..end'. */
+function isBlackedOut(blackouts, dateStr, startMin, endMin, clinicId, doctorId) {
+  for (let i = 0; i < blackouts.length; i++) {
+    const b = blackouts[i];
+    const scope = str(b.scope_type) || 'all';
+    if (scope === 'clinic' && str(b.scope_id) !== clinicId) continue;
+    if (scope === 'doctor' && str(b.scope_id) !== doctorId) continue;
+    if (!dateMatches(b.date, dateStr)) continue;
+    const bf = parseTimeToMin(b.from_time);
+    const bt = parseTimeToMin(b.to_time);
+    if (bf === null || bt === null) return true; // whole day
+    if (overlaps(startMin, endMin, bf, bt)) return true;
+  }
+  return false;
+}
+
+function dateMatches(spec, dateStr) {
+  const s = str(spec);
+  if (!s) return false;
+  const idx = s.indexOf('..');
+  if (idx === -1) return s === dateStr;
+  const from = s.slice(0, idx).trim();
+  const to = s.slice(idx + 2).trim();
+  return dateStr >= from && dateStr <= to;
+}
+
+function withinValidRange(availabilityRow, dateStr) {
+  const from = str(availabilityRow.valid_from);
+  const to = str(availabilityRow.valid_to);
+  if (from && dateStr < from) return false;
+  if (to && dateStr > to) return false;
+  return true;
+}
+
+function isActive(row) {
+  return isTrue(row.active) || (str(row.active) === '' && row.active !== false);
+}
+
+function doctorPublic(doctor) {
+  return { id: str(doctor.doctor_id), nameAr: str(doctor.name_ar), specialtyAr: str(doctor.specialty_ar) };
+}
+
+function clinicPublic(clinic) {
+  return {
+    id: str(clinic.clinic_id),
+    nameAr: str(clinic.name_ar),
+    addressAr: str(clinic.address_ar),
+    mapLink: str(clinic.map_link),
+    phone: str(clinic.phone),
+    workingHoursAr: str(clinic.working_hours_ar)
+  };
+}
+
+function reasonPublic(reason, slotLen) {
+  return {
+    id: str(reason.reason_id),
+    nameAr: str(reason.name_ar),
+    descriptionAr: str(reason.description_ar),
+    durationMin: slotLen
+  };
+}
+
+/** Authoritative yes/no for one exact slot. Used by Booking.gs under lock. */
+function findSlot(req, date, start) {
+  const res = generateSlots(req);
+  if (!res.ok) return null;
+  for (let i = 0; i < res.days.length; i++) {
+    const day = res.days[i];
+    if (day.date !== date) continue;
+    for (let j = 0; j < day.slots.length; j++) {
+      if (day.slots[j].start === start) return { day: day, slot: day.slots[j], context: res };
+    }
+  }
+  return null;
+}
+
+/**
+ * Calendar.gs — the shared clinic calendar is a *mirror* of the Bookings sheet.
+ *
+ * The sheet is authoritative. The calendar exists so the reception sees a
+ * normal agenda and so the doctor's day is visible at a glance.
+ *
+ * Unavailability therefore has two supported routes:
+ *   - add a row to the Blackouts sheet (precise, per doctor/clinic/day)
+ *   - create a calendar event whose title starts with BLOCK, and the nightly
+ *     syncBlockEvents() turns it into a Blackout row automatically
+ */
+
+const BLOCK_PREFIX = 'BLOCK';
+
+function ensureSharedCalendar() {
+  const settings = getSettings();
+  const existingId = str(settings[SETTING.CALENDAR_ID]);
+  if (existingId) {
+    try {
+      const cal = CalendarApp.getCalendarById(existingId);
+      if (cal) return cal;
+    } catch (err) {
+      logWarn('ensureSharedCalendar', 'Stored calendar id unusable: ' + err);
+    }
+  }
+  const name = str(settings[SETTING.CALENDAR_NAME]) || 'Clinic appointments';
+  const cal = CalendarApp.createCalendar(name, {
+    summary: 'مواعيد ' + str(settings[SETTING.CLINIC_NAME]),
+    timeZone: str(settings[SETTING.TIMEZONE]) || 'Africa/Cairo'
+  });
+  setSetting(SETTING.CALENDAR_ID, cal.getId());
+  logInfo('ensureSharedCalendar', 'Created calendar ' + cal.getId());
+  return cal;
+}
+
+function calendarEventTimes(booking) {
+  const startMin = parseTimeToMin(booking.start_time);
+  const endMin = parseTimeToMin(booking.end_time);
+  const base = parseDateStr(str(booking.date));
+  const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), Math.floor(startMin / 60), startMin % 60);
+  const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), Math.floor(endMin / 60), endMin % 60);
+  return { start: start, end: end };
+}
+
+function eventTitle(booking, doctor, reason, clinic) {
+  const who = str(booking.name) || str(booking.phone_norm) || 'مريض';
+  return '[' + str(doctor.name_ar) + '] ' + str(reason.name_ar) + ' — ' + who;
+}
+
+function eventDescription(booking, doctor, reason, clinic) {
+  return [
+    'رقم الحجز: ' + str(booking.booking_id),
+    'الطبيب: ' + str(doctor.name_ar),
+    'سبب الزيارة: ' + str(reason.name_ar),
+    'الفرع: ' + str(clinic.name_ar),
+    'الجوال: ' + str(booking.phone_norm),
+    'الاسم: ' + (str(booking.name) || '—'),
+    str(booking.extra_json) ? 'ملاحظات: ' + str(booking.extra_json) : ''
+  ].filter(String).join('\n');
+}
+
+function colorForDoctor(colorName) {
+  const map = {
+    red: CalendarApp.Color.RED,
+    orange: CalendarApp.Color.ORANGE,
+    yellow: CalendarApp.Color.YELLOW,
+    green: CalendarApp.Color.GREEN,
+    teal: CalendarApp.Color.TEAL,
+    blue: CalendarApp.Color.BLUE,
+    purple: CalendarApp.Color.PURPLE,
+    gray: CalendarApp.Color.GRAY
+  };
+  return map[str(colorName).toLowerCase()] || null;
+}
+
+/** Returns the event id, or '' when the calendar step failed (the booking still stands). */
+function createEventForBooking(booking) {
+  try {
+    const cal = ensureSharedCalendar();
+    const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', str(booking.doctor_id)) || {};
+    const reason = Db.findById(SHEET.REASONS, 'reason_id', str(booking.reason_id)) || {};
+    const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(booking.clinic_id)) || {};
+    const t = calendarEventTimes(booking);
+    const event = cal.createEvent(eventTitle(booking, doctor, reason, clinic), t.start, t.end, {
+      description: eventDescription(booking, doctor, reason, clinic),
+      location: str(clinic.address_ar)
+    });
+    const color = colorForDoctor(doctor.color);
+    if (color) {
+      try { event.setColor(color); } catch (e) { /* color is cosmetic */ }
+    }
+    return event.getId();
+  } catch (err) {
+    logError('createEventForBooking', 'Calendar event failed for ' + str(booking.booking_id) + ': ' + err);
+    return '';
+  }
+}
+
+function deleteEventForBooking(booking) {
+  const eventId = str(booking.event_id);
+  if (!eventId) return false;
+  try {
+    const event = CalendarApp.getEventById(eventId);
+    if (!event) return false;
+    event.deleteEvent();
+    return true;
+  } catch (err) {
+    logError('deleteEventForBooking', 'Could not delete event ' + eventId + ': ' + err);
+    return false;
+  }
+}
+
+function moveEventForBooking(booking) {
+  const eventId = str(booking.event_id);
+  if (!eventId) return false;
+  try {
+    const event = CalendarApp.getEventById(eventId);
+    if (!event) return false;
+    const t = calendarEventTimes(booking);
+    event.setTime(t.start, t.end);
+    return true;
+  } catch (err) {
+    logError('moveEventForBooking', 'Could not move event ' + eventId + ': ' + err);
+    return false;
+  }
+}
+
+function annotateEvent(booking, suffix) {
+  const eventId = str(booking.event_id);
+  if (!eventId) return false;
+  try {
+    const event = CalendarApp.getEventById(eventId);
+    if (!event) return false;
+    const title = event.getTitle();
+    if (title.indexOf(suffix) === -1) event.setTitle(title + ' ' + suffix);
+    return true;
+  } catch (err) {
+    logWarn('annotateEvent', 'Could not annotate event ' + eventId + ': ' + err);
+    return false;
+  }
+}
+
+/**
+ * Nightly job: calendar events titled "BLOCK …" become Blackout rows, so
+ * reception can block a doctor's day without touching the spreadsheet.
+ * Idempotent — one blackout row per event, keyed by the event id.
+ */
+function syncBlockEvents(daysAhead) {
+  const horizon = daysAhead || 60;
+  const cal = ensureSharedCalendar();
+  const from = new Date();
+  const to = new Date(from.getTime() + horizon * 86400000);
+  const existing = Db.rows(SHEET.BLACKOUTS).map(function (b) { return str(b.blackout_id); });
+  const known = {};
+  existing.forEach(function (id) { known[id] = true; });
+  Db.rows(SHEET.AVAILABILITY); // no-op read keeps row order warm; harmless
+
+  let created = 0;
+  const events = cal.getEvents(from, to);
+  events.forEach(function (event) {
+    const title = str(event.getTitle());
+    if (title.toUpperCase().indexOf(BLOCK_PREFIX) !== 0) return;
+    const id = 'BLK-EVT-' + event.getId();
+    if (known[id]) return;
+
+    const scopeMatch = title.match(/\[([^\]]+)\]/); // BLOCK [doctor:D1] …
+    const allDoctors = Db.rows(SHEET.DOCTORS);
+    let scopeType = 'all';
+    let scopeId = '';
+    if (scopeMatch) {
+      const parts = str(scopeMatch[1]).split(':');
+      const key = str(parts[0]).toLowerCase();
+      const val = str(parts[1]);
+      const doc = allDoctors.filter(function (d) {
+        return str(d.doctor_id) === val || str(d.name_ar) === val;
+      })[0];
+      const clinic = Db.rows(SHEET.CLINICS).filter(function (c) {
+        return str(c.clinic_id) === val || str(c.name_ar) === val;
+      })[0];
+      if (key === 'doctor' && doc) { scopeType = 'doctor'; scopeId = str(doc.doctor_id); }
+      if (key === 'clinic' && clinic) { scopeType = 'clinic'; scopeId = str(clinic.clinic_id); }
+    }
+
+    const start = event.getStartTime();
+    const end = event.getEndTime();
+    const dateStr = formatDateStr(start);
+    const sameDay = formatDateStr(end) === dateStr;
+    Db.append(SHEET.BLACKOUTS, {
+      blackout_id: id,
+      date: dateStr,
+      scope_type: scopeType,
+      scope_id: scopeId,
+      from_time: sameDay ? minToTime(start.getHours() * 60 + start.getMinutes()) : '',
+      to_time: sameDay ? minToTime(end.getHours() * 60 + end.getMinutes()) : '',
+      note: title + ' (من التقويم)'
+    });
+    created++;
+  });
+  if (created) logInfo('syncBlockEvents', 'Created ' + created + ' blackout rows from calendar');
+  return created;
+}
+
+/**
+ * WhatsApp.gs — manual WhatsApp, by design.
+ *
+ * No API, no cost. Staff tap a link; WhatsApp opens with the Arabic message
+ * pre-filled to that patient's number. Every tap is stamped on the booking row
+ * (wa_sent_at / wa_template) so "did anyone remind this patient?" is answerable.
+ */
+
+/** wa.me needs digits only, country code included, no plus sign. */
+function waNumberFrom(phoneNorm) {
+  return String(phoneNorm || '').replace(/\D/g, '');
+}
+
+function waLink(phoneNorm, text) {
+  const num = waNumberFrom(phoneNorm);
+  if (!num) return '';
+  return 'https://wa.me/' + num + '?text=' + encodeURIComponent(text);
+}
+
+/** Variables available to every template for one booking. */
+function templateVars(booking) {
+  const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', str(booking.doctor_id)) || {};
+  const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(booking.clinic_id)) || {};
+  const reason = Db.findById(SHEET.REASONS, 'reason_id', str(booking.reason_id)) || {};
+  const startMin = parseTimeToMin(booking.start_time);
+  const dateStr = str(booking.date);
+
+  // The location part of a message, ready to drop in: gone completely when the clinic
+  // has not filled its address and map link yet, so no template ever shows a bare "📍".
+  const addressBlock =
+    (str(clinic.address_ar) ? '📍 ' + str(clinic.address_ar) + '\n' : '') +
+    (str(clinic.map_link) ? 'الموقع على الخريطة:\n' + str(clinic.map_link) + '\n\n' : '');
+
+  return {
+    name: str(booking.name) || 'عميلنا',
+    bookingId: str(booking.booking_id),
+    doctor: str(doctor.name_ar),
+    clinic: str(clinic.name_ar),
+    address: str(clinic.address_ar),
+    mapLink: str(clinic.map_link),
+    addressBlock: addressBlock,
+    reason: str(reason.name_ar),
+    dateAr: formatDateAr(dateStr),
+    whenAr: relativeDayAr(dateStr),
+    timeAr: startMin === null ? '' : minToTimeAr(startMin),
+    phone: str(booking.phone_norm)
+  };
+}
+
+/** Every ready-to-tap link for one booking, in the order staff needs them. */
+function waLinksFor(booking) {
+  const vars = templateVars(booking);
+  const phone = str(booking.phone_norm);
+  const order = ['confirm', 'remind24', 'reschedule', 'cancel'];
+  return order.map(function (key) {
+    const tpl = WA_TEMPLATES[key];
+    return {
+      key: key,
+      labelAr: tpl.labelAr,
+      text: renderTemplate(tpl.text, vars),
+      url: waLink(phone, renderTemplate(tpl.text, vars))
+    };
+  });
+}
+
+/** Text a patient can paste into any calendar app, plus a Google Calendar link. */
+function calendarLinksFor(booking) {
+  const startMin = parseTimeToMin(booking.start_time);
+  const endMin = parseTimeToMin(booking.end_time);
+  if (startMin === null || endMin === null) return { googleUrl: '', text: '' };
+  const base = parseDateStr(str(booking.date));
+  const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), Math.floor(startMin / 60), startMin % 60);
+  const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), Math.floor(endMin / 60), endMin % 60);
+  const stamp = function (d) {
+    return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) +
+      'T' + pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + '00Z';
+  };
+  const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', str(booking.doctor_id)) || {};
+  const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(booking.clinic_id)) || {};
+  const reason = Db.findById(SHEET.REASONS, 'reason_id', str(booking.reason_id)) || {};
+  const title = 'موعد ' + str(reason.name_ar) + ' — ' + str(doctor.name_ar);
+  const params = [
+    'action=TEMPLATE',
+    'text=' + encodeURIComponent(title),
+    'dates=' + stamp(start) + '/' + stamp(end),
+    'details=' + encodeURIComponent('رقم الحجز: ' + str(booking.booking_id)),
+    'location=' + encodeURIComponent(str(clinic.address_ar))
+  ].join('&');
+  return {
+    googleUrl: 'https://calendar.google.com/calendar/render?' + params,
+    text: title + '\n' + formatDateAr(str(booking.date)) + ' ' + minToTimeAr(startMin)
+  };
+}
+
+function markWhatsAppSent(bookingId, templateKey) {
+  const booking = Db.findById(SHEET.BOOKINGS, 'booking_id', bookingId);
+  if (!booking) return { ok: false, error: 'NOT_FOUND' };
+  Db.update(SHEET.BOOKINGS, 'booking_id', bookingId, {
+    wa_sent_at: new Date().toISOString(),
+    wa_template: str(templateKey)
+  });
+  return { ok: true };
+}
+
+/**
+ * Booking.gs — the only place a patient writes to the system.
+ *
+ * Every rule is re-checked here under a script lock, because the client is
+ * public and untrusted. The browser's idea of "available" means nothing.
+ */
+
+const MAX_FUTURE_BOOKINGS_PER_PHONE = 3;
+const MAX_NAME_LENGTH = 80;
+const MAX_EXTRA_LENGTH = 600;
+
+/**
+ * Booking references the patient can read back over the phone:
+ *
+ *   ae-20261018-1   →  the doctor's first booking on 18 Oct 2026
+ *   ae-20261018-2   →  the second
+ *
+ * The doctor part is the `code` column in the Doctors sheet when the clinic fills it.
+ * Otherwise it is improvised from the name: the first letters of the first and last
+ * name (Ashraf Elzamany → ae). The Arabic table below is only a fallback, because
+ * 'ا' can be a, e or i — a clinic that cares about the letters should set the code.
+ */
+const AR_TO_LATIN = {
+  'ا': 'a', 'أ': 'a', 'إ': 'e', 'آ': 'a', 'ٱ': 'a', 'ب': 'b', 'ت': 't', 'ث': 't',
+  'ج': 'j', 'ح': 'h', 'خ': 'k', 'د': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z', 'س': 's',
+  'ش': 's', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z', 'ع': 'a', 'غ': 'g', 'ف': 'f',
+  'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h', 'و': 'w', 'ي': 'y',
+  'ى': 'a', 'ة': 'a', 'ء': 'a', 'ئ': 'y', 'ؤ': 'w'
+};
+
+/** First Latin letters of a name word, e.g. 'أحمد' → 'ah', 'Ashraf' → 'as'. */
+function latinLetters(word) {
+  let out = '';
+  const s = str(word);
+  for (let i = 0; i < s.length && out.length < 2; i++) {
+    const ch = s[i];
+    if (/[A-Za-z]/.test(ch)) out += ch.toLowerCase();
+    else if (AR_TO_LATIN[ch]) out += AR_TO_LATIN[ch];
+  }
+  return out;
+}
+
+/** Short, lowercase code used in booking references. Never returns empty. */
+function doctorCode(doctor) {
+  const explicit = str(doctor && doctor.code).replace(/[^A-Za-z0-9]/g, '');
+  if (explicit) return explicit.toLowerCase().slice(0, 4);
+
+  const words = str(doctor && doctor.name_ar)
+    .split(/\s+/)
+    .map(function (w) { return w.replace(/[^\u0621-\u064AA-Za-z]/g, ''); })
+    .filter(function (w) { return w && !/^(د|dr|doctor)$/i.test(w); });
+
+  let code = '';
+  if (words.length > 1) {
+    code = latinLetters(words[0]).slice(0, 1) + latinLetters(words[words.length - 1]).slice(0, 1);
+  }
+  if (code.length < 2 && words.length) code = latinLetters(words[0]);
+  if (code.length < 2) code = str(doctor && doctor.doctor_id).toLowerCase().replace(/[^a-z0-9]/g, '');
+  return code.slice(0, 4) || 'dr';
+}
+
+/**
+ * <doctor code>-<yyyymmdd>-<n>, where n is this doctor's n-th booking that day.
+ *
+ * Call inside the script lock. Rows are never deleted, so the counter only moves
+ * forward: a cancelled booking keeps its number and the next one takes the next
+ * number — two live bookings can never share a reference.
+ */
+function bookingRefFor(doctor, date) {
+  const doctorId = str(doctor && doctor.doctor_id);
+  const day = str(date);
+  const seq = Db.rows(SHEET.BOOKINGS).filter(function (b) {
+    return str(b.doctor_id) === doctorId && str(b.date) === day;
+  }).length + 1;
+  return doctorCode(doctor) + '-' + day.replace(/-/g, '') + '-' + seq;
+}
+
+function submitBooking(input) {
+  input = input || {};
+  const settings = getSettings();
+  const cc = settings[SETTING.COUNTRY_CODE];
+
+  // Honeypot: a field real patients never fill. Bots happily do.
+  if (str(input.trap)) {
+    logWarn('submitBooking', 'Honeypot triggered from source=' + str(input.source));
+    return { ok: false, error: 'REJECTED' };
+  }
+
+  const clinicId = str(input.clinicId);
+  const doctorId = str(input.doctorId);
+  const reasonId = str(input.reasonId);
+  const date = str(input.date);
+  const start = str(input.start);
+  if (!clinicId || !doctorId || !reasonId || !date || !start) {
+    return { ok: false, error: 'MISSING_FIELDS' };
+  }
+  if (str(input.consent) !== 'true' && str(input.consent) !== '1' && str(input.consent) !== 'on') {
+    return { ok: false, error: 'CONSENT_REQUIRED' };
+  }
+
+  const name = str(input.name).slice(0, MAX_NAME_LENGTH); // optional by design
+  const phoneRaw = str(input.phone).slice(0, 30);
+  const phoneConfirm = str(input.phoneConfirm);
+  if (!phoneRaw) return { ok: false, error: 'PHONE_REQUIRED' };
+  if (phoneConfirm && normalizePhone(phoneRaw, cc) !== normalizePhone(phoneConfirm, cc)) {
+    return { ok: false, error: 'PHONE_MISMATCH' };
+  }
+  if (!isPlausiblePhone(phoneRaw, cc)) return { ok: false, error: 'PHONE_INVALID' };
+  const phoneNorm = normalizePhone(phoneRaw, cc);
+
+  const extra = str(input.extra).slice(0, MAX_EXTRA_LENGTH);
+  const source = str(input.source).slice(0, 60);
+
+  const req = { clinicId: clinicId, doctorId: doctorId, reasonId: reasonId };
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) {
+    logError('submitBooking', 'Could not get lock');
+    return { ok: false, error: 'BUSY' };
+  }
+
+  try {
+    // Idempotency: a double-tap on an impatient phone must not create two bookings.
+    const existing = Db.rows(SHEET.BOOKINGS).filter(function (b) {
+      return str(b.status) === STATUS.CONFIRMED &&
+        str(b.phone_norm) === phoneNorm &&
+        str(b.doctor_id) === doctorId &&
+        str(b.date) === date &&
+        str(b.start_time) === start;
+    });
+    if (existing.length) {
+      return bookingConfirmation(existing[0], true);
+    }
+
+    // Guardrails against a bored teenager with the link.
+    const today = todayStr();
+    const activeCount = Db.rows(SHEET.BOOKINGS).filter(function (b) {
+      return str(b.phone_norm) === phoneNorm &&
+        str(b.status) === STATUS.CONFIRMED &&
+        str(b.date) >= today;
+    }).length;
+    if (activeCount >= MAX_FUTURE_BOOKINGS_PER_PHONE) {
+      return { ok: false, error: 'TOO_MANY_ACTIVE' };
+    }
+
+    const found = findSlot(req, date, start);
+    if (!found) return { ok: false, error: 'SLOT_TAKEN' };
+
+    const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', doctorId) || {};
+
+    const booking = {
+      booking_id: bookingRefFor(doctor, date),
+      created_at: new Date().toISOString(),
+      clinic_id: clinicId,
+      doctor_id: doctorId,
+      reason_id: reasonId,
+      date: date,
+      start_time: found.slot.start,
+      end_time: found.slot.end,
+      name: name,
+      phone_raw: phoneRaw,
+      phone_norm: phoneNorm,
+      email: str(input.email).slice(0, 120),
+      extra_json: extra,
+      status: STATUS.CONFIRMED,
+      status_at: new Date().toISOString(),
+      status_by: 'patient',
+      rescheduled_from: '',
+      staff_note: '',
+      wa_sent_at: '',
+      wa_template: '',
+      event_id: '',
+      source: source
+    };
+
+    Db.append(SHEET.BOOKINGS, booking);
+
+    const eventId = createEventForBooking(booking);
+    if (eventId) {
+      Db.update(SHEET.BOOKINGS, 'booking_id', booking.booking_id, { event_id: eventId });
+      booking.event_id = eventId;
+    }
+
+    logInfo('submitBooking', 'Booked ' + booking.booking_id + ' ' + doctorId + ' ' + date + ' ' + start);
+    return bookingConfirmation(booking, false);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Everything the patient (and the staff page) needs to display a finished booking. */
+function bookingConfirmation(booking, wasDuplicate) {
+  const settings = getSettings();
+  const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(booking.clinic_id)) || {};
+  const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', str(booking.doctor_id)) || {};
+  const reason = Db.findById(SHEET.REASONS, 'reason_id', str(booking.reason_id)) || {};
+  const startMin = parseTimeToMin(booking.start_time);
+  const links = calendarLinksFor(booking);
+  return {
+    ok: true,
+    duplicate: !!wasDuplicate,
+    calendarUrl: links.googleUrl,
+    bookingId: str(booking.booking_id),
+    name: str(booking.name),
+    date: str(booking.date),
+    dateAr: formatDateAr(str(booking.date)),
+    weekdayAr: weekdayAr(str(booking.date)),
+    startTime: str(booking.start_time),
+    startTimeAr: startMin === null ? '' : minToTimeAr(startMin),
+    endTimeAr: parseTimeToMin(booking.end_time) === null ? '' : minToTimeAr(parseTimeToMin(booking.end_time)),
+    doctorAr: str(doctor.name_ar),
+    clinicAr: str(clinic.name_ar),
+    clinicAddressAr: str(clinic.address_ar),
+    clinicPhone: str(clinic.phone),
+    // What a patient should actually dial: the branch line when the clinic has filled
+    // it in, otherwise the general support number. '' means neither is usable yet.
+    contactPhone: callablePhone(clinic.phone) || callablePhone(settings[SETTING.SUPPORT_PHONE]),
+    mapLink: str(clinic.map_link),
+    reasonAr: str(reason.name_ar),
+    whatsappNumber: settings[SETTING.WHATSAPP_NUMBER],
+    supportPhone: settings[SETTING.SUPPORT_PHONE],
+    successText: settings[SETTING.SUCCESS_TEXT_AR]
+  };
+}
+
+function getBookingById(bookingId) {
+  return Db.findById(SHEET.BOOKINGS, 'booking_id', bookingId);
+}
+
+/**
+ * Reports.gs — the doctor's data questions, answered from the Bookings sheet.
+ *
+ * Three outputs:
+ *   - buildReportsSheets(): in-spreadsheet report tabs the clinic can pivot themselves
+ *   - exportCsv(): a UTF-8 CSV that Excel opens correctly in Arabic
+ *   - exportXlsx(): a real .xlsx produced through Drive's export endpoint
+ *
+ * Every output takes the same filter object and can be narrowed to one doctor, any
+ * handful of them (for comparison) or all of them — see doctorIdList().
+ */
+
+const REPORT_HEADER_AR = [
+  'رقم الحجز', 'تاريخ الحجز', 'الفرع', 'الطبيب', 'سبب الزيارة',
+  'تاريخ الموعد', 'اليوم', 'الوقت', 'الاسم', 'الجوال',
+  'الحالة', 'آخر تحديث', 'تم التواصل واتساب', 'قالب الرسالة',
+  'ملاحظة الطاقم', 'مصدر الحجز'
+];
+
+/**
+ * The doctor filter, in every shape the callers use:
+ *   ''            → all doctors
+ *   'D1'          → one doctor
+ *   'D1,D2,D3'    → several (what the export URL and the staff panel send)
+ *   ['D1','D2']   → the same, from a JSON payload or a test
+ * An empty array means "all doctors", never "none" — that is the safer default.
+ */
+function doctorIdList(value) {
+  if (Object.prototype.toString.call(value) === '[object Array]') {
+    return value.map(function (v) { return str(v); }).filter(function (v) { return !!v; });
+  }
+  return str(value).split(',').map(function (v) { return str(v); }).filter(function (v) { return !!v; });
+}
+
+/** Read the doctor selection whichever name the caller used. */
+function doctorFilterValue(filters) {
+  if (!filters) return '';
+  return filters.doctorIds !== undefined ? filters.doctorIds : filters.doctorId;
+}
+
+function filterBookings(filters) {
+  filters = filters || {};
+  const from = str(filters.from);
+  const to = str(filters.to);
+  const doctorIds = doctorIdList(doctorFilterValue(filters));
+  const clinicId = str(filters.clinicId);
+  const reasonId = str(filters.reasonId);
+  const status = str(filters.status);
+
+  return Db.rows(SHEET.BOOKINGS).filter(function (b) {
+    const d = str(b.date);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    if (doctorIds.length && doctorIds.indexOf(str(b.doctor_id)) === -1) return false;
+    if (clinicId && str(b.clinic_id) !== clinicId) return false;
+    if (reasonId && str(b.reason_id) !== reasonId) return false;
+    if (status && str(b.status) !== status) return false;
+    return true;
+  }).sort(function (a, b) {
+    return (str(a.date) + str(a.start_time)).localeCompare(str(b.date) + str(b.start_time));
+  });
+}
+
+function reportRows(filters) {
+  filters = filters || {};
+  const doctorIds = doctorIdList(doctorFilterValue(filters));
+  const doctors = indexBy(Db.rows(SHEET.DOCTORS), 'doctor_id');
+  const clinics = indexBy(Db.rows(SHEET.CLINICS), 'clinic_id');
+  const reasons = indexBy(Db.rows(SHEET.REASONS), 'reason_id');
+
+  const bookings = filterBookings(filters);
+  // A file with several doctors in it is a comparison, so group it by doctor instead of
+  // interleaving everyone by date. Within one doctor the date order is unchanged.
+  if (doctorIds.length > 1) {
+    bookings.sort(function (a, b) {
+      return (str(a.doctor_id) + str(a.date) + str(a.start_time))
+        .localeCompare(str(b.doctor_id) + str(b.date) + str(b.start_time));
+    });
+  }
+
+  return bookings.map(function (b) {
+    const date = str(b.date);
+    const startMin = parseTimeToMin(b.start_time);
+    return [
+      str(b.booking_id),
+      str(b.created_at),
+      nameOf(clinics, str(b.clinic_id), 'name_ar'),
+      nameOf(doctors, str(b.doctor_id), 'name_ar'),
+      nameOf(reasons, str(b.reason_id), 'name_ar'),
+      date,
+      weekdayAr(date),
+      startMin === null ? str(b.start_time) : minToTimeAr(startMin),
+      str(b.name),
+      str(b.phone_norm),
+      statusLabelAr(str(b.status)),
+      str(b.status_at),
+      str(b.wa_sent_at),
+      waTemplateLabelAr(b.wa_template),
+      str(b.staff_note),
+      str(b.source)
+    ];
+  });
+}
+
+function indexBy(rows, field) {
+  const out = {};
+  rows.forEach(function (r) { out[str(r[field])] = r; });
+  return out;
+}
+
+function nameOf(index, id, field) {
+  return index[id] ? str(index[id][field]) : id;
+}
+
+/** The doctors a filter selects, as Arabic names — for a KPI header or a screen label. */
+function scopeLabelAr(filters) {
+  const ids = doctorIdList(doctorFilterValue(filters));
+  if (!ids.length) return 'كل الأطباء';
+  const doctors = indexBy(Db.rows(SHEET.DOCTORS), 'doctor_id');
+  return ids.map(function (id) { return nameOf(doctors, id, 'name_ar'); }).join(' + ');
+}
+
+/** Filesystem-friendly text: no spaces, no characters Windows or Drive dislike. */
+function fileSafeAr(text) {
+  return str(text).replace(/\s+/g, '-').replace(/[\\\/:*?"<>|]/g, '').replace(/-+/g, '-').slice(0, 60);
+}
+
+/** Part of the file name that says who is in the file: one name, a count, or all. */
+function exportScopeSlug(filters) {
+  const ids = doctorIdList(doctorFilterValue(filters));
+  if (!ids.length) return 'كل-الأطباء';
+  if (ids.length === 1) {
+    const doctors = indexBy(Db.rows(SHEET.DOCTORS), 'doctor_id');
+    return fileSafeAr(nameOf(doctors, ids[0], 'name_ar'));
+  }
+  return 'مقارنة-' + ids.length + '-أطباء';
+}
+
+/**
+ * 'تقرير-الحجوزات-د.-أحمد-سمير-2026-10-17-1430' (no extension).
+ * One place builds the name so every export path — Drive, CSV in the browser, the
+ * offline demo — produces a file the clinic can tell apart from the next one.
+ */
+function exportBaseName(filters, label) {
+  const now = new Date();
+  const stamp = formatDateStr(now) + '-' + pad2(now.getHours()) + pad2(now.getMinutes());
+  return fileSafeAr(label || 'تقرير-الحجوزات') + '-' + exportScopeSlug(filters) + '-' + stamp;
+}
+
+/**
+ * KPIs the doctor will actually ask about at the end of month one.
+ * `extra` accepts the same filters as the exports, so the numbers on screen match the
+ * numbers in the file the clinic just downloaded.
+ */
+function kpiSummary(from, to, extra) {
+  extra = extra || {};
+  const filters = {
+    from: str(from) || str(extra.from),
+    to: str(to) || str(extra.to),
+    doctorId: extra.doctorId,
+    doctorIds: extra.doctorIds,
+    clinicId: extra.clinicId,
+    reasonId: extra.reasonId,
+    status: extra.status
+  };
+  const rows = filterBookings(filters);
+  const started = rows.filter(function (r) { return OCCUPYING_STATUSES.indexOf(str(r.status)) !== -1; });
+  const attended = rows.filter(function (r) { return str(r.status) === STATUS.ATTENDED; });
+  const noShow = rows.filter(function (r) { return str(r.status) === STATUS.NO_SHOW; });
+  const cancelled = rows.filter(function (r) { return str(r.status) === STATUS.CANCELLED; });
+  const rescheduled = rows.filter(function (r) { return str(r.status) === STATUS.RESCHEDULED; });
+
+  const finished = attended.length + noShow.length;
+  const phoneCounts = {};
+  rows.forEach(function (r) {
+    const p = str(r.phone_norm);
+    if (!p) return;
+    phoneCounts[p] = (phoneCounts[p] || 0) + 1;
+  });
+  const phones = Object.keys(phoneCounts);
+  const repeat = phones.filter(function (p) { return phoneCounts[p] > 1; }).length;
+
+  return {
+    from: filters.from, to: filters.to,
+    scopeLabelAr: scopeLabelAr(filters),
+    doctorIds: doctorIdList(doctorFilterValue(filters)),
+    totalBookings: rows.length,
+    activeBookings: started.length,
+    attended: attended.length,
+    noShow: noShow.length,
+    cancelled: cancelled.length,
+    rescheduled: rescheduled.length,
+    noShowRate: finished ? Math.round((noShow.length / finished) * 1000) / 10 : 0,
+    uniquePatients: phones.length,
+    repeatPatients: repeat,
+    repeatRate: phones.length ? Math.round((repeat / phones.length) * 1000) / 10 : 0,
+    byDoctor: groupCount(rows, 'doctor_id', 'name_ar', 'doctor_id'),
+    byClinic: groupCount(rows, 'clinic_id', 'name_ar', 'clinic_id'),
+    byReason: groupCount(rows, 'reason_id', 'name_ar', 'reason_id'),
+    byHour: hourHistogram(rows),
+    topPatients: topPatients(phoneCounts, rows)
+  };
+}
+
+function groupCount(rows, idField, labelField, sourceSheetIdField) {
+  const labels = {};
+  const sheet = sourceSheetIdField === 'doctor_id' ? SHEET.DOCTORS
+    : sourceSheetIdField === 'clinic_id' ? SHEET.CLINICS : SHEET.REASONS;
+  const idFieldInSheet = sourceSheetIdField;
+  Db.rows(sheet).forEach(function (r) { labels[str(r[idFieldInSheet])] = str(r[labelField]); });
+
+  const counts = {};
+  rows.forEach(function (r) {
+    const k = str(r[idField]);
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return Object.keys(counts).map(function (k) {
+    return { id: k, labelAr: labels[k] || k, count: counts[k] };
+  }).sort(function (a, b) { return b.count - a.count; });
+}
+
+function hourHistogram(rows) {
+  const counts = {};
+  rows.forEach(function (r) {
+    const min = parseTimeToMin(r.start_time);
+    if (min === null) return;
+    const hour = Math.floor(min / 60);
+    counts[hour] = (counts[hour] || 0) + 1;
+  });
+  return Object.keys(counts).map(function (h) {
+    return { hour: Number(h), labelAr: minToTimeAr(Number(h) * 60), count: counts[h] };
+  }).sort(function (a, b) { return a.hour - b.hour; });
+}
+
+function topPatients(phoneCounts, rows) {
+  const names = {};
+  rows.forEach(function (r) {
+    const p = str(r.phone_norm);
+    if (p && str(r.name) && !names[p]) names[p] = str(r.name);
+  });
+  return Object.keys(phoneCounts).map(function (p) {
+    return { phone: p, name: names[p] || '', count: phoneCounts[p] };
+  }).sort(function (a, b) { return b.count - a.count; }).slice(0, 20);
+}
+
+/** Rebuild the in-spreadsheet report tabs. Called from the menu. */
+function buildReportsSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const data = reportRows({});
+  writeTab(ss, 'Report_Data', REPORT_HEADER_AR, data);
+
+  const kpi = kpiSummary('', '');
+  const kpiRows = [
+    ['الفترة', (kpi.from || 'البداية') + ' → ' + (kpi.to || 'النهاية')],
+    ['النطاق', kpi.scopeLabelAr],
+    ['إجمالي الحجوزات', kpi.totalBookings],
+    ['حجوزات قائمة', kpi.activeBookings],
+    ['حضر', kpi.attended],
+    ['لم يحضر', kpi.noShow],
+    ['ملغي', kpi.cancelled],
+    ['تم تغييره', kpi.rescheduled],
+    ['نسبة عدم الحضور %', kpi.noShowRate],
+    ['مرضى مختلفون', kpi.uniquePatients],
+    ['مرضى مكررون', kpi.repeatPatients],
+    ['نسبة التكرار %', kpi.repeatRate],
+    ['', ''],
+    ['الطبيب', 'عدد الحجوزات']
+  ].concat(kpi.byDoctor.map(function (d) { return [d.labelAr, d.count]; }))
+    .concat([['', ''], ['الفرع', 'عدد الحجوزات']])
+    .concat(kpi.byClinic.map(function (d) { return [d.labelAr, d.count]; }))
+    .concat([['', ''], ['سبب الزيارة', 'عدد الحجوزات']])
+    .concat(kpi.byReason.map(function (d) { return [d.labelAr, d.count]; }))
+    .concat([['', ''], ['الساعة', 'عدد الحجوزات']])
+    .concat(kpi.byHour.map(function (h) { return [h.labelAr, h.count]; }));
+
+  writeTab(ss, 'Report_KPIs', ['البند', 'القيمة'], kpiRows);
+  logInfo('buildReportsSheets', 'Rebuilt report tabs with ' + data.length + ' rows');
+  return { ok: true, rows: data.length, kpis: kpi };
+}
+
+function writeTab(ss, name, header, rows) {
+  let sh = ss.getSheetByName(name);
+  if (!sh) sh = ss.insertSheet(name);
+  sh.clear();
+  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  if (rows.length) {
+    sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+    sh.autoResizeColumns(1, header.length);
+  }
+  return sh;
+}
+
+function exportCsv(filters) {
+  const rows = reportRows(filters);
+  return csvFromRows(REPORT_HEADER_AR, rows);
+}
+
+/**
+ * A genuine .xlsx, via the temp-sheet + Drive export trick. Returns a Drive link
+ * because ContentService cannot stream binary downloads. `label` overrides the
+ * leading part of the file name (the nightly backup does); the selected doctors and
+ * the timestamp are always appended, so two exports never collide.
+ */
+function exportXlsx(filters, label) {
+  const rows = reportRows(filters);
+  const name = exportBaseName(filters, label);
+
+  const temp = SpreadsheetApp.create(name + ' (temp)');
+  const header = REPORT_HEADER_AR;
+  const sh = temp.getSheets()[0];
+  sh.setName('Bookings');
+  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+  if (rows.length) sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+
+  let link = '';
+  try {
+    const url = 'https://www.googleapis.com/drive/v3/files/' + temp.getId() +
+      '/export?mimeType=' + encodeURIComponent('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') +
+      '&alt=media';
+    const response = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    });
+    const blob = response.getBlob().setName(name + '.xlsx');
+    const folderId = str(getSettings()[SETTING.BACKUP_FOLDER_ID]);
+    const file = folderId
+      ? DriveApp.getFolderById(folderId).createFile(blob)
+      : DriveApp.createFile(blob);
+    link = file.getUrl();
+  } catch (err) {
+    logError('exportXlsx', 'Drive export failed, falling back to a Google Sheet: ' + err);
+    link = temp.getUrl();
+  }
+
+  try {
+    DriveApp.getFileById(temp.getId()).setTrashed(true);
+  } catch (err) {
+    logWarn('exportXlsx', 'Could not trash the temp sheet: ' + err);
+  }
+
+  logInfo('exportXlsx', 'Exported ' + rows.length + ' rows to ' + link);
+  return { ok: true, rows: rows.length, url: link, fileName: name + '.xlsx' };
+}
+
+/**
+ * Staff.gs — the reception desk.
+ *
+ * Every function here requires the staff code from Settings. The web app is
+ * deployed anonymously so patients can book without accounts, which also means
+ * these functions are reachable by anyone who knows the URL. The code is the
+ * only gate, so it must be changed at setup and treated as a password.
+ */
+
+function assertStaff(code) {
+  const expected = str(getSettings()[SETTING.STAFF_CODE]);
+  const given = str(code);
+  if (!expected || given !== expected) {
+    logWarn('assertStaff', 'Rejected staff call with a wrong code');
+    return false;
+  }
+  return true;
+}
+
+function staffError(message) {
+  return { ok: false, error: 'STAFF_CODE', messageAr: message };
+}
+
+/** One day's agenda, ready to render: no formatting work left for the browser. */
+function getStaffBoard(dateStr, code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  const date = str(dateStr) || todayStr();
+  const bookings = Db.rows(SHEET.BOOKINGS)
+    .filter(function (b) { return str(b.date) === date; })
+    .sort(function (a, b) { return str(a.start_time).localeCompare(str(b.start_time)); })
+    .map(function (b) { return boardItem(b); });
+
+  const counts = { total: bookings.length, confirmed: 0, attended: 0, no_show: 0, cancelled: 0, reminded: 0 };
+  bookings.forEach(function (b) {
+    if (b.status === STATUS.CONFIRMED) counts.confirmed++;
+    if (b.status === STATUS.ATTENDED) counts.attended++;
+    if (b.status === STATUS.NO_SHOW) counts.no_show++;
+    if (b.status === STATUS.CANCELLED || b.status === STATUS.RESCHEDULED) counts.cancelled++;
+    if (b.waSentAt) counts.reminded++;
+  });
+
+  const upcoming = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = addDaysStr(todayStr(), i);
+    const n = Db.rows(SHEET.BOOKINGS).filter(function (b) {
+      return str(b.date) === d &&
+        OCCUPYING_STATUSES.indexOf(str(b.status)) !== -1;
+    }).length;
+    upcoming.push({ date: d, labelAr: formatDateAr(d), count: n });
+  }
+
+  return {
+    ok: true,
+    date: date,
+    dateAr: formatDateAr(date),
+    weekdayAr: weekdayAr(date),
+    bookings: bookings,
+    doctors: dayDoctors(date),
+    counts: counts,
+    upcoming: upcoming
+  };
+}
+
+/**
+ * Who is on duty this day, and when — the labels the reception filters the shared
+ * schedule by, plus the columns it draws. A doctor appears if they work that weekday
+ * or already have a booking then (even a cancelled one, so nothing goes missing).
+ */
+function dayDoctors(date) {
+  const wd = weekdayIndex(date);
+  const availability = Db.rows(SHEET.AVAILABILITY).filter(isActive);
+  const bookings = Db.rows(SHEET.BOOKINGS).filter(function (b) { return str(b.date) === date; });
+
+  const out = [];
+  Db.rows(SHEET.DOCTORS).forEach(function (d) {
+    const doctorId = str(d.doctor_id);
+    const dayBookings = bookings.filter(function (b) { return str(b.doctor_id) === doctorId; });
+    const windows = availability.filter(function (a) {
+      return str(a.doctor_id) === doctorId && Number(a.weekday) === wd && withinValidRange(a, date);
+    }).map(function (a) {
+      const from = parseTimeToMin(a.from_time);
+      const to = parseTimeToMin(a.to_time);
+      const reason = Db.findById(SHEET.REASONS, 'reason_id', str(a.reason_id)) || {};
+      const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(a.clinic_id)) || {};
+      return {
+        fromAr: from === null ? '' : minToTimeAr(from),
+        toAr: to === null ? '' : minToTimeAr(to),
+        reasonAr: str(reason.name_ar),
+        clinicAr: str(clinic.name_ar)
+      };
+    });
+
+    if (!windows.length && !dayBookings.length) return;
+    if (!isActive(d) && !dayBookings.length) return;
+
+    const times = dayBookings.map(function (b) { return str(b.start_time); }).filter(Boolean).sort();
+    const labels = [];
+    windows.forEach(function (w) {
+      const label = w.fromAr + ' – ' + w.toAr;
+      if (labels.indexOf(label) === -1) labels.push(label);
+    });
+
+    out.push({
+      id: doctorId,
+      nameAr: str(d.name_ar),
+      specialtyAr: str(d.specialty_ar),
+      code: doctorCode(d),
+      color: doctorColorHex(d.color),
+      active: isActive(d),
+      windows: windows,
+      windowsAr: labels.join(' / '),
+      bookings: dayBookings.length,
+      confirmed: dayBookings.filter(function (b) { return str(b.status) === STATUS.CONFIRMED; }).length,
+      firstTime: times.length ? times[0] : ''
+    });
+  });
+
+  // Earliest appointment first (doctors with no bookings last), then by name.
+  out.sort(function (a, b) {
+    const at = a.firstTime || '99:99';
+    const bt = b.firstTime || '99:99';
+    if (at !== bt) return at < bt ? -1 : 1;
+    return a.nameAr.localeCompare(b.nameAr);
+  });
+  return out;
+}
+
+function boardItem(b) {
+  const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', str(b.doctor_id)) || {};
+  const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(b.clinic_id)) || {};
+  const reason = Db.findById(SHEET.REASONS, 'reason_id', str(b.reason_id)) || {};
+  const startMin = parseTimeToMin(b.start_time);
+  return {
+    bookingId: str(b.booking_id),
+    name: str(b.name),
+    phoneNorm: str(b.phone_norm),
+    phoneRaw: str(b.phone_raw),
+    time: str(b.start_time),
+    timeAr: startMin === null ? '' : minToTimeAr(startMin),
+    doctorId: str(b.doctor_id),
+    doctorAr: str(doctor.name_ar),
+    doctorColor: doctorColorHex(doctor.color),
+    doctorCode: doctorCode(doctor),
+    clinicId: str(b.clinic_id),
+    clinicAr: str(clinic.name_ar),
+    reasonId: str(b.reason_id),
+    reasonAr: str(reason.name_ar),
+    status: str(b.status),
+    staffNote: str(b.staff_note),
+    waSentAt: str(b.wa_sent_at),
+    waTemplate: waTemplateLabelAr(b.wa_template),
+    rescheduledFrom: str(b.rescheduled_from),
+    source: str(b.source),
+    canReschedule: str(b.status) === STATUS.CONFIRMED,
+    waLinks: waLinksFor(b)
+  };
+}
+
+/** attended / no_show / cancelled. Cancelling frees the slot and drops the calendar event. */
+function setBookingStatus(bookingId, status, code, note) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  const next = str(status);
+  if (STAFF_STATUS_CHOICES.indexOf(next) === -1) {
+    return { ok: false, error: 'BAD_STATUS', messageAr: 'حالة غير معروفة.' };
+  }
+  const booking = Db.findById(SHEET.BOOKINGS, 'booking_id', str(bookingId));
+  if (!booking) return { ok: false, error: 'NOT_FOUND', messageAr: errorMessageAr('NOT_FOUND') };
+  if (str(booking.status) === STATUS.RESCHEDULED) {
+    return { ok: false, error: 'ALREADY_RESCHEDULED', messageAr: 'هذا الموعد تم تغييره بالفعل.' };
+  }
+
+  Db.update(SHEET.BOOKINGS, 'booking_id', str(bookingId), {
+    status: next,
+    status_at: new Date().toISOString(),
+    status_by: 'staff',
+    staff_note: note === undefined ? str(booking.staff_note) : str(note)
+  });
+
+  if (next === STATUS.CANCELLED) {
+    deleteEventForBooking(booking);
+    Db.update(SHEET.BOOKINGS, 'booking_id', str(bookingId), { event_id: '' });
+  } else if (next === STATUS.NO_SHOW) {
+    annotateEvent(booking, '✗ لم يحضر');
+  } else if (next === STATUS.ATTENDED) {
+    annotateEvent(booking, '✓ حضر');
+  }
+
+  logInfo('setBookingStatus', str(bookingId) + ' -> ' + next);
+  return { ok: true, bookingId: str(bookingId), status: next };
+}
+
+/**
+ * Reschedule = close the old row, open a new one, keep one calendar event.
+ * Nothing is deleted, so "she moved twice" stays visible in history.
+ */
+function rescheduleBooking(bookingId, newDate, newStart, code, note) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  const booking = Db.findById(SHEET.BOOKINGS, 'booking_id', str(bookingId));
+  if (!booking) return { ok: false, error: 'NOT_FOUND', messageAr: errorMessageAr('NOT_FOUND') };
+  if (str(booking.status) !== STATUS.CONFIRMED) {
+    return { ok: false, error: 'NOT_CONFIRMED', messageAr: 'لا يمكن تغيير موعد غير مؤكد.' };
+  }
+
+  const req = {
+    clinicId: str(booking.clinic_id),
+    doctorId: str(booking.doctor_id),
+    reasonId: str(booking.reason_id)
+  };
+  const found = findSlot(req, str(newDate), str(newStart));
+  if (!found) return { ok: false, error: 'SLOT_TAKEN', messageAr: errorMessageAr('SLOT_TAKEN') };
+
+  const now = new Date().toISOString();
+  const fresh = {
+    booking_id: bookingRefFor(Db.findById(SHEET.DOCTORS, 'doctor_id', str(booking.doctor_id)) || {}, str(newDate)),
+    created_at: now,
+    clinic_id: str(booking.clinic_id),
+    doctor_id: str(booking.doctor_id),
+    reason_id: str(booking.reason_id),
+    date: str(newDate),
+    start_time: found.slot.start,
+    end_time: found.slot.end,
+    name: str(booking.name),
+    phone_raw: str(booking.phone_raw),
+    phone_norm: str(booking.phone_norm),
+    email: str(booking.email),
+    extra_json: str(booking.extra_json),
+    status: STATUS.CONFIRMED,
+    status_at: now,
+    status_by: 'staff',
+    rescheduled_from: str(bookingId),
+    staff_note: str(note),
+    wa_sent_at: '',
+    wa_template: '',
+    event_id: str(booking.event_id),
+    source: 'staff:reschedule'
+  };
+
+  Db.append(SHEET.BOOKINGS, fresh);
+
+  if (fresh.event_id) {
+    const moved = moveEventForBooking(fresh);
+    if (!moved) {
+      deleteEventForBooking(booking);
+      const newEventId = createEventForBooking(fresh);
+      Db.update(SHEET.BOOKINGS, 'booking_id', fresh.booking_id, { event_id: newEventId });
+      fresh.event_id = newEventId;
+    }
+  } else {
+    const newEventId = createEventForBooking(fresh);
+    Db.update(SHEET.BOOKINGS, 'booking_id', fresh.booking_id, { event_id: newEventId });
+    fresh.event_id = newEventId;
+  }
+
+  Db.update(SHEET.BOOKINGS, 'booking_id', str(bookingId), {
+    status: STATUS.RESCHEDULED,
+    status_at: now,
+    status_by: 'staff',
+    event_id: '',
+    staff_note: str(note)
+  });
+
+  logInfo('rescheduleBooking', str(bookingId) + ' -> ' + fresh.booking_id + ' ' + newDate + ' ' + newStart);
+  return { ok: true, oldBookingId: str(bookingId), booking: bookingConfirmation(fresh, false) };
+}
+
+/** Block a doctor's or a clinic's time, from the staff page. Also mirrored to the calendar. */
+function blockTime(payload, code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  payload = payload || {};
+  const date = str(payload.date);
+  if (!date) return { ok: false, error: 'MISSING_FIELDS', messageAr: 'اختر التاريخ.' };
+  const scopeType = str(payload.scopeType) || 'all';
+  const scopeId = str(payload.scopeId);
+  const fromTime = str(payload.fromTime);
+  const toTime = str(payload.toTime);
+  const note = str(payload.note);
+  const blackoutId = newId('BLK');
+
+  Db.append(SHEET.BLACKOUTS, {
+    blackout_id: blackoutId,
+    date: date,
+    scope_type: scopeType,
+    scope_id: scopeId,
+    from_time: fromTime,
+    to_time: toTime,
+    note: note || 'إيقاف من شاشة الاستقبال'
+  });
+
+  // Mirror to the calendar so the doctors can see the block where they look.
+  try {
+    const cal = ensureSharedCalendar();
+    const from = parseDateTime(date, fromTime || '00:00');
+    const to = parseDateTime(date, toTime || '23:59');
+    cal.createEvent(BLOCK_PREFIX + (scopeType !== 'all' ? ' [' + scopeType + ':' + scopeId + '] ' : ' ') + (note || ''), from, to);
+  } catch (err) {
+    logWarn('blockTime', 'Calendar mirror failed: ' + err);
+  }
+
+  return { ok: true, blackoutId: blackoutId };
+}
+
+function parseDateTime(dateStr, timeStr) {
+  const d = parseDateStr(dateStr);
+  const min = parseTimeToMin(timeStr);
+  const m = min === null ? 0 : min;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(m / 60), m % 60);
+}
+
+/** Patient history by phone — the report the doctor described, for one person. */
+function lookupPatient(phone, code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  const cc = getSettings()[SETTING.COUNTRY_CODE];
+  const norm = normalizePhone(phone, cc);
+  if (!norm) return { ok: false, error: 'NOT_FOUND', messageAr: errorMessageAr('NOT_FOUND') };
+
+  const rows = Db.rows(SHEET.BOOKINGS)
+    .filter(function (b) { return str(b.phone_norm) === norm; })
+    .sort(function (a, b) { return str(b.date).localeCompare(str(a.date)); });
+
+  if (!rows.length) return { ok: false, error: 'NOT_FOUND', messageAr: 'لا يوجد سجل بهذا الرقم.' };
+
+  const items = rows.map(function (b) {
+    const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', str(b.doctor_id)) || {};
+    const clinic = Db.findById(SHEET.CLINICS, 'clinic_id', str(b.clinic_id)) || {};
+    const reason = Db.findById(SHEET.REASONS, 'reason_id', str(b.reason_id)) || {};
+    return {
+      bookingId: str(b.booking_id),
+      dateAr: formatDateAr(str(b.date)),
+      date: str(b.date),
+      timeAr: timeToAr(b.start_time),
+      doctorAr: str(doctor.name_ar),
+      clinicAr: str(clinic.name_ar),
+      reasonAr: str(reason.name_ar),
+      status: str(b.status),
+      statusAr: statusLabelAr(str(b.status))
+    };
+  });
+
+  return {
+    ok: true,
+    phoneNorm: norm,
+    name: str(rows[0].name),
+    total: items.length,
+    attended: items.filter(function (i) { return i.status === STATUS.ATTENDED; }).length,
+    noShow: items.filter(function (i) { return i.status === STATUS.NO_SHOW; }).length,
+    items: items
+  };
+}
+
+function statusLabelAr(status) {
+  const map = {};
+  map[STATUS.CONFIRMED] = 'مؤكد';
+  map[STATUS.ATTENDED] = 'حضر';
+  map[STATUS.NO_SHOW] = 'لم يحضر';
+  map[STATUS.CANCELLED] = 'ملغي';
+  map[STATUS.RESCHEDULED] = 'تم تغييره';
+  return map[str(status)] || str(status);
+}
+
+/** Free slots the staff can offer while moving an existing booking. */
+function getStaffSlots(payload, code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  payload = payload || {};
+  return generateSlots({
+    clinicId: str(payload.clinicId),
+    doctorId: str(payload.doctorId),
+    reasonId: str(payload.reasonId),
+    days: Number(payload.days) || 21
+  });
+}
+
+/**
+ * The full active catalogue, for the staff screen's dropdowns. Needed because
+ * "block Dr. X's morning" must work on a day where Dr. X has no bookings yet.
+ */
+function getStaffCatalog(code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  return {
+    ok: true,
+    doctors: Db.rows(SHEET.DOCTORS).filter(isActive).map(function (d) {
+      return {
+        id: str(d.doctor_id),
+        nameAr: str(d.name_ar),
+        specialtyAr: str(d.specialty_ar),
+        code: str(d.code),
+        color: doctorColorHex(str(d.doctor_id))
+      };
+    }),
+    clinics: Db.rows(SHEET.CLINICS).filter(isActive).map(function (c) {
+      return { id: str(c.clinic_id), nameAr: str(c.name_ar) };
+    }),
+    reasons: Db.rows(SHEET.REASONS).filter(isActive).map(function (r) {
+      return { id: str(r.reason_id), nameAr: str(r.name_ar) };
+    })
+  };
+}
+
+/**
+ * Notify.gs — internal mail only.
+ *
+ * Nothing here is sent to patients: reminders reach patients as manual WhatsApp
+ * messages from the staff page. These jobs go to the clinic's own inbox.
+ *
+ * Consumer Gmail allows 100 recipients/day through Apps Script. One clinic
+ * inbox receives ~2 mails a day from this file, so the quota is irrelevant.
+ */
+
+function looksLikeRealEmail(value) {
+  const v = str(value);
+  return v.indexOf('@') > 0 && v.indexOf('[') === -1;
+}
+
+/** Morning agenda for reception: who is coming today, and who still needs a reminder. */
+function sendDailyAgenda(dateStr) {
+  const settings = getSettings();
+  const to = str(settings[SETTING.REPORT_EMAIL]);
+  if (!looksLikeRealEmail(to)) {
+    logWarn('sendDailyAgenda', 'report_email is not set; skipping');
+    return { ok: false, error: 'NO_RECIPIENT' };
+  }
+
+  const day = str(dateStr) || todayStr();
+  const board = getStaffBoard(day, str(settings[SETTING.STAFF_CODE]));
+  if (!board.ok) return board;
+
+  const rows = board.bookings.map(function (b) {
+    const flag = b.status === STATUS.CONFIRMED && !b.waSentAt ? ' ⚠️ لم يتم التذكير' : '';
+    return '<tr>' +
+      '<td>' + escapeHtml(b.timeAr) + '</td>' +
+      '<td>' + escapeHtml(b.doctorAr) + '</td>' +
+      '<td>' + escapeHtml(b.reasonAr) + '</td>' +
+      '<td>' + escapeHtml(b.name || '—') + '</td>' +
+      '<td dir="ltr">' + escapeHtml(b.phoneNorm) + '</td>' +
+      '<td>' + escapeHtml(statusLabelAr(b.status)) + flag + '</td>' +
+      '</tr>';
+  }).join('');
+
+  const html = '<div dir="rtl" style="font-family:system-ui,Segoe UI,Arial;direction:rtl">' +
+    '<h2>مواعيد ' + escapeHtml(board.dateAr) + ' — ' + escapeHtml(str(settings[SETTING.CLINIC_NAME])) + '</h2>' +
+    '<p>إجمالي: ' + board.counts.total + ' | مؤكد: ' + board.counts.confirmed +
+    ' | حضر: ' + board.counts.attended + ' | لم يحضر: ' + board.counts.no_show +
+    ' | ملغي: ' + board.counts.cancelled + '</p>' +
+    (rows
+      ? '<table cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse;font-size:14px">' +
+        '<thead style="background:#eee"><tr><th>الوقت</th><th>الطبيب</th><th>سبب الزيارة</th><th>الاسم</th><th>الجوال</th><th>الحالة</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>'
+      : '<p>لا توجد مواعيد في هذا اليوم.</p>') +
+    '<p style="color:#666;font-size:12px">تذكيرات المرضى تُرسل يدوياً من شاشة الاستقبال.</p>' +
+    '</div>';
+
+  MailApp.sendEmail({
+    to: to,
+    subject: 'مواعيد اليوم ' + board.dateAr + ' (' + board.counts.total + ')',
+    htmlBody: html
+  });
+  logInfo('sendDailyAgenda', 'Agenda sent for ' + day + ' (' + board.counts.total + ' bookings)');
+  return { ok: true, sent: to, total: board.counts.total };
+}
+
+/** Weekly: a real .xlsx of everything, plus the KPI summary, mailed to the clinic. */
+function sendWeeklyBackup() {
+  const settings = getSettings();
+  const exported = exportXlsx({}, 'نسخة-احتياطية-الحجوزات');
+  const kpi = kpiSummary('', '');
+
+  const to = str(settings[SETTING.REPORT_EMAIL]);
+  const lines = [
+    'إجمالي الحجوزات: ' + kpi.totalBookings,
+    'حضر: ' + kpi.attended + ' | لم يحضر: ' + kpi.noShow + ' | ملغي: ' + kpi.cancelled,
+    'نسبة عدم الحضور: ' + kpi.noShowRate + '%',
+    'مرضى مختلفون: ' + kpi.uniquePatients + ' | مكررون: ' + kpi.repeatPatients,
+    '',
+    'الأطباء:',
+  ].concat(kpi.byDoctor.map(function (d) { return '  - ' + d.labelAr + ': ' + d.count; }))
+    .concat(['', 'الأسباب:'])
+    .concat(kpi.byReason.map(function (d) { return '  - ' + d.labelAr + ': ' + d.count; }));
+
+  if (looksLikeRealEmail(to)) {
+    MailApp.sendEmail({
+      to: to,
+      subject: 'نسخة احتياطية أسبوعية — ' + str(settings[SETTING.CLINIC_NAME]),
+      body: 'ملف الإكسل:\n' + exported.url + '\n\n' + lines.join('\n')
+    });
+  } else {
+    logWarn('sendWeeklyBackup', 'report_email is not set; backup file only');
+  }
+
+  // Keep a rolling master copy in Drive as well, in case the sheet itself is lost.
+  try {
+    const folderId = str(settings[SETTING.BACKUP_FOLDER_ID]);
+    if (folderId) {
+      const master = 'PolyClinic-MASTER-' + formatDateStr(new Date());
+      const already = DriveApp.getFolderById(folderId).getFilesByName(master).hasNext();
+      if (!already) {
+        DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId())
+          .makeCopy(master, DriveApp.getFolderById(folderId));
+      }
+    }
+  } catch (err) {
+    logWarn('sendWeeklyBackup', 'Master copy failed: ' + err);
+  }
+
+  logInfo('sendWeeklyBackup', 'Backup done: ' + exported.url);
+  return { ok: true, url: exported.url, emailed: looksLikeRealEmail(to), kpi: kpi };
+}
+
+/* Trigger entry points. Each one swallows its own error so one bad night does
+   not disable the schedule. */
+
+function jobDailyAgenda() {
+  try { sendDailyAgenda(todayStr()); } catch (err) { logError('jobDailyAgenda', err); }
+}
+
+function jobSyncBlocks() {
+  try { syncBlockEvents(); } catch (err) { logError('jobSyncBlocks', err); }
+}
+
+function jobWeeklyBackup() {
+  try { sendWeeklyBackup(); } catch (err) { logError('jobWeeklyBackup', err); }
+}
+
+/**
+ * Setup.gs — one-time provisioning and the spreadsheet menu.
+ *
+ * Run setupEverything() once, from the Apps Script editor. It is safe to re-run:
+ * existing sheets and existing config rows are never overwritten.
+ */
+
+/**
+ * Creates any missing sheet, writes its header row, and forces plain-text
+ * formatting so 'yyyy-MM-dd' and 'HH:mm' can never be reinterpreted by Sheets.
+ */
+function createAllSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const created = [];
+  Object.keys(HEADERS).forEach(function (name) {
+    let sh = ss.getSheetByName(name);
+    if (!sh) {
+      sh = ss.insertSheet(name);
+      created.push(name);
+    }
+    const header = HEADERS[name];
+    const current = sh.getLastRow() >= 1 && sh.getLastColumn() >= 1
+      ? sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String)
+      : [];
+    const matches = current.length === header.length && header.every(function (h, i) { return current[i] === h; });
+    if (!matches) {
+      sh.getRange(1, 1, 1, header.length).setValues([header]);
+    }
+    sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
+    sh.getRange(1, 1, Math.max(sh.getMaxRows(), 2), header.length).setNumberFormat('@');
+    sh.setFrozenRows(1);
+    if (name !== SHEET.SETTINGS) sh.setColumnWidth(1, 150);
+  });
+  invalidateSettingsCache();
+  logInfo('createAllSheets', 'Created: ' + (created.join(', ') || 'none') + ' | verified: ' + Object.keys(HEADERS).length);
+  return { ok: true, created: created };
+}
+
+/** Seeds placeholder config so the app is walkable before the clinic's real data arrives. */
+function seedPlaceholders() {
+  const blocked = Db.rows(SHEET.CLINICS).length || Db.rows(SHEET.DOCTORS).length ||
+    Db.rows(SHEET.REASONS).length || Db.rows(SHEET.AVAILABILITY).length;
+  if (blocked) {
+    logInfo('seedPlaceholders', 'Config already present, skipping seed');
+    return { ok: true, seeded: false, reason: 'CONFIG_EXISTS' };
+  }
+
+  Db.appendMany(SHEET.CLINICS, [
+    { clinic_id: 'C1', name_ar: '[اسم الفرع الأول]', address_ar: '[العنوان الأول]', map_link: 'https://maps.google.com/?q=[رابط الخريطة]', phone: '[هاتف الفرع]', working_hours_ar: 'يومياً 9:00 ص – 9:00 م', active: 'TRUE' },
+    { clinic_id: 'C2', name_ar: '[اسم الفرع الثاني]', address_ar: '[العنوان الثاني]', map_link: 'https://maps.google.com/?q=[رابط الخريطة]', phone: '[هاتف الفرع]', working_hours_ar: 'يومياً 10:00 ص – 6:00 م', active: 'FALSE' }
+  ]);
+
+  Db.appendMany(SHEET.DOCTORS, [
+    { doctor_id: 'D1', name_ar: 'د. [الطبيب الأول]', specialty_ar: '[التخصص]', clinic_ids: 'C1,C2', color: 'teal', active: 'TRUE' },
+    { doctor_id: 'D2', name_ar: 'د. [الطبيب الثاني]', specialty_ar: '[التخصص]', clinic_ids: 'C1', color: 'blue', active: 'TRUE' },
+    { doctor_id: 'D3', name_ar: 'د. [الطبيب الثالث]', specialty_ar: '[التخصص]', clinic_ids: 'C1', color: 'purple', active: 'FALSE' }
+  ]);
+
+  Db.appendMany(SHEET.REASONS, [
+    { reason_id: 'R1', name_ar: 'فحص أولي', description_ar: 'زيارة أولى للفحص والتشخيص', duration_min: 45, lead_hours: 12, book_days_ahead: 21, max_per_day: 10, active: 'TRUE', sort_order: 1 },
+    { reason_id: 'R2', name_ar: 'استشارة', description_ar: 'استشارة طبية عامة', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 12, active: 'TRUE', sort_order: 2 },
+    { reason_id: 'R3', name_ar: 'متابعة', description_ar: 'متابعة بعد زيارة سابقة', duration_min: 15, lead_hours: 4, book_days_ahead: 14, max_per_day: 16, active: 'TRUE', sort_order: 3 },
+    { reason_id: 'R4', name_ar: 'إجراء / جلسة', description_ar: 'إجراء بسيط أو جلسة علاجية', duration_min: 30, lead_hours: 24, book_days_ahead: 30, max_per_day: 6, active: 'FALSE', sort_order: 4 }
+  ]);
+
+  // weekday: 0 = الأحد … 6 = السبت. The doctor's rule from the brief:
+  // examinations on Sundays and Wednesdays, 9:00 to 16:00.
+  Db.appendMany(SHEET.AVAILABILITY, [
+    { availability_id: 'A1', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R1', weekday: 0, from_time: '09:00', to_time: '16:00', slot_min: 45, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A2', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R1', weekday: 3, from_time: '09:00', to_time: '16:00', slot_min: 45, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A3', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R3', weekday: 0, from_time: '16:00', to_time: '19:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A4', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R3', weekday: 3, from_time: '16:00', to_time: '19:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A5', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2', weekday: 1, from_time: '10:00', to_time: '14:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A6', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2', weekday: 2, from_time: '10:00', to_time: '14:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A7', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R3', weekday: 1, from_time: '14:00', to_time: '17:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' }
+  ]);
+
+  Db.appendMany(SHEET.BLACKOUTS, [
+    { blackout_id: 'B1', date: addDaysStr(todayStr(), 30) + '..' + addDaysStr(todayStr(), 32), scope_type: 'all', scope_id: '', from_time: '', to_time: '', note: '[عطلة رسمية — مثال]' }
+  ]);
+
+  Object.keys(SETTING_DEFAULTS).forEach(function (key) {
+    if (key === SETTING.CALENDAR_ID || key === SETTING.BACKUP_FOLDER_ID) return;
+    Db.append(SHEET.SETTINGS, { key: key, value: SETTING_DEFAULTS[key], note: SETTING_NOTES[key] || '' });
+  });
+
+  invalidateSettingsCache();
+  logInfo('seedPlaceholders', 'Seeded placeholder config');
+  return { ok: true, seeded: true };
+}
+
+/** Creates the shared calendar and the backup folder if they do not exist yet. */
+function ensureCalendarAndFolder() {
+  const settings = getSettings();
+  const cal = ensureSharedCalendar();
+
+  let folderId = str(settings[SETTING.BACKUP_FOLDER_ID]);
+  if (!folderId) {
+    const folder = DriveApp.createFolder('PolyClinic Backups — ' + str(settings[SETTING.CLINIC_NAME]));
+    folderId = folder.getId();
+    setSetting(SETTING.BACKUP_FOLDER_ID, folderId);
+  }
+
+  // Safety net: the clinic account is a single point of failure. A weekly copy
+  // of the whole spreadsheet lives in Drive regardless of what happens to it.
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const files = folder.getFilesByName('PolyClinic-MASTER-backup');
+    if (!files.hasNext()) {
+      DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).makeCopy('PolyClinic-MASTER-backup', folder);
+    }
+  } catch (err) {
+    logWarn('ensureCalendarAndFolder', 'Initial master backup failed: ' + err);
+  }
+
+  return { ok: true, calendarId: cal.getId(), calendarName: cal.getName(), backupFolderId: folderId };
+}
+
+/** Runs on a schedule (see installTriggers). */
+function installTriggers() {
+  const handlers = ['jobDailyAgenda', 'jobSyncBlocks', 'jobWeeklyBackup'];
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (handlers.indexOf(t.getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(t);
+  });
+
+  ScriptApp.newTrigger('jobDailyAgenda').timeBased().atHour(7).everyDays(1).create();
+  ScriptApp.newTrigger('jobSyncBlocks').timeBased().atHour(5).everyDays(1).create();
+  ScriptApp.newTrigger('jobWeeklyBackup').timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(22).create();
+
+  logInfo('installTriggers', 'Installed daily agenda, nightly block sync, weekly backup');
+  return { ok: true, triggers: ScriptApp.getProjectTriggers().length };
+}
+
+function removeTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  return { ok: true };
+}
+
+/** The full first-run sequence. */
+function setupEverything() {
+  const sheetResult = createAllSheets();
+  const seedResult = seedPlaceholders();
+  const infra = ensureCalendarAndFolder();
+  const triggers = installTriggers();
+  const check = checkConfiguration();
+  const summary = {
+    ok: true,
+    sheetsCreated: sheetResult.created,
+    seeded: seedResult.seeded,
+    calendar: infra.calendarName,
+    triggers: triggers.triggers,
+    warnings: check.warnings,
+    bookingUrl: getBookingUrl(),
+    nextStepsAr: [
+      'املأ أسماء الفروع والأطباء والأسباب في أوراق Clinics / Doctors / Reasons.',
+      'اضبط المواعيد المتاحة في ورقة Availability (0 = الأحد … 6 = السبت).',
+      'غيّر كود الاستقبال في ورقة Settings (staff_code).',
+      'انشر التطبيق: Deploy → New deployment → Web app → Execute as me → Anyone.',
+      'اختبر الحجز من رابط الحجز ثم افتح شاشة الاستقبال.'
+    ]
+  };
+  logInfo('setupEverything', JSON.stringify({ sheets: summary.sheetsCreated, seeded: summary.seeded }));
+  Logger.log(JSON.stringify(summary, null, 2));
+  return summary;
+}
+
+function getBookingUrl() {
+  try {
+    return ScriptApp.getService().getUrl() || '';
+  } catch (err) {
+    return '';
+  }
+}
+
+/** What is still a placeholder, what is missing, what looks broken. */
+function checkConfiguration() {
+  const warnings = [];
+  const settings = getSettings();
+
+  Db.rows(SHEET.CLINICS).forEach(function (c) {
+    if (str(c.name_ar).indexOf('[') !== -1) warnings.push('الفرع ' + str(c.clinic_id) + ': الاسم لم يُعدّل بعد (' + str(c.name_ar) + ')');
+  });
+  Db.rows(SHEET.DOCTORS).forEach(function (d) {
+    if (str(d.name_ar).indexOf('[') !== -1) warnings.push('الطبيب ' + str(d.doctor_id) + ': الاسم لم يُعدّل بعد (' + str(d.name_ar) + ')');
+  });
+  if (str(settings[SETTING.STAFF_CODE]) === SETTING_DEFAULTS[SETTING.STAFF_CODE]) {
+    warnings.push('كود الاستقبال ما زال الافتراضي — غيّره فوراً.');
+  }
+  if (!str(settings[SETTING.REPORT_EMAIL]).match(/@/)) {
+    warnings.push('بريد التقارير غير مضبوط، لن تصل النسخ الاحتياطية.');
+  }
+  if (!Db.rows(SHEET.AVAILABILITY).filter(isActive).length) {
+    warnings.push('لا توجد أي مواعيد متاحة — المرضى لن يجدوا أي وقت.');
+  }
+
+  const doctorIds = {};
+  Db.rows(SHEET.DOCTORS).forEach(function (d) { doctorIds[str(d.doctor_id)] = true; });
+  const clinicIds = {};
+  Db.rows(SHEET.CLINICS).forEach(function (c) { clinicIds[str(c.clinic_id)] = true; });
+  const reasonIds = {};
+  Db.rows(SHEET.REASONS).forEach(function (r) { reasonIds[str(r.reason_id)] = true; });
+  Db.rows(SHEET.AVAILABILITY).forEach(function (a) {
+    if (!doctorIds[str(a.doctor_id)]) warnings.push('Availability ' + str(a.availability_id) + ': طبيب غير موجود (' + str(a.doctor_id) + ')');
+    if (!clinicIds[str(a.clinic_id)]) warnings.push('Availability ' + str(a.availability_id) + ': فرع غير موجود (' + str(a.clinic_id) + ')');
+    if (!reasonIds[str(a.reason_id)]) warnings.push('Availability ' + str(a.availability_id) + ': سبب زيارة غير موجود (' + str(a.reason_id) + ')');
+    if (parseTimeToMin(a.from_time) === null || parseTimeToMin(a.to_time) === null) {
+      warnings.push('Availability ' + str(a.availability_id) + ': وقت غير صالح، يجب أن يكون HH:mm');
+    }
+  });
+
+  // Two doctors with the same code would produce the same booking reference,
+  // which defeats the point of reading it back over the phone.
+  const codeOwner = {};
+  Db.rows(SHEET.DOCTORS).filter(isActive).forEach(function (d) {
+    const code = doctorCode(d);
+    if (codeOwner[code]) {
+      warnings.push('الطبيب ' + str(d.doctor_id) + ': كود الحجز "' + code + '" مستخدم أيضاً للطبيب ' + codeOwner[code] +
+        ' — اكتب كوداً مختلفاً (حرفان لاتينيان) في عمود code بورقة Doctors.');
+    } else {
+      codeOwner[code] = str(d.doctor_id);
+    }
+  });
+
+  const result = { ok: warnings.length === 0, warnings: warnings, bookingUrl: getBookingUrl() };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('العيادة')
+    .addItem('تهيئة النظام', 'menuSetup')
+    .addItem('فحص الإعدادات', 'menuCheck')
+    .addItem('تحديث أوراق التقارير', 'menuReports')
+    .addItem('نسخة احتياطية الآن', 'menuBackup')
+    .addItem('مزامنة أوقات الإيقاف', 'menuSyncBlocks')
+    .addItem('عرض رابط الحجز', 'menuBookingUrl')
+    .addToUi();
+}
+
+function menuSetup() { showAlert('تهيئة النظام', JSON.stringify(setupEverything(), null, 2)); }
+function menuCheck() { showAlert('فحص الإعدادات', JSON.stringify(checkConfiguration(), null, 2)); }
+function menuReports() { const r = buildReportsSheets(); showAlert('التقارير', 'تم تحديث الأوراق: ' + r.rows + ' صف'); }
+function menuBackup() { showAlert('نسخة احتياطية', JSON.stringify(sendWeeklyBackup(), null, 2)); }
+function menuSyncBlocks() { showAlert('مزامنة الإيقاف', 'تم إنشاء ' + syncBlockEvents() + ' سجل إيقاف من التقويم'); }
+function menuBookingUrl() { showAlert('رابط الحجز', getBookingUrl() || 'انشر التطبيق أولاً (Deploy → Web app)'); }
+
+function showAlert(title, text) {
+  SpreadsheetApp.getUi().alert(title, String(text), SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Code.gs — the web endpoints.
+ *
+ * Two pages and one export route:
+ *   /exec                      → the public booking page (what patients see)
+ *   /exec?page=staff           → the reception screen (asks for the staff code)
+ *   /exec?page=export&type=... → CSV / XLSX download (needs the staff code)
+ *
+ * All interactive data goes over google.script.run, so nothing patient-related
+ * is ever readable by URL guessing.
+ */
+
+function doGet(e) {
+  const params = (e && e.parameter) || {};
+  const page = str(params.page);
+
+  if (page === 'export') return handleExport(params);
+  if (page === 'staff') return renderStaffPage(params);
+  return renderBookingPage(params);
+}
+
+function renderBookingPage(params) {
+  const t = HtmlService.createTemplateFromFile('Booking');
+  t.config = getPublicConfig();
+  t.source = str(params.src || params.source || 'link');
+  // Optional pre-filter from a campaign link: /exec?doctor=D1&reason=R1&clinic=C1
+  t.preset = {
+    clinicId: str(params.clinic),
+    doctorId: str(params.doctor),
+    reasonId: str(params.reason)
+  };
+  return t.evaluate()
+    .setTitle(getPublicConfig().clinicName + ' — حجز موعد')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function renderStaffPage() {
+  const t = HtmlService.createTemplateFromFile('Staff');
+  t.config = getPublicConfig();
+  t.webAppUrl = getBookingUrl();
+  return t.evaluate()
+    .setTitle('شاشة الاستقبال — ' + getPublicConfig().clinicName)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/* ------------------------------------------------------------------ *
+ * Patient-facing API (public — no staff code, no patient data returned)
+ * ------------------------------------------------------------------ */
+
+function apiBootstrap() {
+  return getBootstrap();
+}
+
+function apiSlots(payload) {
+  const res = generateSlots({
+    clinicId: str((payload || {}).clinicId),
+    doctorId: str((payload || {}).doctorId),
+    reasonId: str((payload || {}).reasonId),
+    days: Number((payload || {}).days) || 0
+  });
+  if (res && !res.ok) res.messageAr = 'تعذّر عرض المواعيد. حاول مرة أخرى.';
+  if (res && res.ok && !res.days.length) {
+    res.emptyText = 'لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.';
+  }
+  return res;
+}
+
+/** Translates an error code into the Arabic sentence the patient should read. */
+function apiSubmit(payload) {
+  const res = submitBooking(payload || {});
+  if (res && !res.ok) res.messageAr = errorMessageAr(res.error);
+  return res;
+}
+
+/* ------------------------------------------------------------------ *
+ * Staff API (every one of these requires the staff code)
+ * ------------------------------------------------------------------ */
+
+function apiStaffBoard(dateStr, code) {
+  return getStaffBoard(dateStr, code);
+}
+
+function apiStaffStatus(bookingId, status, code, note) {
+  return setBookingStatus(bookingId, status, code, note);
+}
+
+function apiStaffReschedule(bookingId, newDate, newStart, code, note) {
+  return rescheduleBooking(bookingId, newDate, newStart, code, note);
+}
+
+function apiStaffBlock(payload, code) {
+  return blockTime(payload, code);
+}
+
+function apiStaffLookup(phone, code) {
+  return lookupPatient(phone, code);
+}
+
+function apiStaffSlots(payload, code) {
+  return getStaffSlots(payload, code);
+}
+
+function apiStaffCatalog(code) {
+  return getStaffCatalog(code);
+}
+
+function apiStaffWaMark(bookingId, templateKey, code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  return markWhatsAppSent(bookingId, templateKey);
+}
+
+/**
+ * `filters` may carry doctorIds (one id, 'D1,D2', or an array) so the KPI cards match
+ * whatever the clinic selected in the report panel.
+ */
+function apiStaffKpis(from, to, code, filters) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  return { ok: true, kpi: kpiSummary(from, to, filters) };
+}
+
+/* ------------------------------------------------------------------ *
+ * Exports
+ * ------------------------------------------------------------------ */
+
+function handleExport(params) {
+  const code = str(params.code);
+  if (!assertStaff(code)) {
+    return HtmlService.createHtmlOutput(
+      '<div dir="rtl" style="font-family:Arial;padding:24px">كود الاستقبال غير صحيح.</div>'
+    );
+  }
+
+  // `doctor` takes '' (every doctor), one id, or a comma-separated list for a
+  // comparison export — the same shape filterBookings understands.
+  const filters = {
+    from: str(params.from),
+    to: str(params.to),
+    doctorId: str(params.doctor),
+    clinicId: str(params.clinic),
+    reasonId: str(params.reason),
+    status: str(params.status)
+  };
+  const type = str(params.type) || 'xlsx';
+
+  if (type === 'csv') {
+    const csv = exportCsv(filters);
+    return ContentService.createTextOutput(csv).setMimeType(ContentService.MimeType.CSV);
+  }
+
+  const result = exportXlsx(filters);
+  const safeUrl = escapeHtml(result.url);
+  return HtmlService.createHtmlOutput(
+    '<div dir="rtl" style="font-family:Arial;padding:24px">' +
+    '<meta http-equiv="refresh" content="0;url=' + safeUrl + '">' +
+    '<p>تم إنشاء التقرير (' + result.rows + ' صف).</p>' +
+    '<p><a href="' + safeUrl + '" target="_blank" style="font-size:18px">اضغط هنا للتحميل</a></p>' +
+    '</div>'
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Handy for testing in the editor
+ * ------------------------------------------------------------------ */
+
+/** Logs a preview of the next few available slots for the first active configuration. */
+function previewSlots() {
+  const clinic = Db.rows(SHEET.CLINICS).filter(isActive)[0];
+  if (!clinic) { Logger.log('No active clinic configured'); return; }
+  const avail = Db.rows(SHEET.AVAILABILITY).filter(isActive)[0];
+  if (!avail) { Logger.log('No availability configured'); return; }
+  const res = generateSlots({
+    clinicId: str(avail.clinic_id),
+    doctorId: str(avail.doctor_id),
+    reasonId: str(avail.reason_id)
+  });
+  Logger.log(JSON.stringify(res, null, 2));
+  return res;
+}
+
+    return {
+      HEADERS: HEADERS, SHEET: SHEET, STATUS: STATUS, SETTING: SETTING,
+      SETTING_DEFAULTS: SETTING_DEFAULTS, WA_TEMPLATES: WA_TEMPLATES,
+      Db: Db,
+      createAllSheets: createAllSheets,
+      seedPlaceholders: seedPlaceholders,
+      ensureSharedCalendar: ensureSharedCalendar,
+      invalidateSettingsCache: invalidateSettingsCache,
+      getSettings: getSettings,
+      setSetting: setSetting,
+      setSetting: setSetting,
+      generateSlots: generateSlots,
+      getBootstrap: getBootstrap,
+      submitBooking: submitBooking,
+      getStaffBoard: getStaffBoard,
+      setBookingStatus: setBookingStatus,
+      rescheduleBooking: rescheduleBooking,
+      blockTime: blockTime,
+      lookupPatient: lookupPatient,
+      getStaffSlots: getStaffSlots,
+      getStaffCatalog: getStaffCatalog,
+      markWhatsAppSent: markWhatsAppSent,
+      kpiSummary: kpiSummary,
+      reportRows: reportRows,
+      filterBookings: filterBookings,
+      exportCsv: exportCsv,
+      // Naming and scope: the same functions the live export uses, so an offline demo
+      // file and a live Drive file are named identically.
+      REPORT_HEADER_AR: REPORT_HEADER_AR,
+      exportBaseName: exportBaseName,
+      exportScopeSlug: exportScopeSlug,
+      scopeLabelAr: scopeLabelAr,
+      // The production API surface itself, from Code.gs — same names, same
+      // signatures, same validation. The demo calls exactly what the web app calls.
+      apiBootstrap: apiBootstrap,
+      apiSlots: apiSlots,
+      apiSubmit: apiSubmit,
+      apiStaffBoard: apiStaffBoard,
+      apiStaffStatus: apiStaffStatus,
+      apiStaffReschedule: apiStaffReschedule,
+      apiStaffBlock: apiStaffBlock,
+      apiStaffLookup: apiStaffLookup,
+      apiStaffSlots: apiStaffSlots,
+      apiStaffCatalog: apiStaffCatalog,
+      apiStaffWaMark: apiStaffWaMark,
+      apiStaffKpis: apiStaffKpis
+    };
+  })();
+
+  /* ------------------------------------------------------------------ *
+   * Persistence of the fake world
+   * ------------------------------------------------------------------ */
+
+  function serialize() {
+    var plain = {};
+    Object.keys(sheets).forEach(function (name) {
+      var sh = sheets[name];
+      var rows = [];
+      for (var r = 0; r < sh.grid.length; r++) rows.push(sh.grid[r].slice());
+      plain[name] = rows;
+    });
+    return {
+      mockNow: mockNow,
+      savedAt: RealDate.now(),
+      sheets: plain,
+      events: events.map(function (e) {
+        return {
+          id: e.id, title: e.title, color: e.color, description: e.description, location: e.location,
+          start: new RealDate(e.start.getTime()).toISOString(),
+          end: new RealDate(e.end.getTime()).toISOString()
+        };
+      })
+    };
+  }
+
+  function save() { writeRaw(STORE_KEY, JSON.stringify(serialize())); }
+
+  function restore(saved) {
+    Object.keys(saved.sheets).forEach(function (name) {
+      sheets[name] = new FakeSheet(name, saved.sheets[name]);
+    });
+    events = (saved.events || []).map(function (e) {
+      eventSeq++;
+      return {
+        id: e.id || 'evt-' + eventSeq,
+        title: e.title, color: e.color, description: e.description, location: e.location,
+        start: new RealDate(e.start),
+        end: new RealDate(e.end)
+      };
+    });
+    calendar = buildCalendar('demo');
+  }
+
+  function bootstrapDemo() {
+    var mode = 'seeded';
+    if (persisted && persisted.sheets && Object.keys(persisted.sheets).length) {
+      restore(persisted);
+      mode = 'restored';
+    } else {
+      SERVER.createAllSheets();
+      SERVER.seedPlaceholders();
+      SERVER.ensureSharedCalendar();
+    }
+    // Applied on both paths: a browser that kept yesterday's demo data must still get
+    // today's demo data, or the presenter sees a half-configured board.
+    applyDemoData();
+    save();
+    return mode;
+  }
+
+  /**
+   * Demo data only — every line here is something the real clinic would set in its
+   * own sheets. Nothing here changes a product rule.
+   */
+  function applyDemoData() {
+    // The seeded reasons ask for 4–24 hours' notice, which would hide the pinned
+    // "today" and leave the reception board empty on stage. Zeroing the notice keeps
+    // the real engine and the real lead-time check intact.
+    SERVER.Db.rows(SERVER.SHEET.REASONS).forEach(function (reason) {
+      SERVER.Db.update(SERVER.SHEET.REASONS, 'reason_id', reason.reason_id, { lead_hours: 0 });
+    });
+
+    // Real-looking initials, because the placeholder names are Arabic brackets and
+    // would both derive to "aa". Makes the confirmation read ae-20261018-1.
+    SERVER.Db.update(SERVER.SHEET.DOCTORS, 'doctor_id', 'D1', { code: 'ae' });
+    SERVER.Db.update(SERVER.SHEET.DOCTORS, 'doctor_id', 'D2', { code: 'ms' });
+
+    // The placeholder clinic works Dr. 1 on Sun/Wed and Dr. 2 on Mon/Tue, so no single
+    // day ever showed two doctors and the reception's per-doctor filter had nothing to
+    // filter. A Sunday afternoon window for Dr. 2 gives the shared schedule two columns.
+    var hasA8 = SERVER.Db.rows(SERVER.SHEET.AVAILABILITY).some(function (a) {
+      return String(a.availability_id || '').trim() === 'A8';
+    });
+    if (!hasA8) {
+      SERVER.Db.append(SERVER.SHEET.AVAILABILITY, {
+        availability_id: 'A8', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2',
+        weekday: 0, from_time: '14:00', to_time: '17:00', slot_min: 30,
+        max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE'
+      });
+    }
+
+    SERVER.setSetting(SERVER.SETTING.STAFF_CODE, STAFF_CODE);
+    SERVER.setSetting(SERVER.SETTING.REPORT_EMAIL, 'demo@polyclinic.example');
+    SERVER.setSetting(SERVER.SETTING.WHATSAPP_NUMBER, '+201000000000');
+    SERVER.setSetting(SERVER.SETTING.SUPPORT_PHONE, '0220000000');
+    SERVER.invalidateSettingsCache();
+  }
+
+  var bootMode = bootstrapDemo();
+
+  /* ------------------------------------------------------------------ *
+   * google.script.run shim
+   * ------------------------------------------------------------------ */
+
+  function makeRunner() {
+    var onSuccess = function () {};
+    var onFailure = function (err) { window.console && window.console.error(err); };
+
+    var proxy = null;
+
+    // Note: the handler functions must return the *proxy*, not the target, or the
+    // chained call google.script.run.withSuccessHandler(cb).withFailureHandler(cb)[fn]
+    // would fall through to an object with no server functions on it.
+    var handler = {
+      get: function (target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function (cb) { onSuccess = cb; return proxy; };
+        }
+        if (prop === 'withFailureHandler') {
+          return function (cb) { onFailure = cb; return proxy; };
+        }
+        if (typeof prop !== 'string') return undefined;
+        return function () {
+          var args = Array.prototype.slice.call(arguments);
+          setTimeout(function () {
+            try {
+              if (typeof SERVER[prop] !== 'function') throw new Error('لا توجد دالة باسم ' + prop);
+              var result = SERVER[prop].apply(SERVER, args);
+              save();
+              onSuccess(result);
+            } catch (err) {
+              onFailure(err);
+            }
+          }, 120);
+        };
+      }
+    };
+
+    proxy = new Proxy({}, handler);
+    return proxy;
+  }
+
+  // google.script.run must hand out a *fresh* chain per access, exactly like Apps
+  // Script does. If the handlers were shared, two calls in flight at once (the
+  // reception board loads bookings and the catalogue together) would overwrite each
+  // other's callbacks and one promise would never settle.
+  window.google = { script: {} };
+  Object.defineProperty(window.google.script, 'run', {
+    get: function () { return makeRunner(); },
+    configurable: true
+  });
+
+  /* ------------------------------------------------------------------ *
+   * Exports: the reception screen opens ?page=export; the demo turns that
+   * into a real CSV download so the flow is visible without Drive.
+   * ------------------------------------------------------------------ */
+
+  window.POLYCLINIC_DEMO = {
+    page: PAGE,
+    bootMode: bootMode,
+    staffCode: STAFF_CODE,
+    storeKey: STORE_KEY,
+    mockNow: mockNow,
+    mockNowLabel: mockNowLabel,
+    reset: function () { dropRaw(STORE_KEY); dropRaw('polyclinic_staff_code'); window.location.reload(); },
+    events: function () { return events.map(function (e) { return e; }); },
+    save: save
+  };
+
+  var realOpen = window.open;
+  window.open = function (url, name, features) {
+    if (typeof url === 'string' && url.indexOf('page=export') !== -1) {
+      demoDownload(url);
+      return null;
+    }
+    return realOpen.call(window, url, name, features);
+  };
+
+  function demoDownload(url) {
+    var query = url.split('?')[1] || '';
+    var params = {};
+    query.split('&').forEach(function (pair) {
+      var p = pair.split('=');
+      params[decodeURIComponent(p[0])] = decodeURIComponent((p[1] || '').replace(/\+/g, ' '));
+    });
+    var filters = {
+      from: params.from, to: params.to,
+      doctorId: params.doctor, clinicId: params.clinic,
+      reasonId: params.reason, status: params.status
+    };
+    var base = SERVER.exportBaseName(filters);
+    var scope = SERVER.scopeLabelAr(filters);
+
+    // The real thing: a genuine .xlsx built in the browser. Live, Drive converts a
+    // temporary Sheet; offline there is no Drive, so tools/xlsx-writer.js writes the
+    // same five OOXML parts Excel expects. Same name, same columns, same filter.
+    if (params.type !== 'csv' && window.POLYCLINIC_XLSX) {
+      var rows = [SERVER.REPORT_HEADER_AR].concat(SERVER.reportRows(filters));
+      saveBlobFile(
+        new Blob([window.POLYCLINIC_XLSX.build(rows, 'Bookings')],
+          { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        base + '.xlsx'
+      );
+      demoToast('تم إنشاء ملف Excel — ' + (rows.length - 1) + ' حجز (' + scope + ')');
+      return;
+    }
+
+    saveBlobFile(new Blob([SERVER.exportCsv(filters)], { type: 'text/csv;charset=utf-8;' }), base + '.csv');
+    demoToast('تم إنشاء ملف CSV — ' + scope);
+  }
+
+  function saveBlobFile(blob, fileName) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  function demoToast(message) {
+    var t = document.getElementById('toast');
+    if (t) { t.textContent = message; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 4000); }
+    else window.console.log(message);
+  }
+
+  function refreshCalendarHint() { /* index.html reads storage directly */ }
+
+  /* ------------------------------------------------------------------ *
+   * The demo strip, so nobody mistakes this for the live system
+   * ------------------------------------------------------------------ */
+
+  function injectStrip() {
+    var style = document.createElement('style');
+    style.textContent =
+      '#demo-strip{position:fixed;bottom:0;right:0;left:0;background:#101828;color:#fff;font:13px/1.6 "Segoe UI",Tahoma,Arial;' +
+      'padding:7px 14px;z-index:99;display:flex;gap:14px;align-items:center;justify-content:space-between;direction:rtl}' +
+      '#demo-strip b{color:#7dd3c0}' +
+      '#demo-strip button{background:#7dd3c0;border:0;border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer;color:#04312b}' +
+      '#demo-strip .d{margin-left:auto}' +
+      'body{padding-bottom:46px}';
+    document.head.appendChild(style);
+
+    var strip = document.createElement('div');
+    strip.id = 'demo-strip';
+    strip.innerHTML =
+      '<span>عرض تجريبي — البيانات وهمية. ساعة العرض: <b>' + mockNowLabel() + '</b></span>' +
+      (PAGE === 'reception' ? '<span>كود الاستقبال: <b>' + STAFF_CODE + '</b></span>' : '') +
+      '<span class="d"><button onclick="window.POLYCLINIC_DEMO.reset()">إعادة تعيين البيانات</button></span>';
+    document.body.appendChild(strip);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Reception: skip the code gate, this is a demo
+   * ------------------------------------------------------------------ */
+
+  if (PAGE === 'reception') {
+    if (!readRaw('polyclinic_staff_code')) writeRaw('polyclinic_staff_code', STAFF_CODE);
+  }
+
+  if (document.body) injectStrip();
+  else document.addEventListener('DOMContentLoaded', injectStrip);
+
+  // Let the launcher know the world is ready.
+  writeRaw('polyclinic_demo_ready', String(RealDate.now()));
+})();
+
+</script>
+
+
+<header class="top">
+  <div class="inner">
+    
+    <div>
+      <h1>[اسم المجمع الطبي]</h1>
+      <p>احجز موعدك في أقل من دقيقة</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="steps" id="steps"></div>
+  <div id="app"></div>
+  <div class="footer">
+    
+      للاستفسار: <span dir="ltr">0220000000</span>
+    
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  /** google.script.run as a promise. */
+  function api(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(function (err) {
+        reject(err && err.message ? err.message : err);
+      });
+      runner[fn].apply(runner, args);
+    });
+  }
+
+  function el(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  var _toastTimer = null;
+  function toast(message) {
+    var t = el('toast');
+    if (!t) { alert(message); return; }
+    t.textContent = message;
+    t.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3800);
+  }
+
+  function busy(button, isBusy, labelWhenBusy) {
+    if (!button) return;
+    if (isBusy) {
+      button.dataset.label = button.textContent;
+      button.textContent = labelWhenBusy || '…';
+      button.disabled = true;
+    } else {
+      button.textContent = button.dataset.label || button.textContent;
+      button.disabled = false;
+    }
+  }
+
+  /** Digits-only comparison so '0100 123 4567' and '01001234567' agree client-side. */
+  function digits(s) { return String(s || '').replace(/\D/g, ''); }
+</script>
+
+<script>
+  var CONFIG = {"clinicName":"[اسم المجمع الطبي]","brandPrimary":"#0f6f6c","brandSecondary":"#f4f7f7","logoUrl":"","whatsappNumber":"+201000000000","supportPhone":"0220000000","consentText":"أوافق على استخدام اسمي ورقم هاتفي وسبب الزيارة لحجز الموعد والتواصل معي بشأنه فقط.","successText":"تم حجز موعدك بنجاح. سنتواصل معك على واتساب للتأكيد.","windowDays":14};
+  var PRESET = {};
+  var SOURCE = "instagram";
+  var TOTAL_STEPS = 5;
+
+  var S = {
+    boot: null,
+    clinic: null,
+    doctor: null,
+    reason: null,
+    day: null,
+    slot: null,
+    submitting: false
+  };
+
+  /* ---------- tiny helpers ---------- */
+
+  function shade(hex, amount) {
+    var h = String(hex || '#0f6f6c').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var num = parseInt(h, 16);
+    if (isNaN(num)) return hex;
+    var r = Math.max(0, Math.min(255, ((num >> 16) & 255) * (1 - amount)));
+    var g = Math.max(0, Math.min(255, ((num >> 8) & 255) * (1 - amount)));
+    var b = Math.max(0, Math.min(255, (num & 255) * (1 - amount)));
+    return '#' + ((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b)).toString(16).slice(1);
+  }
+
+  function paintSteps() {
+    var html = '';
+    for (var i = 1; i <= TOTAL_STEPS; i++) html += '<i class="' + (i <= S.step ? 'on' : '') + '"></i>';
+    el('steps').innerHTML = html;
+  }
+
+  function view(html) { el('app').innerHTML = html; }
+  function alertBox(kind, text) { return '<div class="msg ' + kind + '">' + esc(text) + '</div>'; }
+
+  function header(title, hint) {
+    return '<div class="card"><h2>' + esc(title) + '</h2>' +
+      (hint ? '<p class="hint">' + esc(hint) + '</p>' : '') + '</div>';
+  }
+
+  function backButton(label) {
+    return '<button class="btn link" onclick="goBack()">↩ ' + esc(label || 'رجوع') + '</button>';
+  }
+
+  /* ---------- flow ---------- */
+
+  function boot() {
+    document.documentElement.style.setProperty('--primary-dark', shade(CONFIG.brandPrimary, 0.22));
+    paintSteps();
+    view('<div class="spinner">جاري التحميل…</div>');
+    api('apiBootstrap').then(function (res) {
+      if (!res || !res.ok) { view(alertBox('err', 'تعذّر تحميل بيانات العيادة. حاول تحديث الصفحة.')); return; }
+      S.boot = res;
+      if (!res.clinics.length || !res.reasons.length) {
+        view(alertBox('err', 'لم يتم إعداد مواعيد العيادة بعد. تواصل مع الاستقبال.'));
+        return;
+      }
+      applyPreset();
+      stepClinic();
+    }).catch(function (err) {
+      view(alertBox('err', 'خطأ في الاتصال: ' + err));
+    });
+  }
+
+  function applyPreset() {
+    if (PRESET.clinicId) {
+      S.clinic = find(S.boot.clinics, 'id', PRESET.clinicId);
+    }
+    if (PRESET.doctorId) {
+      S.doctor = find(S.boot.doctors, 'id', PRESET.doctorId);
+    }
+    if (PRESET.reasonId) {
+      S.reason = find(S.boot.reasons, 'id', PRESET.reasonId);
+    }
+    if (S.clinic && S.doctor && S.reason) return;
+    if (S.clinic && S.doctor) { S.reason = null; }
+    if (S.clinic && !S.doctor) { S.doctor = null; }
+  }
+
+  function find(list, field, value) {
+    for (var i = 0; i < list.length; i++) if (String(list[i][field]) === String(value)) return list[i];
+    return null;
+  }
+
+  function doctorsFor(clinicId) {
+    var allowed = {};
+    S.boot.reasons.forEach(function (r) {
+      (r.links || []).forEach(function (l) { if (l.clinicId === clinicId) allowed[l.doctorId] = true; });
+    });
+    return S.boot.doctors.filter(function (d) { return allowed[d.id]; });
+  }
+
+  function reasonsFor(clinicId, doctorId) {
+    return S.boot.reasons.filter(function (r) {
+      return (r.links || []).some(function (l) { return l.clinicId === clinicId && l.doctorId === doctorId; });
+    });
+  }
+
+  function stepClinic() {
+    S.step = 1; paintSteps();
+    if (S.clinic) return stepDoctor();
+    var html = header('اختر الفرع', 'من أي فرع تحب أن يكون موعدك؟');
+    S.boot.clinics.forEach(function (c) {
+      html += '<button class="choice" onclick="pickClinic(\'' + c.id + '\')">' + esc(c.nameAr) +
+        (c.addressAr ? '<span class="sub">' + esc(c.addressAr) + '</span>' : '') + '</button>';
+    });
+    view(html);
+  }
+
+  function pickClinic(id) {
+    S.clinic = find(S.boot.clinics, 'id', id);
+    S.doctor = null; S.reason = null; S.day = null; S.slot = null;
+    S.step = 2;
+    stepDoctor();
+  }
+
+  function stepDoctor() {
+    S.step = Math.max(S.step, 2); paintSteps();
+    var docs = doctorsFor(S.clinic.id);
+    if (!docs.length) {
+      view(header('لا يوجد أطباء متاحون') + alertBox('info', 'لا يوجد أطباء بمواعيد متاحة في هذا الفرع حالياً. اختر فرعاً آخر.') + backButton());
+      return;
+    }
+    if (S.doctor && docs.some(function (d) { return d.id === S.doctor.id; })) { S.step = 3; return stepReason(); }
+
+    var html = header('اختر الطبيب', 'طبيب ' + S.clinic.nameAr);
+    docs.forEach(function (d) {
+      html += '<button class="choice" onclick="pickDoctor(\'' + d.id + '\')">' + esc(d.nameAr) +
+        (d.specialtyAr ? '<span class="sub">' + esc(d.specialtyAr) + '</span>' : '') + '</button>';
+    });
+    html += backButton('تغيير الفرع');
+    view(html);
+  }
+
+  function pickDoctor(id) {
+    S.doctor = find(S.boot.doctors, 'id', id);
+    S.reason = null; S.day = null; S.slot = null;
+    S.step = 3;
+    stepReason();
+  }
+
+  function stepReason() {
+    S.step = Math.max(S.step, 3); paintSteps();
+    var reasons = reasonsFor(S.clinic.id, S.doctor.id);
+    if (!reasons.length) {
+      view(header('لا توجد أسباب زيارة') + alertBox('info', 'هذا الطبيب لا يستقبل حجوزات حالياً.') + backButton());
+      return;
+    }
+    if (S.reason && reasons.some(function (r) { return r.id === S.reason.id; })) { S.step = 4; return stepSlots(); }
+
+    var html = header('سبب الزيارة', 'اختر نوع الزيارة ليظهر لك الوقت المناسب');
+    reasons.forEach(function (r) {
+      html += '<button class="choice" onclick="pickReason(\'' + r.id + '\')">' + esc(r.nameAr) +
+        '<span class="badge">' + r.durationMin + ' د</span>' +
+        (r.descriptionAr ? '<span class="sub">' + esc(r.descriptionAr) + '</span>' : '') + '</button>';
+    });
+    html += backButton('تغيير الطبيب');
+    view(html);
+  }
+
+  function pickReason(id) {
+    S.reason = find(S.boot.reasons, 'id', id);
+    S.day = null; S.slot = null;
+    S.step = 4;
+    stepSlots();
+  }
+
+  function stepSlots() {
+    S.step = Math.max(S.step, 4); paintSteps();
+    view('<div class="spinner">جاري البحث عن المواعيد المتاحة…</div>');
+    api('apiSlots', { clinicId: S.clinic.id, doctorId: S.doctor.id, reasonId: S.reason.id })
+      .then(function (res) {
+        if (!res || !res.ok) {
+          view(header('تعذّر عرض المواعيد') + alertBox('err', res && res.messageAr ? res.messageAr : 'حدث خطأ.') + backButton());
+          return;
+        }
+        if (!res.days || !res.days.length) {
+          view(header('لا توجد مواعيد متاحة') + alertBox('info', res.emptyText || 'لا توجد مواعيد متاحة لهذا الاختيار حالياً. اختر طبيباً آخر أو عد لاحقاً.') + backButton());
+          return;
+        }
+        S.days = res.days;
+        S.day = S.day && findDay(S.day.date) ? S.day : res.days[0];
+        renderSlots();
+      })
+      .catch(function (err) { view(alertBox('err', 'خطأ في الاتصال: ' + err)); });
+  }
+
+  function findDay(dateStr) {
+    for (var i = 0; i < S.days.length; i++) if (S.days[i].date === dateStr) return S.days[i];
+    return null;
+  }
+
+  function renderSlots() {
+    var html = '<div class="card"><h2>اختر الموعد</h2>' +
+      '<p class="hint">' + esc(S.doctor.nameAr) + ' — ' + esc(S.reason.nameAr) + ' (' + S.reason.durationMin + ' دقيقة)</p>';
+
+    html += '<div class="daybar">';
+    S.days.forEach(function (d) {
+      html += '<button class="' + (d.date === S.day.date ? 'on' : '') + '" onclick="pickDay(\'' + d.date + '\')">' +
+        esc(d.weekdayAr) + '<span class="d">' + d.date.slice(8) + '/' + d.date.slice(5, 7) + '</span>' +
+        '<span class="sub">' + d.slots.length + ' موعد</span></button>';
+    });
+    html += '</div>';
+
+    html += '<div class="slots">';
+    S.day.slots.forEach(function (s) {
+      html += '<button class="' + (S.slot && S.slot.start === s.start ? 'on' : '') + '" onclick="pickSlot(\'' + s.start + '\')">' + esc(s.labelAr) + '</button>';
+    });
+    html += '</div></div>';
+
+    html += backButton('تغيير سبب الزيارة');
+    view(html);
+  }
+
+  function pickDay(date) {
+    S.day = findDay(date);
+    S.slot = null;
+    renderSlots();
+  }
+
+  function pickSlot(start) {
+    S.slot = { start: start };
+    S.step = 5;
+    stepDetails();
+  }
+
+  function stepDetails() {
+    paintSteps();
+    var html = header('بياناتك', esc(S.day.labelAr) + ' — ' + esc(timeLabel(S.slot.start)));
+    html += '<div class="card">';
+    html += '<label class="field">الاسم' +
+      '<input id="f-name" type="text" autocomplete="name" maxlength="80" placeholder="اكتب اسمك">' +
+      '<span class="why">اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.</span></label>';
+
+    html += '<div class="phone-row">' +
+      '<label class="field">رقم الجوال *' +
+      '<input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01xxxxxxxxx">' +
+      '<span class="why">مطلوب — سنتواصل معك على واتساب عليه.</span></label>' +
+      '<label class="field">تأكيد الرقم *' +
+      '<input id="f-phone2" type="tel" inputmode="tel" placeholder="أعد كتابة الرقم">' +
+      '<span class="why">للتأكد من صحة الرقم.</span></label>' +
+      '</div>';
+
+    html += '<label class="field">ملاحظة للطبيب<span class="why">اختياري</span>' +
+      '<textarea id="f-extra" rows="2" maxlength="600"></textarea></label>';
+
+    html += '<label class="consent"><input id="f-consent" type="checkbox">' +
+      '<span>' + esc(CONFIG.consentText) + '</span></label>' +
+      '<input class="hp" id="f-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">';
+
+    html += '<div id="form-error"></div>';
+    html += '<div class="actions"><button class="btn wide" id="btn-submit" onclick="doSubmit()">تأكيد الحجز</button></div>';
+    html += '</div>';
+    html += backButton('تغيير الموعد');
+    view(html);
+  }
+
+  function timeLabel(hhmm) {
+    var parts = String(hhmm).split(':');
+    var h = parseInt(parts[0], 10);
+    var m = parts[1];
+    var suffix = h < 12 ? 'ص' : 'م';
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + m + ' ' + suffix;
+  }
+
+  function doSubmit() {
+    if (S.submitting) return;
+    var name = (el('f-name').value || '').trim();
+    var phone = (el('f-phone').value || '').trim();
+    var phone2 = (el('f-phone2').value || '').trim();
+    var extra = (el('f-extra').value || '').trim();
+    var consent = el('f-consent').checked;
+
+    var err = el('form-error');
+    if (!phone) { err.innerHTML = alertBox('err', 'رقم الجوال مطلوب.'); el('f-phone').focus(); return; }
+    if (digits(phone).length < 8) { err.innerHTML = alertBox('err', 'رقم الجوال غير صحيح.'); el('f-phone').focus(); return; }
+    if (digits(phone) !== digits(phone2)) { err.innerHTML = alertBox('err', 'رقم الجوال وتأكيده غير متطابقين.'); el('f-phone2').focus(); return; }
+    if (!consent) { err.innerHTML = alertBox('err', 'من فضلك وافق على استخدام بياناتك لإتمام الحجز.'); return; }
+    err.innerHTML = '';
+
+    S.submitting = true;
+    busy(el('btn-submit'), true, 'جاري تأكيد الحجز…');
+
+    api('apiSubmit', {
+      clinicId: S.clinic.id,
+      doctorId: S.doctor.id,
+      reasonId: S.reason.id,
+      date: S.day.date,
+      start: S.slot.start,
+      name: name,
+      phone: phone,
+      phoneConfirm: phone2,
+      extra: extra,
+      consent: 'true',
+      trap: el('f-website').value,
+      source: SOURCE
+    }).then(function (res) {
+      S.submitting = false;
+      if (!res || !res.ok) {
+        busy(el('btn-submit'), false);
+        var msg = res && res.messageAr ? res.messageAr : 'تعذّر إتمام الحجز. حاول مرة أخرى.';
+        el('form-error').innerHTML = alertBox('err', msg);
+        if (res && (res.error === 'SLOT_TAKEN' || res.error === 'BUSY')) {
+          setTimeout(function () { S.step = 4; S.slot = null; stepSlots(); }, 1200);
+        }
+        return;
+      }
+      stepDone(res);
+    }).catch(function (err2) {
+      S.submitting = false;
+      busy(el('btn-submit'), false);
+      el('form-error').innerHTML = alertBox('err', 'خطأ في الاتصال: ' + err2);
+    });
+  }
+
+  function stepDone(result) {
+    S.step = TOTAL_STEPS; paintSteps();
+    var html = alertBox('ok', result.successText || 'تم حجز موعدك بنجاح.');
+    html += '<div class="card"><h2>ملخص الموعد</h2>' +
+      '<dl class="summary">' +
+      row('الطبيب', result.doctorAr) +
+      row('سبب الزيارة', result.reasonAr) +
+      row('الفرع', result.clinicAr) +
+      row('التاريخ', result.dateAr) +
+      row('الوقت', result.startTimeAr + (result.endTimeAr ? ' — ' + result.endTimeAr : '')) +
+      (result.name ? row('الاسم', result.name) : '') +
+      row('رقم الحجز', '<span class="ref">' + esc(result.bookingId) + '</span>') +
+      (result.clinicAddressAr ? row('العنوان', result.clinicAddressAr) : '') +
+      '</dl>';
+
+    // The phone number is the one thing a patient reaches for when something changes,
+    // so it is the loudest element on this card — bigger than the map link beside it
+    // and than the calendar link below it. The server already decided which number
+    // is real; a placeholder string never gets here.
+    const phoneShown = result.contactPhone || '';
+    const phoneDial = String(phoneShown).replace(/[^\d+]/g, '');
+
+    html += '<div class="actions">';
+    if (phoneDial) {
+      html += '<a class="call-strip" href="tel:' + esc(phoneDial) + '">' +
+        '<span>لو احتجت تعديل الموعد<small>تواصل مع الاستقبال — اضغط للاتصال</small></span>' +
+        '<span class="num" dir="ltr">' + esc(phoneShown) + '</span>' +
+        '</a>';
+    }
+    if (result.mapLink) {
+      html += '<a class="btn ghost" href="' + esc(result.mapLink) + '" target="_blank" rel="noopener">موقع العيادة</a>';
+    }
+    html += '</div>';
+
+    html += '<div class="actions" style="margin-top:10px">';
+    if (result.calendarUrl) {
+      html += '<a class="btn ghost" href="' + esc(result.calendarUrl) + '" target="_blank" rel="noopener">أضف إلى تقويمي</a>';
+    }
+    if (result.whatsappNumber) {
+      html += '<a class="btn ghost" href="https://wa.me/' + esc(String(result.whatsappNumber).replace(/\D/g, '')) + '" target="_blank" rel="noopener">تواصل واتساب</a>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="card"><button class="btn ghost wide" onclick="restart()">حجز موعد آخر</button></div>';
+    view(html);
+    window.scrollTo(0, 0);
+  }
+
+  function row(label, value) {
+    return '<dt>' + esc(label) + '</dt><dd>' + (value && String(value).indexOf('<span') === 0 ? value : esc(value)) + '</dd>';
+  }
+
+  function restart() {
+    S.clinic = null; S.doctor = null; S.reason = null; S.day = null; S.slot = null; S.step = 1;
+    stepClinic();
+    window.scrollTo(0, 0);
+  }
+
+  function goBack() {
+    if (S.step === 2) { S.clinic = null; S.step = 1; return stepClinic(); }
+    if (S.step === 3) { S.doctor = null; S.step = 2; return stepDoctor(); }
+    if (S.step === 4) { S.reason = null; S.step = 3; return stepReason(); }
+    if (S.step === 5) { S.slot = null; S.step = 4; return stepSlots(); }
+    return stepClinic();
+  }
+
+  boot();
+</script>
+</body>
+</html>

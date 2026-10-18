@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles') ?>
+  <style>
+    :root {
+      --primary: <?= config.brandPrimary ?>;
+      --primary-dark: <?= config.brandPrimary ?>;
+      --soft: <?= config.brandSecondary ?>;
+      --bg: #f7f9f9;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e4e7ec;
+    }
+  </style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <? if (config.logoUrl) { ?>
+      <img class="logo" src="<?= config.logoUrl ?>" alt="">
+    <? } ?>
+    <div>
+      <h1><?= config.clinicName ?></h1>
+      <p>احجز موعدك في أقل من دقيقة</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="steps" id="steps"></div>
+  <div id="app"></div>
+  <div class="footer">
+    <? if (config.supportPhone) { ?>
+      للاستفسار: <span dir="ltr"><?= config.supportPhone ?></span>
+    <? } ?>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<?!= include('ClientJs') ?>
+<script>
+  var CONFIG = <?!= JSON.stringify(config) ?>;
+  var PRESET = <?!= JSON.stringify(preset) ?>;
+  var SOURCE = <?!= JSON.stringify(source) ?>;
+  var TOTAL_STEPS = 5;
+
+  var S = {
+    boot: null,
+    clinic: null,
+    doctor: null,
+    reason: null,
+    day: null,
+    slot: null,
+    submitting: false
+  };
+
+  /* ---------- tiny helpers ---------- */
+
+  function shade(hex, amount) {
+    var h = String(hex || '#0f6f6c').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var num = parseInt(h, 16);
+    if (isNaN(num)) return hex;
+    var r = Math.max(0, Math.min(255, ((num >> 16) & 255) * (1 - amount)));
+    var g = Math.max(0, Math.min(255, ((num >> 8) & 255) * (1 - amount)));
+    var b = Math.max(0, Math.min(255, (num & 255) * (1 - amount)));
+    return '#' + ((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b)).toString(16).slice(1);
+  }
+
+  function paintSteps() {
+    var html = '';
+    for (var i = 1; i <= TOTAL_STEPS; i++) html += '<i class="' + (i <= S.step ? 'on' : '') + '"></i>';
+    el('steps').innerHTML = html;
+  }
+
+  function view(html) { el('app').innerHTML = html; }
+  function alertBox(kind, text) { return '<div class="msg ' + kind + '">' + esc(text) + '</div>'; }
+
+  function header(title, hint) {
+    return '<div class="card"><h2>' + esc(title) + '</h2>' +
+      (hint ? '<p class="hint">' + esc(hint) + '</p>' : '') + '</div>';
+  }
+
+  function backButton(label) {
+    return '<button class="btn link" onclick="goBack()">↩ ' + esc(label || 'رجوع') + '</button>';
+  }
+
+  /* ---------- flow ---------- */
+
+  function boot() {
+    document.documentElement.style.setProperty('--primary-dark', shade(CONFIG.brandPrimary, 0.22));
+    paintSteps();
+    view('<div class="spinner">جاري التحميل…</div>');
+    api('apiBootstrap').then(function (res) {
+      if (!res || !res.ok) { view(alertBox('err', 'تعذّر تحميل بيانات العيادة. حاول تحديث الصفحة.')); return; }
+      S.boot = res;
+      if (!res.clinics.length || !res.reasons.length) {
+        view(alertBox('err', 'لم يتم إعداد مواعيد العيادة بعد. تواصل مع الاستقبال.'));
+        return;
+      }
+      applyPreset();
+      stepClinic();
+    }).catch(function (err) {
+      view(alertBox('err', 'خطأ في الاتصال: ' + err));
+    });
+  }
+
+  function applyPreset() {
+    if (PRESET.clinicId) {
+      S.clinic = find(S.boot.clinics, 'id', PRESET.clinicId);
+    }
+    if (PRESET.doctorId) {
+      S.doctor = find(S.boot.doctors, 'id', PRESET.doctorId);
+    }
+    if (PRESET.reasonId) {
+      S.reason = find(S.boot.reasons, 'id', PRESET.reasonId);
+    }
+    if (S.clinic && S.doctor && S.reason) return;
+    if (S.clinic && S.doctor) { S.reason = null; }
+    if (S.clinic && !S.doctor) { S.doctor = null; }
+  }
+
+  function find(list, field, value) {
+    for (var i = 0; i < list.length; i++) if (String(list[i][field]) === String(value)) return list[i];
+    return null;
+  }
+
+  function doctorsFor(clinicId) {
+    var allowed = {};
+    S.boot.reasons.forEach(function (r) {
+      (r.links || []).forEach(function (l) { if (l.clinicId === clinicId) allowed[l.doctorId] = true; });
+    });
+    return S.boot.doctors.filter(function (d) { return allowed[d.id]; });
+  }
+
+  function reasonsFor(clinicId, doctorId) {
+    return S.boot.reasons.filter(function (r) {
+      return (r.links || []).some(function (l) { return l.clinicId === clinicId && l.doctorId === doctorId; });
+    });
+  }
+
+  function stepClinic() {
+    S.step = 1; paintSteps();
+    if (S.clinic) return stepDoctor();
+    var html = header('اختر الفرع', 'من أي فرع تحب أن يكون موعدك؟');
+    S.boot.clinics.forEach(function (c) {
+      html += '<button class="choice" onclick="pickClinic(\'' + c.id + '\')">' + esc(c.nameAr) +
+        (c.addressAr ? '<span class="sub">' + esc(c.addressAr) + '</span>' : '') + '</button>';
+    });
+    view(html);
+  }
+
+  function pickClinic(id) {
+    S.clinic = find(S.boot.clinics, 'id', id);
+    S.doctor = null; S.reason = null; S.day = null; S.slot = null;
+    S.step = 2;
+    stepDoctor();
+  }
+
+  function stepDoctor() {
+    S.step = Math.max(S.step, 2); paintSteps();
+    var docs = doctorsFor(S.clinic.id);
+    if (!docs.length) {
+      view(header('لا يوجد أطباء متاحون') + alertBox('info', 'لا يوجد أطباء بمواعيد متاحة في هذا الفرع حالياً. اختر فرعاً آخر.') + backButton());
+      return;
+    }
+    if (S.doctor && docs.some(function (d) { return d.id === S.doctor.id; })) { S.step = 3; return stepReason(); }
+
+    var html = header('اختر الطبيب', 'طبيب ' + S.clinic.nameAr);
+    docs.forEach(function (d) {
+      html += '<button class="choice" onclick="pickDoctor(\'' + d.id + '\')">' + esc(d.nameAr) +
+        (d.specialtyAr ? '<span class="sub">' + esc(d.specialtyAr) + '</span>' : '') + '</button>';
+    });
+    html += backButton('تغيير الفرع');
+    view(html);
+  }
+
+  function pickDoctor(id) {
+    S.doctor = find(S.boot.doctors, 'id', id);
+    S.reason = null; S.day = null; S.slot = null;
+    S.step = 3;
+    stepReason();
+  }
+
+  function stepReason() {
+    S.step = Math.max(S.step, 3); paintSteps();
+    var reasons = reasonsFor(S.clinic.id, S.doctor.id);
+    if (!reasons.length) {
+      view(header('لا توجد أسباب زيارة') + alertBox('info', 'هذا الطبيب لا يستقبل حجوزات حالياً.') + backButton());
+      return;
+    }
+    if (S.reason && reasons.some(function (r) { return r.id === S.reason.id; })) { S.step = 4; return stepSlots(); }
+
+    var html = header('سبب الزيارة', 'اختر نوع الزيارة ليظهر لك الوقت المناسب');
+    reasons.forEach(function (r) {
+      html += '<button class="choice" onclick="pickReason(\'' + r.id + '\')">' + esc(r.nameAr) +
+        '<span class="badge">' + r.durationMin + ' د</span>' +
+        (r.descriptionAr ? '<span class="sub">' + esc(r.descriptionAr) + '</span>' : '') + '</button>';
+    });
+    html += backButton('تغيير الطبيب');
+    view(html);
+  }
+
+  function pickReason(id) {
+    S.reason = find(S.boot.reasons, 'id', id);
+    S.day = null; S.slot = null;
+    S.step = 4;
+    stepSlots();
+  }
+
+  function stepSlots() {
+    S.step = Math.max(S.step, 4); paintSteps();
+    view('<div class="spinner">جاري البحث عن المواعيد المتاحة…</div>');
+    api('apiSlots', { clinicId: S.clinic.id, doctorId: S.doctor.id, reasonId: S.reason.id })
+      .then(function (res) {
+        if (!res || !res.ok) {
+          view(header('تعذّر عرض المواعيد') + alertBox('err', res && res.messageAr ? res.messageAr : 'حدث خطأ.') + backButton());
+          return;
+        }
+        if (!res.days || !res.days.length) {
+          view(header('لا توجد مواعيد متاحة') + alertBox('info', res.emptyText || 'لا توجد مواعيد متاحة لهذا الاختيار حالياً. اختر طبيباً آخر أو عد لاحقاً.') + backButton());
+          return;
+        }
+        S.days = res.days;
+        S.day = S.day && findDay(S.day.date) ? S.day : res.days[0];
+        renderSlots();
+      })
+      .catch(function (err) { view(alertBox('err', 'خطأ في الاتصال: ' + err)); });
+  }
+
+  function findDay(dateStr) {
+    for (var i = 0; i < S.days.length; i++) if (S.days[i].date === dateStr) return S.days[i];
+    return null;
+  }
+
+  function renderSlots() {
+    var html = '<div class="card"><h2>اختر الموعد</h2>' +
+      '<p class="hint">' + esc(S.doctor.nameAr) + ' — ' + esc(S.reason.nameAr) + ' (' + S.reason.durationMin + ' دقيقة)</p>';
+
+    html += '<div class="daybar">';
+    S.days.forEach(function (d) {
+      html += '<button class="' + (d.date === S.day.date ? 'on' : '') + '" onclick="pickDay(\'' + d.date + '\')">' +
+        esc(d.weekdayAr) + '<span class="d">' + d.date.slice(8) + '/' + d.date.slice(5, 7) + '</span>' +
+        '<span class="sub">' + d.slots.length + ' موعد</span></button>';
+    });
+    html += '</div>';
+
+    html += '<div class="slots">';
+    S.day.slots.forEach(function (s) {
+      html += '<button class="' + (S.slot && S.slot.start === s.start ? 'on' : '') + '" onclick="pickSlot(\'' + s.start + '\')">' + esc(s.labelAr) + '</button>';
+    });
+    html += '</div></div>';
+
+    html += backButton('تغيير سبب الزيارة');
+    view(html);
+  }
+
+  function pickDay(date) {
+    S.day = findDay(date);
+    S.slot = null;
+    renderSlots();
+  }
+
+  function pickSlot(start) {
+    S.slot = { start: start };
+    S.step = 5;
+    stepDetails();
+  }
+
+  function stepDetails() {
+    paintSteps();
+    var html = header('بياناتك', esc(S.day.labelAr) + ' — ' + esc(timeLabel(S.slot.start)));
+    html += '<div class="card">';
+    html += '<label class="field">الاسم' +
+      '<input id="f-name" type="text" autocomplete="name" maxlength="80" placeholder="اكتب اسمك">' +
+      '<span class="why">اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.</span></label>';
+
+    html += '<div class="phone-row">' +
+      '<label class="field">رقم الجوال *' +
+      '<input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01xxxxxxxxx">' +
+      '<span class="why">مطلوب — سنتواصل معك على واتساب عليه.</span></label>' +
+      '<label class="field">تأكيد الرقم *' +
+      '<input id="f-phone2" type="tel" inputmode="tel" placeholder="أعد كتابة الرقم">' +
+      '<span class="why">للتأكد من صحة الرقم.</span></label>' +
+      '</div>';
+
+    html += '<label class="field">ملاحظة للطبيب<span class="why">اختياري</span>' +
+      '<textarea id="f-extra" rows="2" maxlength="600"></textarea></label>';
+
+    html += '<label class="consent"><input id="f-consent" type="checkbox">' +
+      '<span>' + esc(CONFIG.consentText) + '</span></label>' +
+      '<input class="hp" id="f-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">';
+
+    html += '<div id="form-error"></div>';
+    html += '<div class="actions"><button class="btn wide" id="btn-submit" onclick="doSubmit()">تأكيد الحجز</button></div>';
+    html += '</div>';
+    html += backButton('تغيير الموعد');
+    view(html);
+  }
+
+  function timeLabel(hhmm) {
+    var parts = String(hhmm).split(':');
+    var h = parseInt(parts[0], 10);
+    var m = parts[1];
+    var suffix = h < 12 ? 'ص' : 'م';
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + m + ' ' + suffix;
+  }
+
+  function doSubmit() {
+    if (S.submitting) return;
+    var name = (el('f-name').value || '').trim();
+    var phone = (el('f-phone').value || '').trim();
+    var phone2 = (el('f-phone2').value || '').trim();
+    var extra = (el('f-extra').value || '').trim();
+    var consent = el('f-consent').checked;
+
+    var err = el('form-error');
+    if (!phone) { err.innerHTML = alertBox('err', 'رقم الجوال مطلوب.'); el('f-phone').focus(); return; }
+    if (digits(phone).length < 8) { err.innerHTML = alertBox('err', 'رقم الجوال غير صحيح.'); el('f-phone').focus(); return; }
+    if (digits(phone) !== digits(phone2)) { err.innerHTML = alertBox('err', 'رقم الجوال وتأكيده غير متطابقين.'); el('f-phone2').focus(); return; }
+    if (!consent) { err.innerHTML = alertBox('err', 'من فضلك وافق على استخدام بياناتك لإتمام الحجز.'); return; }
+    err.innerHTML = '';
+
+    S.submitting = true;
+    busy(el('btn-submit'), true, 'جاري تأكيد الحجز…');
+
+    api('apiSubmit', {
+      clinicId: S.clinic.id,
+      doctorId: S.doctor.id,
+      reasonId: S.reason.id,
+      date: S.day.date,
+      start: S.slot.start,
+      name: name,
+      phone: phone,
+      phoneConfirm: phone2,
+      extra: extra,
+      consent: 'true',
+      trap: el('f-website').value,
+      source: SOURCE
+    }).then(function (res) {
+      S.submitting = false;
+      if (!res || !res.ok) {
+        busy(el('btn-submit'), false);
+        var msg = res && res.messageAr ? res.messageAr : 'تعذّر إتمام الحجز. حاول مرة أخرى.';
+        el('form-error').innerHTML = alertBox('err', msg);
+        if (res && (res.error === 'SLOT_TAKEN' || res.error === 'BUSY')) {
+          setTimeout(function () { S.step = 4; S.slot = null; stepSlots(); }, 1200);
+        }
+        return;
+      }
+      stepDone(res);
+    }).catch(function (err2) {
+      S.submitting = false;
+      busy(el('btn-submit'), false);
+      el('form-error').innerHTML = alertBox('err', 'خطأ في الاتصال: ' + err2);
+    });
+  }
+
+  function stepDone(result) {
+    S.step = TOTAL_STEPS; paintSteps();
+    var html = alertBox('ok', result.successText || 'تم حجز موعدك بنجاح.');
+    html += '<div class="card"><h2>ملخص الموعد</h2>' +
+      '<dl class="summary">' +
+      row('الطبيب', result.doctorAr) +
+      row('سبب الزيارة', result.reasonAr) +
+      row('الفرع', result.clinicAr) +
+      row('التاريخ', result.dateAr) +
+      row('الوقت', result.startTimeAr + (result.endTimeAr ? ' — ' + result.endTimeAr : '')) +
+      (result.name ? row('الاسم', result.name) : '') +
+      row('رقم الحجز', '<span class="ref">' + esc(result.bookingId) + '</span>') +
+      (result.clinicAddressAr ? row('العنوان', result.clinicAddressAr) : '') +
+      '</dl>';
+
+    // The phone number is the one thing a patient reaches for when something changes,
+    // so it is the loudest element on this card — bigger than the map link beside it
+    // and than the calendar link below it. The server already decided which number
+    // is real; a placeholder string never gets here.
+    const phoneShown = result.contactPhone || '';
+    const phoneDial = String(phoneShown).replace(/[^\d+]/g, '');
+
+    html += '<div class="actions">';
+    if (phoneDial) {
+      html += '<a class="call-strip" href="tel:' + esc(phoneDial) + '">' +
+        '<span>لو احتجت تعديل الموعد<small>تواصل مع الاستقبال — اضغط للاتصال</small></span>' +
+        '<span class="num" dir="ltr">' + esc(phoneShown) + '</span>' +
+        '</a>';
+    }
+    if (result.mapLink) {
+      html += '<a class="btn ghost" href="' + esc(result.mapLink) + '" target="_blank" rel="noopener">موقع العيادة</a>';
+    }
+    html += '</div>';
+
+    html += '<div class="actions" style="margin-top:10px">';
+    if (result.calendarUrl) {
+      html += '<a class="btn ghost" href="' + esc(result.calendarUrl) + '" target="_blank" rel="noopener">أضف إلى تقويمي</a>';
+    }
+    if (result.whatsappNumber) {
+      html += '<a class="btn ghost" href="https://wa.me/' + esc(String(result.whatsappNumber).replace(/\D/g, '')) + '" target="_blank" rel="noopener">تواصل واتساب</a>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="card"><button class="btn ghost wide" onclick="restart()">حجز موعد آخر</button></div>';
+    view(html);
+    window.scrollTo(0, 0);
+  }
+
+  function row(label, value) {
+    return '<dt>' + esc(label) + '</dt><dd>' + (value && String(value).indexOf('<span') === 0 ? value : esc(value)) + '</dd>';
+  }
+
+  function restart() {
+    S.clinic = null; S.doctor = null; S.reason = null; S.day = null; S.slot = null; S.step = 1;
+    stepClinic();
+    window.scrollTo(0, 0);
+  }
+
+  function goBack() {
+    if (S.step === 2) { S.clinic = null; S.step = 1; return stepClinic(); }
+    if (S.step === 3) { S.doctor = null; S.step = 2; return stepDoctor(); }
+    if (S.step === 4) { S.reason = null; S.step = 3; return stepReason(); }
+    if (S.step === 5) { S.slot = null; S.step = 4; return stepSlots(); }
+    return stepClinic();
+  }
+
+  boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles') ?>
+  <style>
+    :root {
+      --primary: <?= config.brandPrimary ?>;
+      --primary-dark: <?= config.brandPrimary ?>;
+      --soft: <?= config.brandSecondary ?>;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e4e7ec;
+    }
+    .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .bar input[type="date"], .bar input[type="text"], .bar select {
+      padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+      font-family: inherit; font-size: 15px; background: #fff; color: var(--text);
+    }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+    .chip b { color: var(--primary); }
+    .upcoming { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
+    .upcoming button { flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; cursor: pointer; color: inherit; }
+    .upcoming button.on { border-color: var(--primary); }
+    .bk { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .bk.cancelled { opacity: .6; }
+    .bk .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .bk .time { font-size: 19px; font-weight: 700; min-width: 84px; }
+    .bk .who { flex: 1 1 auto; }
+    .bk .who .nm { font-size: 16px; font-weight: 600; }
+    .bk .who .meta { font-size: 13px; color: var(--muted); }
+    .tag { font-size: 12px; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+    .t-confirmed { background: #e7f0ff; color: #11407e; }
+    .t-attended { background: #e8f5e9; color: #14532d; }
+    .t-no_show { background: #fdecea; color: #8a1c10; }
+    .t-cancelled, .t-rescheduled { background: #f2f4f7; color: #475467; }
+    .warn { color: #b54708; font-size: 12.5px; }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .row-actions button, .row-actions a {
+      font-family: inherit; font-size: 13px; padding: 7px 11px; border-radius: 9px;
+      border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; text-decoration: none;
+    }
+    .row-actions button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .row-actions button.wa { background: #25d366; color: #04310f; border-color: #1da851; }
+    .row-actions button.danger { color: #8a1c10; }
+    details.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
+    details.panel > summary { cursor: pointer; font-weight: 700; font-size: 15px; }
+    details.panel .body { margin-top: 12px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 620px) { .grid2 { grid-template-columns: 1fr; } }
+    .mini-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; margin-top: 8px; }
+    .mini-slots button { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 8px 4px; font-family: inherit; font-size: 13px; cursor: pointer; color: inherit; }
+    .mini-slots button:hover { border-color: var(--primary); background: var(--soft); }
+    table.hist { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    table.hist th, table.hist td { border-bottom: 1px solid var(--line); padding: 7px 6px; text-align: right; }
+    .kpi { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .kpi div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+    .kpi span { display: block; font-size: 12.5px; color: var(--muted); }
+    .kpi b { font-size: 20px; }
+
+    /* Shared schedule: one column per doctor, filtered by the labels above it. */
+    .doc-filter { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 12px; }
+    .doc-chip {
+      display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+      background: #fff; border: 1px solid var(--line); border-radius: 999px;
+      padding: 7px 13px; font-family: inherit; font-size: 13.5px; color: inherit;
+    }
+    .doc-chip .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--dot, var(--primary)); flex: 0 0 auto; }
+    .doc-chip .cnt { font-size: 12px; color: var(--muted); }
+    .doc-chip.on { border-color: var(--dot, var(--primary)); border-width: 2px; padding: 6px 12px; }
+    .doc-chip.off { opacity: .55; }
+    .doc-chip.off .dot { background: var(--line); }
+    .sched { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .sched .col {
+      background: var(--card); border: 1px solid var(--line);
+      border-top: 3px solid var(--dot, var(--primary)); border-radius: 12px; padding: 10px; min-height: 96px;
+    }
+    .sched .col h3 { margin: 0; font-size: 14.5px; }
+    .sched .col .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .sched .appt {
+      display: block; width: 100%; text-align: right; font-family: inherit; cursor: pointer;
+      border: 0; border-inline-start: 3px solid var(--dot, var(--primary)); background: #f7f9fa;
+      border-radius: 8px; padding: 7px 9px; margin-top: 7px; font-size: 13px; color: inherit;
+    }
+    .sched .appt .st { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+    .sched .appt.cancelled { opacity: .55; text-decoration: line-through; }
+    .sched-empty { border: 1px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 10px; }
+    @keyframes bkflash { from { background: var(--soft); } to { background: var(--card); } }
+    .bk.flash { animation: bkflash 1.5s ease-out; }
+  </style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div>
+      <h1>شاشة الاستقبال</h1>
+      <p><?= config.clinicName ?> — اليوم: <span id="hdr-date"></span></p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="app"></div>
+<div id="toast"></div>
+
+<?!= include('ClientJs') ?>
+<script>
+  var WEBAPP_URL = <?!= JSON.stringify(webAppUrl) ?>;
+  var S = { code: '', date: '', board: null, reschedule: null, hidden: [], reportDoctors: [] };
+
+  // Which doctors the reception chose to hide — one or several, remembered on this
+  // device so the same view survives a reload. Ids are pruned per day below.
+  try {
+    S.hidden = JSON.parse(localStorage.getItem('polyclinic_board_hidden_doctors') || '[]') || [];
+    if (!Array.isArray(S.hidden)) S.hidden = [];
+  } catch (e) { S.hidden = []; }
+
+  // Which doctors a report covers — one of them, a handful for a comparison, or all.
+  // Also remembered on this device, so a repeated export keeps the same scope.
+  try {
+    S.reportDoctors = JSON.parse(localStorage.getItem('polyclinic_report_doctors') || '[]') || [];
+    if (!Array.isArray(S.reportDoctors)) S.reportDoctors = [];
+  } catch (e) { S.reportDoctors = []; }
+
+  function gate() {
+    view(
+      '<div class="card"><h2>دخول الاستقبال</h2>' +
+      '<p class="hint">اكتب كود الاستقبال. الكود موجود في ورقة Settings بند staff_code.</p>' +
+      '<label class="field">كود الاستقبال<input id="g-code" type="password" autocomplete="off"></label>' +
+      '<button class="btn wide" onclick="tryGate()">دخول</button>' +
+      '<div id="gate-err"></div></div>'
+    );
+    el('hdr-date').textContent = '';
+    el('g-code').focus();
+  }
+
+  function tryGate() {
+    var code = el('g-code').value.trim();
+    if (!code) return;
+    S.code = code;
+    view('<div class="spinner">جاري التحقق…</div>');
+    api('apiStaffBoard', todayISO(), code).then(function (res) {
+      if (!res || !res.ok) {
+        S.code = '';
+        gate();
+        el('gate-err').innerHTML = alertBox('err', (res && res.messageAr) || 'كود غير صحيح.');
+        return;
+      }
+      try { localStorage.setItem('polyclinic_staff_code', code); } catch (e) {}
+      S.date = todayISO();
+      renderBoard(res);
+    }).catch(function (err) { gate(); el('gate-err').innerHTML = alertBox('err', 'خطأ: ' + err); });
+  }
+
+  function view(html) { el('app').innerHTML = html; }
+  function todayISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function alertBox(kind, text) { return '<div class="msg ' + kind + '" style="margin-top:10px">' + esc(text) + '</div>'; }
+
+  function load(date) {
+    S.date = date || S.date || todayISO();
+    view('<div class="spinner">جاري التحميل…</div>');
+    api('apiStaffBoard', S.date, S.code).then(function (res) {
+      if (!res || !res.ok) { gate(); return; }
+      renderBoard(res);
+    }).catch(function (err) { view(alertBox('err', 'خطأ: ' + err)); });
+    if (!S.catalog) {
+      api('apiStaffCatalog', S.code).then(function (cat) {
+        if (!cat || !cat.ok) return;
+        S.catalog = cat;
+        // The report panel is already on screen by now; give it the doctor list.
+        pruneReportDoctors();
+        refreshReportDoctors();
+      });
+    }
+  }
+
+  function renderBoard(board) {
+    S.board = board;
+
+    // Drop hidden doctors who are not on this day's roster anyway.
+    var rosterIds = (board.doctors || []).map(function (d) { return d.id; });
+    S.hidden = S.hidden.filter(function (id) { return rosterIds.indexOf(id) !== -1; });
+
+    el('hdr-date').textContent = board.dateAr;
+
+    var html = '';
+
+    html += '<div class="bar">' +
+      '<input type="date" id="d-pick" value="' + board.date + '" onchange="load(this.value)">' +
+      '<button class="btn ghost" onclick="load(\'' + todayISO() + '\')">اليوم</button>' +
+      '<button class="btn ghost" onclick="load(\'' + addDays(board.date, 1) + '\')">الغد ›</button>' +
+      '</div>';
+
+    html += '<div class="chips">' +
+      '<span class="chip">الإجمالي <b>' + board.counts.total + '</b></span>' +
+      '<span class="chip">مؤكد <b>' + board.counts.confirmed + '</b></span>' +
+      '<span class="chip">حضر <b>' + board.counts.attended + '</b></span>' +
+      '<span class="chip">لم يحضر <b>' + board.counts.no_show + '</b></span>' +
+      '<span class="chip">ملغي <b>' + board.counts.cancelled + '</b></span>' +
+      '<span class="chip">تم تذكيره <b>' + board.counts.reminded + '</b></span>' +
+      '</div>';
+
+    html += '<div class="upcoming">';
+    board.upcoming.forEach(function (u) {
+      html += '<button onclick="load(\'' + u.date + '\')">' + esc(u.labelAr) + '<br><b>' + u.count + '</b></button>';
+    });
+    html += '</div>';
+
+    html += schedulePanel(board);
+
+    var visible = board.bookings.filter(function (b) { return !isHidden(b.doctorId); });
+
+    if (S.hidden.length) {
+      html += alertBox('info', 'تم إخفاء ' + S.hidden.length + ' طبيب. يُعرض ' + visible.length + ' من ' +
+        board.bookings.length + ' موعد. اضغط «كل الأطباء» لإظهار الجميع.');
+    }
+    if (!board.bookings.length) {
+      html += alertBox('info', 'لا توجد مواعيد في هذا اليوم.');
+    } else if (!visible.length) {
+      html += alertBox('info', 'لا مواعيد للأطباء المختارين.');
+    }
+
+    visible.forEach(function (b) { html += bookingCard(b); });
+
+    html += blockPanel();
+    html += lookupPanel();
+    html += reportPanel();
+
+    view(html);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Shared schedule: colour-coded columns, filtered by doctor labels
+   * ---------------------------------------------------------------- */
+
+  function isHidden(id) { return S.hidden.indexOf(id) !== -1; }
+
+  function visibleDoctors() {
+    return ((S.board && S.board.doctors) || []).filter(function (d) { return !isHidden(d.id); });
+  }
+
+  function toggleDoctor(id) {
+    var i = S.hidden.indexOf(id);
+    if (i === -1) S.hidden.push(id); else S.hidden.splice(i, 1);
+    // Never leave the board blank: hiding the last doctor means "show them all".
+    if (S.board && S.board.doctors && S.hidden.length >= S.board.doctors.length) {
+      S.hidden = [];
+      toast('تم إظهار كل الأطباء.');
+    }
+    saveHidden();
+    renderBoard(S.board);
+  }
+
+  function showAllDoctors() {
+    S.hidden = [];
+    saveHidden();
+    renderBoard(S.board);
+  }
+
+  function saveHidden() {
+    try { localStorage.setItem('polyclinic_board_hidden_doctors', JSON.stringify(S.hidden)); } catch (e) {}
+  }
+
+  function schedulePanel(board) {
+    var docs = board.doctors || [];
+    var shown = visibleDoctors();
+
+    var html = '<div class="card" style="margin-top:14px">' +
+      '<h2 style="margin:0 0 4px">التقويم المشترك — جدول الأطباء</h2>' +
+      '<p class="hint" style="margin:0">اضغط على اسم أي طبيب لعرض أو إخفاء مواعيده. يمكنك اختيار أكثر من طبيب.</p>';
+
+    if (!docs.length) {
+      return html + '<div class="sched-empty">لا يوجد أطباء في هذا اليوم.</div></div>';
+    }
+
+    html += '<div class="doc-filter">';
+    html += '<button class="doc-chip ' + (S.hidden.length ? 'off' : 'on') + '" onclick="showAllDoctors()">' +
+      'كل الأطباء <span class="cnt">(' + docs.length + ')</span></button>';
+    docs.forEach(function (d) {
+      html += '<button class="doc-chip ' + (isHidden(d.id) ? 'off' : 'on') + '"' +
+        ' style="--dot:' + esc(d.color) + '"' +
+        ' title="' + esc(d.windowsAr || '') + '"' +
+        ' onclick="toggleDoctor(\'' + esc(d.id) + '\')">' +
+        '<span class="dot"></span>' + esc(d.nameAr) + '<span class="cnt">' + d.bookings + '</span>' +
+        '</button>';
+    });
+    html += '</div>';
+
+    html += '<div class="sched">';
+    shown.forEach(function (d) {
+      var meta = esc(d.specialtyAr || '');
+      if (d.windowsAr) meta += (meta ? ' — ' : '') + esc(d.windowsAr);
+      html += '<div class="col" style="--dot:' + esc(d.color) + '">' +
+        '<h3>' + esc(d.nameAr) + '</h3>' +
+        '<div class="sub">' + meta + '</div>';
+
+      var mine = board.bookings.filter(function (b) { return b.doctorId === d.id; });
+      if (!mine.length) {
+        html += '<div class="sub" style="margin-top:8px">لا مواعيد محجوزة.</div>';
+      } else {
+        mine.forEach(function (b) {
+          var off = (b.status === 'cancelled' || b.status === 'rescheduled') ? ' cancelled' : '';
+          html += '<button class="appt' + off + '" onclick="scrollToBooking(\'' + esc(b.bookingId) + '\')">' +
+            '<b>' + esc(b.timeAr) + '</b> — ' + esc(b.name || b.phoneNorm) +
+            '<span class="st">' + esc(statusAr(b.status)) + (b.name ? ' — ' + esc(b.phoneNorm) : '') + '</span>' +
+            '</button>';
+        });
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (!shown.length) html += '<div class="sched-empty">لم تختر أي طبيب.</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function scrollToBooking(id) {
+    var node = document.getElementById('bk-' + id);
+    if (!node) { toast('الموعد غير ظاهر في القائمة.'); return; }
+    if (node.scrollIntoView) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    node.classList.add('flash');
+    setTimeout(function () { node.classList.remove('flash'); }, 1600);
+  }
+
+  function bookingCard(b) {
+    var html = '<div id="bk-' + esc(b.bookingId) + '" class="bk ' +
+      (b.status === 'cancelled' || b.status === 'rescheduled' ? 'cancelled' : '') + '"' +
+      (b.doctorColor ? ' style="border-inline-start:4px solid ' + esc(b.doctorColor) + '"' : '') + '>';
+    html += '<div class="top">' +
+      '<div class="time">' + esc(b.timeAr) + '</div>' +
+      '<div class="who">' +
+      '<div class="nm">' + esc(b.name || 'بدون اسم') + '</div>' +
+      '<div class="meta">' + esc(b.doctorAr) + ' — ' + esc(b.reasonAr) + ' — ' + esc(b.clinicAr) + '</div>' +
+      '<div class="meta" dir="ltr" style="text-align:right">' + esc(b.phoneNorm) + '</div>' +
+      (b.staffNote ? '<div class="meta">ملاحظة: ' + esc(b.staffNote) + '</div>' : '') +
+      (b.status === 'confirmed' && !b.waSentAt ? '<div class="warn">⚠ لم يتم إرسال أي رسالة بعد</div>' : '') +
+      (b.waSentAt ? '<div class="meta">آخر رسالة: ' + esc(b.waTemplate || '') + '</div>' : '') +
+      '</div>' +
+      '<div class="tag t-' + esc(b.status) + '">' + esc(statusAr(b.status)) + '</div>' +
+      '</div>';
+
+    html += '<div class="row-actions">';
+    b.waLinks.forEach(function (w) {
+      html += '<button class="wa" onclick="sendWa(\'' + b.bookingId + '\',\'' + w.key + '\',\'' + encodeURIComponent(w.url) + '\')">' + esc(w.labelAr) + '</button>';
+    });
+    if (b.status === 'confirmed') {
+      html += '<button class="primary" onclick="setStatus(\'' + b.bookingId + '\',\'attended\')">حضر</button>';
+      html += '<button onclick="setStatus(\'' + b.bookingId + '\',\'no_show\')">لم يحضر</button>';
+      html += '<button onclick="openReschedule(\'' + b.bookingId + '\')">تغيير الموعد</button>';
+      html += '<button class="danger" onclick="setStatus(\'' + b.bookingId + '\',\'cancelled\')">إلغاء</button>';
+    } else if (b.status !== 'rescheduled') {
+      html += '<button onclick="setStatus(\'' + b.bookingId + '\',\'confirmed\')">إرجاع كمؤكد</button>';
+    }
+    html += '</div>';
+
+    html += '<div id="rs-' + b.bookingId + '"></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function statusAr(status) {
+    return { confirmed: 'مؤكد', attended: 'حضر', no_show: 'لم يحضر', cancelled: 'ملغي', rescheduled: 'تم تغييره' }[status] || status;
+  }
+
+  function addDays(dateStr, n) {
+    var p = String(dateStr).split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function sendWa(bookingId, key, encodedUrl) {
+    var url = decodeURIComponent(encodedUrl);
+    window.open(url, '_blank'); // must happen in the click, or the popup is blocked
+    api('apiStaffWaMark', bookingId, key, S.code).then(function () {
+      load(S.date);
+    });
+  }
+
+  function setStatus(bookingId, status) {
+    var label = statusAr(status);
+    if (status === 'cancelled' && !confirm('تأكيد إلغاء الموعد؟ سيتم تحرير الوقت وإزالة الموعد من التقويم.')) return;
+    var note = prompt('ملاحظة (اختياري) — ' + label, '') || '';
+    api('apiStaffStatus', bookingId, status, S.code, note).then(function (res) {
+      if (!res || !res.ok) { toast((res && res.messageAr) || 'تعذّر التحديث'); return; }
+      toast('تم: ' + label);
+      load(S.date);
+    });
+  }
+
+  function openReschedule(bookingId) {
+    S.reschedule = bookingId;
+    var item = null;
+    S.board.bookings.forEach(function (b) { if (b.bookingId === bookingId) item = b; });
+    var box = el('rs-' + bookingId);
+    if (!box || !item) return;
+    box.innerHTML = '<div class="spinner">جاري البحث عن مواعيد بديلة…</div>';
+    api('apiStaffSlots', { clinicId: item.clinicId, doctorId: item.doctorId, reasonId: item.reasonId, days: 21 }, S.code)
+      .then(function (res) {
+        if (!res || !res.ok || !res.days || !res.days.length) {
+          box.innerHTML = alertBox('info', 'لا توجد مواعيد بديلة متاحة.');
+          return;
+        }
+        var html = '<div class="msg info">اختر الموعد الجديد لـ ' + esc(item.name || item.phoneNorm) + '</div>';
+        res.days.slice(0, 10).forEach(function (d) {
+          html += '<div style="margin-top:8px"><b style="font-size:13.5px">' + esc(d.labelAr) + '</b><div class="mini-slots">';
+          d.slots.forEach(function (s) {
+            html += '<button onclick="doReschedule(\'' + bookingId + '\',\'' + d.date + '\',\'' + s.start + '\')">' + esc(s.labelAr) + '</button>';
+          });
+          html += '</div></div>';
+        });
+        box.innerHTML = html;
+      })
+      .catch(function (err) { box.innerHTML = alertBox('err', 'خطأ: ' + err); });
+  }
+
+  function doReschedule(bookingId, date, start) {
+    api('apiStaffReschedule', bookingId, date, start, S.code, 'تغيير من الاستقبال').then(function (res) {
+      if (!res || !res.ok) { toast((res && res.messageAr) || 'تعذّر تغيير الموعد'); return; }
+      toast('تم تغيير الموعد. أرسل رسالة «تغيير الموعد» للمريض على واتساب.');
+      load(S.date);
+    });
+  }
+
+  function blockPanel() {
+    var html = '<details class="panel"><summary>إيقاف وقت (عاتل / إجازة / ظرف طارئ)</summary><div class="body">';
+    html += '<div class="grid2">' +
+      '<label class="field">التاريخ<input type="date" id="b-date" value="' + S.date + '"></label>' +
+      '<label class="field">النطاق<select id="b-scope" onchange="renderScope()">' +
+      '<option value="all">كل الأطباء</option><option value="doctor">طبيب محدد</option><option value="clinic">فرع محدد</option>' +
+      '</select></label>' +
+      '</div>';
+    html += '<div id="b-scope-box"></div>';
+    html += '<div class="grid2">' +
+      '<label class="field">من (اتركه فارغاً ليوم كامل)<input type="time" id="b-from"></label>' +
+      '<label class="field">إلى<input type="time" id="b-to"></label>' +
+      '</div>';
+    html += '<label class="field">السبب<input type="text" id="b-note" placeholder="مثال: إجازة طارئة"></label>';
+    html += '<button class="btn" onclick="doBlock()">إيقاف الوقت</button>';
+    html += '</div></details>';
+    return html;
+  }
+
+  function renderScope() {
+    var scope = el('b-scope').value;
+    var box = el('b-scope-box');
+    if (scope === 'all') { box.innerHTML = ''; return; }
+    var options = '';
+    var list = [];
+    if (scope === 'doctor') {
+      list = S.catalog ? S.catalog.doctors : [];
+      if (!list.length) list = uniqueBy(S.board ? S.board.bookings : [], 'doctorId', 'doctorAr').map(function (d) { return { id: d.id, nameAr: d.label }; });
+    } else {
+      list = S.catalog ? S.catalog.clinics : [];
+      if (!list.length) list = uniqueBy(S.board ? S.board.bookings : [], 'clinicId', 'clinicAr').map(function (c) { return { id: c.id, nameAr: c.label }; });
+    }
+    list.forEach(function (x) {
+      options += '<option value="' + esc(x.id) + '">' + esc(x.nameAr) + '</option>';
+    });
+    box.innerHTML = '<label class="field">اختر<select id="b-id">' + options + '</select></label>';
+  }
+
+  function uniqueBy(list, idField, labelField) {
+    var out = [];
+    list.forEach(function (x) {
+      if (!out.some(function (y) { return y.id === x[idField]; })) out.push({ id: x[idField], label: x[labelField] });
+    });
+    return out;
+  }
+
+  function doBlock() {
+    var payload = {
+      date: el('b-date').value,
+      scopeType: el('b-scope').value,
+      scopeId: el('b-scope').value === 'all' ? '' : (el('b-id') ? el('b-id').value : ''),
+      fromTime: el('b-from').value,
+      toTime: el('b-to').value,
+      note: el('b-note').value
+    };
+    api('apiStaffBlock', payload, S.code).then(function (res) {
+      if (!res || !res.ok) { toast((res && res.messageAr) || 'تعذّر إيقاف الوقت'); return; }
+      toast('تم إيقاف الوقت.');
+      load(S.date);
+    });
+  }
+
+  function lookupPanel() {
+    return '<details class="panel"><summary>بحث عن مريض برقم الجوال</summary><div class="body">' +
+      '<div class="bar"><input type="tel" id="l-phone" placeholder="01xxxxxxxxx" style="flex:1 1 200px">' +
+      '<button class="btn" onclick="doLookup()">بحث</button></div>' +
+      '<div id="l-result"></div></div></details>';
+  }
+
+  function doLookup() {
+    var phone = el('l-phone').value.trim();
+    var box = el('l-result');
+    if (!phone) return;
+    box.innerHTML = '<div class="spinner">جاري البحث…</div>';
+    api('apiStaffLookup', phone, S.code).then(function (res) {
+      if (!res || !res.ok) { box.innerHTML = alertBox('info', (res && res.messageAr) || 'لا يوجد سجل.'); return; }
+      var html = '<div class="msg ok">' + esc(res.name || 'بدون اسم') + ' — إجمالي ' + res.total +
+        ' حجز | حضر ' + res.attended + ' | لم يحضر ' + res.noShow + '</div>';
+      html += '<table class="hist"><thead><tr><th>التاريخ</th><th>الوقت</th><th>الطبيب</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>';
+      res.items.forEach(function (i) {
+        html += '<tr><td>' + esc(i.dateAr) + '</td><td>' + esc(i.timeAr) + '</td><td>' + esc(i.doctorAr) +
+          '</td><td>' + esc(i.reasonAr) + '</td><td>' + esc(i.statusAr) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      box.innerHTML = html;
+    });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Reports: scope by doctor
+   * ---------------------------------------------------------------- */
+
+  function reportDoctorList() {
+    if (S.catalog && S.catalog.doctors && S.catalog.doctors.length) return S.catalog.doctors;
+    // Before the catalog arrives (or on a sheet with no Doctors rows yet) fall back
+    // to whoever is on today's board, so the buttons are never empty.
+    return (S.board && S.board.doctors) || [];
+  }
+
+  function isReportDoctor(id) { return S.reportDoctors.indexOf(id) !== -1; }
+
+  function toggleReportDoctor(id) {
+    var i = S.reportDoctors.indexOf(id);
+    if (i === -1) S.reportDoctors.push(id); else S.reportDoctors.splice(i, 1);
+    // Ticking every doctor is the same thing as ticking none: the report covers all.
+    if (S.reportDoctors.length >= reportDoctorList().length) S.reportDoctors = [];
+    saveReportDoctors();
+    refreshReportDoctors();
+  }
+
+  function allReportDoctors() {
+    S.reportDoctors = [];
+    saveReportDoctors();
+    refreshReportDoctors();
+  }
+
+  function saveReportDoctors() {
+    try { localStorage.setItem('polyclinic_report_doctors', JSON.stringify(S.reportDoctors)); } catch (e) {}
+  }
+
+  /** Drop ids of doctors who no longer exist, so a stale choice cannot export nothing. */
+  function pruneReportDoctors() {
+    var ids = reportDoctorList().map(function (d) { return d.id; });
+    S.reportDoctors = S.reportDoctors.filter(function (id) { return ids.indexOf(id) !== -1; });
+    saveReportDoctors();
+  }
+
+  /** '' for all doctors, 'D1' for one, 'D1,D3' for a comparison — the server's shape. */
+  function reportDoctorParam() { return S.reportDoctors.join(','); }
+
+  function reportDoctorsLabel() {
+    var list = reportDoctorList();
+    if (!S.reportDoctors.length) return 'كل الأطباء (' + list.length + ')';
+    return S.reportDoctors.map(function (id) {
+      var found = list.filter(function (d) { return d.id === id; })[0];
+      return found ? found.nameAr : id;
+    }).join(' + ');
+  }
+
+  function reportDoctorChips() {
+    var list = reportDoctorList();
+    var html = '<button class="doc-chip ' + (S.reportDoctors.length ? 'off' : 'on') + '" onclick="allReportDoctors()">' +
+      'كل الأطباء <span class="cnt">(' + list.length + ')</span></button>';
+    list.forEach(function (d) {
+      html += '<button class="doc-chip ' + (isReportDoctor(d.id) ? 'on' : 'off') + '"' +
+        ' style="--dot:' + esc(d.color || '#98a2b3') + '"' +
+        ' title="' + esc(d.specialtyAr || '') + '"' +
+        ' onclick="toggleReportDoctor(\'' + esc(d.id) + '\')">' +
+        '<span class="dot"></span>' + esc(d.nameAr) + '</button>';
+    });
+    if (!list.length) html += '<span class="hint">لا يوجد أطباء بعد — أضفهم في ورقة Doctors.</span>';
+    return html;
+  }
+
+  function refreshReportDoctors() {
+    var box = el('r-docs');
+    if (box) box.innerHTML = reportDoctorChips();
+    var note = el('r-scope');
+    if (note) note.textContent = reportDoctorsLabel();
+    markKpisStale();
+  }
+
+  /** The numbers on screen are for the old scope now — say so instead of lying. */
+  function markKpisStale() {
+    var box = el('r-kpi');
+    if (box && box.innerHTML) {
+      box.innerHTML = '<p class="hint">تغيّر نطاق التقرير — اضغط «عرض المؤشرات» لعرض الأرقام الجديدة.</p>';
+    }
+  }
+
+  function reportPanel() {
+    return '<details class="panel"><summary>التقارير والتصدير</summary><div class="body">' +
+      '<div class="grid2">' +
+      '<label class="field">من تاريخ<input type="date" id="r-from" value="' + addDays(S.date, -30) + '" onchange="markKpisStale()"></label>' +
+      '<label class="field">إلى تاريخ<input type="date" id="r-to" value="' + S.date + '" onchange="markKpisStale()"></label>' +
+      '</div>' +
+      '<h3 style="font-size:15px;margin:14px 0 4px">الأطباء في التقرير</h3>' +
+      '<p class="hint" style="margin:0">اختر طبيباً واحداً، أو أكثر من طبيب لتقارن بينهم، أو اترك «كل الأطباء».</p>' +
+      '<div class="doc-filter" id="r-docs">' + reportDoctorChips() + '</div>' +
+      '<div class="row-actions">' +
+      '<button class="primary" onclick="exportReport(\'xlsx\')">تصدير Excel</button>' +
+      '<button onclick="exportReport(\'csv\')">تصدير CSV</button>' +
+      '<button onclick="loadKpis()">عرض المؤشرات</button>' +
+      '</div>' +
+      '<p class="hint" style="margin-top:10px">النطاق الحالي: <b id="r-scope">' + esc(reportDoctorsLabel()) + '</b>' +
+      ' — اسم الملف يتضمنه تلقائياً.</p>' +
+      '<div id="r-kpi"></div>' +
+      '<p class="hint" style="margin-top:10px">ملاحظة: ملف Excel يُنشأ في درايف المجمع، والـ CSV يُنزّل مباشرة.</p>' +
+      '</div></details>';
+  }
+
+  function exportReport(type) {
+    var params = 'page=export&type=' + type + '&code=' + encodeURIComponent(S.code) +
+      '&from=' + el('r-from').value + '&to=' + el('r-to').value +
+      '&doctor=' + encodeURIComponent(reportDoctorParam());
+    window.open(WEBAPP_URL + '?' + params, '_blank');
+  }
+
+  function loadKpis() {
+    var box = el('r-kpi');
+    box.innerHTML = '<div class="spinner">جاري الحساب…</div>';
+    var filters = { doctorIds: S.reportDoctors.slice() };
+    api('apiStaffKpis', el('r-from').value, el('r-to').value, S.code, filters).then(function (res) {
+      if (!res || !res.ok) { box.innerHTML = alertBox('err', 'تعذّر حساب المؤشرات'); return; }
+      var k = res.kpi;
+      var html = '<p class="hint" style="margin-top:12px">النطاق: <b>' + esc(k.scopeLabelAr) + '</b> — ' +
+        esc(k.from || 'البداية') + ' → ' + esc(k.to || 'النهاية') + '</p>';
+      html += '<div class="kpi">' +
+        card('إجمالي الحجوزات', k.totalBookings) +
+        card('حضر', k.attended) +
+        card('لم يحضر', k.noShow) +
+        card('نسبة عدم الحضور', k.noShowRate + '%') +
+        card('ملغي', k.cancelled) +
+        card('تم تغييره', k.rescheduled) +
+        card('مرضى مختلفون', k.uniquePatients) +
+        card('مرضى مكررون', k.repeatPatients) +
+        '</div>';
+      html += '<h3 style="font-size:15px;margin:16px 0 6px">حسب الطبيب</h3>' +
+        '<p class="hint" style="margin:0 0 6px">للمقارنة: اختر أكثر من طبيب بالأعلى ثم اضغط «عرض المؤشرات».</p>' +
+        bars(k.byDoctor);
+      html += '<h3 style="font-size:15px;margin:16px 0 6px">حسب سبب الزيارة</h3>' + bars(k.byReason);
+      html += '<h3 style="font-size:15px;margin:16px 0 6px">حسب الساعة</h3>' + bars(k.byHour.map(function (h) { return { labelAr: h.labelAr, count: h.count }; }));
+      box.innerHTML = html;
+    });
+  }
+
+  function card(label, value) {
+    return '<div><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
+  }
+
+  function bars(list) {
+    if (!list || !list.length) return '<p class="hint">لا بيانات.</p>';
+    var max = Math.max.apply(null, list.map(function (x) { return x.count; })) || 1;
+    var html = '';
+    list.forEach(function (x) {
+      var pct = Math.round((x.count / max) * 100);
+      html += '<div style="margin-bottom:6px;font-size:13.5px">' + esc(x.labelAr) + ' <b>' + x.count + '</b>' +
+        '<div style="height:8px;background:#e9edf2;border-radius:5px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:var(--primary)"></div></div></div>';
+    });
+    return html;
+  }
+
+  /* start */
+  try {
+    var saved = localStorage.getItem('polyclinic_staff_code');
+    if (saved) { S.code = saved; load(todayISO()); } else { gate(); }
+  } catch (e) {
+    gate();
+  }
+</script>
+</body>
+</html>
