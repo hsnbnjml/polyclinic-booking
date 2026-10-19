@@ -362,6 +362,19 @@ function slotForWeekday(res, weekday) {
   return null;
 }
 
+/**
+ * The first day that still has at least n bookable slots. days[0] is "today" whenever
+ * today is still ahead, and today shrinks as the clock moves — a test that books slots
+ * 0..n of days[0] crashes in the last hours of a workday. Derive like the checks above:
+ * fall through to the next full day instead of assuming today is whole.
+ */
+function dayWithSlots(res, n) {
+  for (const day of res.days) {
+    if (day.slots.length >= n) return day;
+  }
+  throw new Error('local-test: no day with ' + n + ' free slots — widen the fixture window');
+}
+
 reset();
 
 /* -------------------------------------------------- */
@@ -722,7 +735,7 @@ check('bootstrap leaks nothing patient-related',
 section('9. Booking reference — doctor initials, date, running number');
 
 reset();
-const refDays = api.generateSlots({ clinicId: 'C1', doctorId: 'D1', reasonId: 'R1' }).days[0];
+const refDays = dayWithSlots(api.generateSlots({ clinicId: 'C1', doctorId: 'D1', reasonId: 'R1' }), 3);
 const refStamp = refDays.date.replace(/-/g, '');
 
 const ref1 = api.submitBooking({
@@ -793,8 +806,8 @@ section('11. Reports: one doctor, several, or all');
 
 reset();
 
-const d1Day = api.generateSlots({ clinicId: 'C1', doctorId: 'D1', reasonId: 'R1' }).days[0];
-const d2Day = api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' }).days[0];
+const d1Day = dayWithSlots(api.generateSlots({ clinicId: 'C1', doctorId: 'D1', reasonId: 'R1' }), 2);
+const d2Day = dayWithSlots(api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' }), 2);
 
 let seq = 0;
 function bookFor(doctorId, reasonId, day, slotIndex, name) {
