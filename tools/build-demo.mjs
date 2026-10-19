@@ -178,6 +178,19 @@ if (xlsxWriter.indexOf('POLYCLINIC_XLSX') === -1) {
   throw new Error('tools/xlsx-writer.js no longer exposes POLYCLINIC_XLSX');
 }
 
+// The demo opens as a plain static file with no Apps Script runtime around it, so the
+// two things Code.gs normally adds at serve time — the mobile viewport meta and a brand
+// touch — have to be baked into the generated HTML here. Without the viewport meta a
+// phone renders the page as a zoomed-out ~980px desktop layout (this actually shipped).
+const demoFavicon =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    '<rect width="64" height="64" rx="14" fill="' + demoConfig.brandPrimary + '"/>' +
+    '<path d="M32 17v30M17 32h30" stroke="#fff" stroke-width="10" stroke-linecap="round"/>' +
+    '</svg>'
+  );
+
 function buildPage({ view, scope, page, title }) {
   let html = renderTemplate(read(path.join(GS, view)), makeScope(scope), view);
 
@@ -199,7 +212,13 @@ function buildPage({ view, scope, page, title }) {
     throw new Error(`${page}: runtime or server source has a syntax error — ${err.message}`);
   }
 
-  html = html.replace(/<head>/i, '<head>\n<title>' + title + '</title>');
+  html = html.replace(/<head>/i, function () {
+    return '<head>\n' +
+      '<title>' + title + '</title>\n' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+      '<meta name="theme-color" content="' + demoConfig.brandPrimary + '">\n' +
+      '<link rel="icon" href="' + demoFavicon + '">';
+  });
   html = html.replace(/<body>/, '<body>\n<script>\n' + runtime + '\n</script>\n');
 
   // Unreplaced Apps Script scriptlets. `<?xml …?>` is not a scriptlet — the inlined
@@ -214,6 +233,11 @@ function buildPage({ view, scope, page, title }) {
   const emptyVar = html.match(/--[a-z-]+:\s*;/);
   if (emptyVar) {
     throw new Error(`${view}: empty CSS value "${emptyVar[0].trim()}" — a config field is blank`);
+  }
+
+  // Guard the fix above: a demo page without it renders like a 2010 desktop site on phones.
+  if (!/<meta name="viewport"/.test(html)) {
+    throw new Error(`${view}: generated page has no viewport meta — phones would render it in desktop mode`);
   }
 
   return html;

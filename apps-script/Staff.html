@@ -17,19 +17,19 @@
     }
     .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .bar input[type="date"], .bar input[type="text"], .bar select {
-      padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+      padding: 11px 12px; min-height: 48px; border: 1px solid var(--line); border-radius: 10px;
       font-family: inherit; font-size: 15px; background: #fff; color: var(--text);
     }
     .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-    .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+    .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; font-size: 13.5px; }
     .chip b { color: var(--primary); }
     .upcoming { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
-    .upcoming button { flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; cursor: pointer; color: inherit; }
+    .upcoming button { flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 48px; font-size: 13px; font-family: inherit; cursor: pointer; color: inherit; }
     .upcoming button.on { border-color: var(--primary); }
     .bk { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
     .bk.cancelled { opacity: .6; }
-    .bk .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
-    .bk .time { font-size: 19px; font-weight: 700; min-width: 84px; }
+    .bk .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+    .bk .time { font-size: 20px; font-weight: 700; min-width: 84px; }
     .bk .who { flex: 1 1 auto; }
     .bk .who .nm { font-size: 16px; font-weight: 600; }
     .bk .who .meta { font-size: 13px; color: var(--muted); }
@@ -41,7 +41,8 @@
     .warn { color: #b54708; font-size: 12.5px; }
     .row-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     .row-actions button, .row-actions a {
-      font-family: inherit; font-size: 13px; padding: 7px 11px; border-radius: 9px;
+      display: inline-flex; align-items: center; font-family: inherit; font-size: 13.5px; padding: 9px 13px;
+      min-height: 44px; border-radius: 10px;
       border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; text-decoration: none;
     }
     .row-actions button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
@@ -52,11 +53,19 @@
     details.panel .body { margin-top: 12px; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     @media (max-width: 620px) { .grid2 { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) {
+      /* Reception on a phone: the day picker gets its own row, اليوم / الغد split the next. */
+      .bar-days { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .bar-days input[type="date"] { grid-column: 1 / -1; width: 100%; }
+      .bar-days .btn { width: 100%; }
+    }
     .mini-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; margin-top: 8px; }
-    .mini-slots button { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 8px 4px; font-family: inherit; font-size: 13px; cursor: pointer; color: inherit; }
+    .mini-slots button { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 10px 4px; min-height: 44px; font-family: inherit; font-size: 13.5px; cursor: pointer; color: inherit; }
     .mini-slots button:hover { border-color: var(--primary); background: var(--soft); }
     table.hist { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-    table.hist th, table.hist td { border-bottom: 1px solid var(--line); padding: 7px 6px; text-align: right; }
+    table.hist th, table.hist td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: right; white-space: nowrap; }
+    /* Five squeezed columns on a 390px phone: scroll the table instead of the page. */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .kpi { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
     .kpi div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
     .kpi span { display: block; font-size: 12.5px; color: var(--muted); }
@@ -74,10 +83,11 @@
     .doc-chip.on { border-color: var(--dot, var(--primary)); border-width: 2px; padding: 6px 12px; }
     .doc-chip.off { opacity: .55; }
     .doc-chip.off .dot { background: var(--line); }
-    .sched { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .sched { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; padding-bottom: 4px; }
     .sched .col {
       background: var(--card); border: 1px solid var(--line);
       border-top: 3px solid var(--dot, var(--primary)); border-radius: 12px; padding: 10px; min-height: 96px;
+      scroll-snap-align: start;
     }
     .sched .col h3 { margin: 0; font-size: 14.5px; }
     .sched .col .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
@@ -193,7 +203,7 @@
 
     var html = '';
 
-    html += '<div class="bar">' +
+    html += '<div class="bar bar-days">' +
       '<input type="date" id="d-pick" value="' + board.date + '" onchange="load(this.value)">' +
       '<button class="btn ghost" onclick="load(\'' + todayISO() + '\')">اليوم</button>' +
       '<button class="btn ghost" onclick="load(\'' + addDays(board.date, 1) + '\')">الغد ›</button>' +
@@ -510,12 +520,12 @@
       if (!res || !res.ok) { box.innerHTML = alertBox('info', (res && res.messageAr) || 'لا يوجد سجل.'); return; }
       var html = '<div class="msg ok">' + esc(res.name || 'بدون اسم') + ' — إجمالي ' + res.total +
         ' حجز | حضر ' + res.attended + ' | لم يحضر ' + res.noShow + '</div>';
-      html += '<table class="hist"><thead><tr><th>التاريخ</th><th>الوقت</th><th>الطبيب</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>';
+      html += '<div class="table-scroll"><table class="hist"><thead><tr><th>التاريخ</th><th>الوقت</th><th>الطبيب</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>';
       res.items.forEach(function (i) {
         html += '<tr><td>' + esc(i.dateAr) + '</td><td>' + esc(i.timeAr) + '</td><td>' + esc(i.doctorAr) +
           '</td><td>' + esc(i.reasonAr) + '</td><td>' + esc(i.statusAr) + '</td></tr>';
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       box.innerHTML = html;
     });
   }
