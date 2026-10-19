@@ -1,7 +1,8 @@
 # pwa/ — the installable app shell
 
 The real app runs on `script.google.com`, and Google owns that page: its tab icon, its
-browser chrome, its "no manifest" policy. So the app is **not** installed from there.
+browser chrome, its "no manifest" policy — and the "created by a Google Apps Script user"
+attribution bar it forces above the app. So the app is **not** installed from there.
 This folder is a tiny page we do own. It loads the live app in a full-screen iframe and
 adds everything a phone needs to install it as an app:
 
@@ -37,6 +38,15 @@ an offline demo).
 
 Same steps for patients if they want the icon — but patients do not need it; the plain
 link works fine.
+
+## Why the shell also looks cleaner
+
+Google renders its "created by a Google Apps Script user / report abuse" bar only when the
+app page is opened top-level. Inside this shell the bar is not rendered at all (measured
+live: 25px bar on the raw link, 0 inside the shell), so the framed app — and anything
+installed from it — looks fully branded. The raw `…/exec` link still shows the bar; that is
+Google's page and no setting removes it, so share the **shell URL** (and print it into the
+QR codes) instead.
 
 ## Regenerating after any app change
 
