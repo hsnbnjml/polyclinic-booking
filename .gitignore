@@ -17,3 +17,6 @@ desktop.ini
 # clasp: the deployed project's ID and local auth
 .clasp.json
 .clasprc.json
+
+# Generated installable-app shell (carries the live URL — never committed)
+dist/

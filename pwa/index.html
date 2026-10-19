@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>العيادة — حجز المواعيد</title>
+
+<!-- This shell exists for one reason: the real app runs on script.google.com, whose
+     page Google controls — its icon, its manifest, its browser chrome. This page is
+     ours, so it is what gets installed: manifest, icons, standalone window. The app
+     itself loads in a full-screen iframe below, unchanged. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f6f6c">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="العيادة">
+<style>
+  html, body { margin: 0; height: 100%; background: #f7f9f9; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+  #boot {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: #f7f9f9; font-family: "Cairo", "Segoe UI", Tahoma, Arial, sans-serif; text-align: center;
+  }
+  #boot .mark { width: 88px; height: 88px; border-radius: 23px; overflow: hidden; box-shadow: 0 10px 26px rgba(15,111,108,.28); }
+  #boot .mark img { width: 100%; height: 100%; display: block; }
+  #boot p { margin: 0; font-size: 15px; color: #667085; }
+  #boot a.btn {
+    display: none; margin-top: 8px; background: #0f6f6c; color: #fff; text-decoration: none;
+    padding: 14px 26px; border-radius: 14px; font-weight: 700; font-size: 16px;
+  }
+  #boot .spinner {
+    width: 34px; height: 34px; border-radius: 50%; border: 3px solid #d8e5e4; border-top-color: #0f6f6c;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<iframe id="app" src="__APP_URL__" title="نظام حجز مواعيد العيادة"></iframe>
+
+<div id="boot">
+  <div class="mark"><img src="icons/icon-192.png" alt=""></div>
+  <div class="spinner"></div>
+  <p>جاري تحميل التطبيق…</p>
+  <a class="btn" id="fallback" href="__APP_URL__">افتح التطبيق مباشرة</a>
+</div>
+
+<script>
+  // Forward the link's parameters (?src=… / ?clinic=… / ?doctor=… / ?reason=… / ?page=staff)
+  // to the app, so campaign QR codes and the reception link keep working from the
+  // installed app exactly as they do in the browser.
+  var APP_URL = '__APP_URL__' + location.search;
+  var frame = document.getElementById('app');
+  var boot = document.getElementById('boot');
+  frame.src = APP_URL;
+  document.getElementById('fallback').href = APP_URL;
+  frame.addEventListener('load', function () { boot.style.display = 'none'; });
+  // If the app has not loaded after 9s (offline, blocked frame), offer the direct link.
+  setTimeout(function () { document.getElementById('fallback').style.display = 'inline-block'; }, 9000);
+</script>
+</body>
+</html>
