@@ -692,7 +692,8 @@ check('the same message carries the map link',
 check('the reminder still asks for the ten minutes and a call if he cannot come',
   reminder.text.indexOf('عشر دقائق') !== -1 && reminder.text.indexOf('بلّغنا') !== -1);
 check('the reminder does not hard-code "tomorrow"',
-  reminder.text.indexOf('غداً') === -1 || api.relativeDayAr(cardFor.date) === 'غداً');
+  reminder.text.indexOf('غداً') === -1 || api.relativeDayAr(rep1.date) === 'غداً',
+  'date=' + rep1.date + ' rel=' + api.relativeDayAr(rep1.date) + ' today=' + api.todayStr());
 check('the link is a wa.me link to the patient',
   reminder.url.indexOf('https://wa.me/201010000001?text=') === 0);
 
