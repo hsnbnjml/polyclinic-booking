@@ -15,6 +15,7 @@ no per-booking fee and no third-party scheduler in the middle — the clinic's r
 - **المريض**: رابط واحد → الفرع → الطبيب → سبب الزيارة → المواعيد المتاحة فعلياً من جدول ذلك الطبيب → الاسم والجوال → تأكيد فوري برقم حجز مقروء مثل `ae-20261018-1`.
 - **الاستقبال**: شاشة اليوم، تقويم مشترك لكل الأطباء بألوان، تصفية بطبيب أو أكثر بضغطة، حضور / لم يحضر / إلغاء / تغيير موعد، إغلاق أوقات أو أيام، بحث عن أي مريض برقم الجوال، وتصدير Excel حقيقي.
 - **الطبيب**: تقرير مصفّى بطبيب واحد أو عدة أطباء للمقارنة، مؤشرات أداء، ونسخة احتياطية أسبوعية تلقائية على Drive.
+- **كتطبيق**: يُضاف إلى شاشة الجوال الرئيسية بأيقونة العيادة ويفتح كتطبيق كامل الشاشة بلا شريط متصفح (صفحة `pwa/`).
 
 عرض توضيحي ببيانات وهمية (بلا حساب Google): <https://hsnbnjml.github.io/polyclinic-booking/>
 
@@ -68,17 +69,34 @@ node tools/build-demo.mjs
 It compiles every `.gs` file as part of the build, so a syntax error fails the build instead of the
 demo. CI fails too if the committed demo no longer matches the sources.
 
+## Install it as an app (optional)
+
+Google serves the app from its own page, so the tab icon and the browser bars are Google's, not the
+clinic's. `pwa/` is a small page the clinic owns: it frames the live app full-screen and carries the
+web-app manifest and the icons — which is exactly what a phone installs.
+
+```
+node tools/build-pwa.mjs      # bakes the live URL in; writes dist/pwa/ (git-ignored)
+```
+
+Upload `dist/pwa/` to any static host (Cloudflare Pages recommended: free, no card, commercial use
+allowed). Android: open the link → ⋮ → *Add to Home screen*. iPhone: open in **Safari** → Share →
+*Add to Home Screen*. The icon is a placeholder medical plus in the brand teal (`pwa/icons/icon.svg`)
+until the clinic's real logo replaces it. Full walkthrough: `pwa/README.md`.
+
 ## Repository layout
 
 | Path | What it is |
 |---|---|
 | `apps-script/` | the whole application — 14 `.gs` files + 4 HTML views + `appsscript.json` |
+| `pwa/` | installable app shell + clinic icons — the page a phone installs, so the icon and the standalone window are the clinic's, not Google's |
 | `docs/` | proposal (Arabic and English), technical plan, setup guide, doctor checklist, demo script |
 | `demo/` | the offline demo: launcher, patient page, reception screen (generated, committed so Pages can publish it) |
 | `tools/local-test.mjs` | runs the real `.gs` source against an in-memory fake of Google's services |
 | `tools/check-html.mjs` | front-end wiring: script parsing, includes, server-function names, Arabic template placeholders |
 | `tools/check-xlsx.mjs` | proves the Excel export is a real `.xlsx` (own ZIP reader **and** .NET's, every CRC and XML part) |
 | `tools/build-demo.mjs` | builds the demo from the real sources |
+| `tools/build-pwa.mjs` | fills the live URL into the installable app shell and writes `dist/pwa/` for upload (never committed — it carries the live URL) |
 | `tools/xlsx-writer.js` | dependency-free OOXML writer — no npm packages anywhere in this repo |
 | `tools/demo-runtime.js` | the browser runtime that fakes Google's storage for the demo |
 | `tools/serve-demo.mjs` | tiny static server (optional; the pages also work from `file://`) |
@@ -145,6 +163,8 @@ database adapter, not a rewrite. Details and risks: `docs/technical-plan.md`.
 - [x] Real `.xlsx` / CSV reports, KPI summary, per-doctor or multi-doctor scope
 - [x] Shared calendar mirror, daily agenda e-mail, weekly backup
 - [x] Test suite, front-end checks, `.xlsx` validator, offline demo
+- [x] Phone-first layout: thumb-sized controls, Cairo Arabic font, and demo pages that open at phone width
+- [x] Installable app shell with a branded icon (`pwa/`)
 - [ ] Fill the real clinic data (see `docs/doctor-checklist.md`)
 - [x] One live end-to-end run on a deployed web app: book → reception board → cancel released the slot
 - [ ] A two-week pilot with one doctor
