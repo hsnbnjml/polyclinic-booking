@@ -34,9 +34,11 @@
       button.dataset.label = button.textContent;
       button.textContent = labelWhenBusy || '…';
       button.disabled = true;
+      button.classList.add('loading');
     } else {
       button.textContent = button.dataset.label || button.textContent;
       button.disabled = false;
+      button.classList.remove('loading');
     }
   }
 

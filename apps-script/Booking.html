@@ -7,7 +7,6 @@
   <style>
     :root {
       --primary: <?= config.brandPrimary ?>;
-      --primary-dark: <?= config.brandPrimary ?>;
       --soft: <?= config.brandSecondary ?>;
       --bg: #f7f9f9;
       --card: #ffffff;
@@ -32,7 +31,10 @@
 </header>
 
 <div class="wrap">
-  <div class="steps" id="steps"></div>
+  <div class="stepper">
+    <div class="lbl"><span id="step-label"></span><b id="step-title"></b></div>
+    <div class="segs" id="steps"></div>
+  </div>
   <div id="app"></div>
   <div class="footer">
     <? if (config.supportPhone) { ?>
@@ -49,6 +51,7 @@
   var PRESET = <?!= JSON.stringify(preset) ?>;
   var SOURCE = <?!= JSON.stringify(source) ?>;
   var TOTAL_STEPS = 5;
+  var STEP_TITLES = ['اختر الفرع', 'اختر الطبيب', 'سبب الزيارة', 'اختر الوقت', 'بياناتك'];
 
   var S = {
     boot: null,
@@ -74,9 +77,14 @@
   }
 
   function paintSteps() {
+    var st = S.step || 1;
     var html = '';
-    for (var i = 1; i <= TOTAL_STEPS; i++) html += '<i class="' + (i <= S.step ? 'on' : '') + '"></i>';
+    for (var i = 1; i <= TOTAL_STEPS; i++) {
+      html += '<i class="' + (i < st ? 'on' : (i === st ? 'on now' : '')) + '"></i>';
+    }
     el('steps').innerHTML = html;
+    if (el('step-label')) el('step-label').textContent = 'الخطوة ' + st + ' من ' + TOTAL_STEPS;
+    if (el('step-title')) el('step-title').textContent = STEP_TITLES[st - 1] || '';
   }
 
   function view(html) { el('app').innerHTML = html; }
@@ -91,10 +99,29 @@
     return '<button class="btn link" onclick="goBack()">↩ ' + esc(label || 'رجوع') + '</button>';
   }
 
+  /* First letter of a name, skipping the «د.» title and any placeholder brackets. */
+  function firstLetter(name) {
+    var s = String(name || '').replace(/^(د\.|Dr\.)\s*/i, '').trim();
+    var m = s.match(/[\u0621-\u064A]/) || s.match(/[A-Za-z0-9]/);
+    return m ? m[0] : '؟';
+  }
+
+  /* One choice row shape everywhere: avatar + title + optional sub + optional chip + check. */
+  function choiceButton(onclick, avatar, title, sub, chip) {
+    return '<button class="choice" onclick="' + onclick + '">' +
+      '<span class="avatar">' + esc(avatar) + '</span>' +
+      '<span class="mid"><span class="name">' + esc(title) + '</span>' +
+      (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') +
+      (chip ? '<span class="chip">' + esc(chip) + '</span>' : '') +
+      '</span>' +
+      '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>' +
+      '</button>';
+  }
+
   /* ---------- flow ---------- */
 
   function boot() {
-    document.documentElement.style.setProperty('--primary-dark', shade(CONFIG.brandPrimary, 0.22));
+    document.documentElement.style.setProperty('--primary-dark', shade(CONFIG.brandPrimary, 0.18));
     paintSteps();
     view('<div class="spinner">جاري التحميل…</div>');
     api('apiBootstrap').then(function (res) {
@@ -150,8 +177,7 @@
     if (S.clinic) return stepDoctor();
     var html = header('اختر الفرع', 'من أي فرع تحب أن يكون موعدك؟');
     S.boot.clinics.forEach(function (c) {
-      html += '<button class="choice" onclick="pickClinic(\'' + c.id + '\')">' + esc(c.nameAr) +
-        (c.addressAr ? '<span class="sub">' + esc(c.addressAr) + '</span>' : '') + '</button>';
+      html += choiceButton('pickClinic(\'' + c.id + '\')', firstLetter(c.nameAr), c.nameAr, c.addressAr || '');
     });
     view(html);
   }
@@ -174,8 +200,7 @@
 
     var html = header('اختر الطبيب', 'طبيب ' + S.clinic.nameAr);
     docs.forEach(function (d) {
-      html += '<button class="choice" onclick="pickDoctor(\'' + d.id + '\')">' + esc(d.nameAr) +
-        (d.specialtyAr ? '<span class="sub">' + esc(d.specialtyAr) + '</span>' : '') + '</button>';
+      html += choiceButton('pickDoctor(\'' + d.id + '\')', firstLetter(d.nameAr), d.nameAr, d.specialtyAr || '');
     });
     html += backButton('تغيير الفرع');
     view(html);
@@ -199,9 +224,7 @@
 
     var html = header('سبب الزيارة', 'اختر نوع الزيارة ليظهر لك الوقت المناسب');
     reasons.forEach(function (r) {
-      html += '<button class="choice" onclick="pickReason(\'' + r.id + '\')">' + esc(r.nameAr) +
-        '<span class="badge">' + r.durationMin + ' د</span>' +
-        (r.descriptionAr ? '<span class="sub">' + esc(r.descriptionAr) + '</span>' : '') + '</button>';
+      html += choiceButton('pickReason(\'' + r.id + '\')', firstLetter(r.nameAr), r.nameAr, r.descriptionAr || '', r.durationMin + ' د');
     });
     html += backButton('تغيير الطبيب');
     view(html);
@@ -365,7 +388,16 @@
 
   function stepDone(result) {
     S.step = TOTAL_STEPS; paintSteps();
-    var html = alertBox('ok', result.successText || 'تم حجز موعدك بنجاح.');
+    if (el('step-title')) el('step-title').textContent = 'تم الحجز بنجاح';
+    // The success moment: a drawn check, then the summary with the pill-shaped reference.
+    var html = '<div class="card"><div class="done">' +
+      '<div class="done-check"><svg viewBox="0 0 56 56">' +
+      '<circle class="r" cx="28" cy="28" r="24.5"/>' +
+      '<path class="k" d="M17 29l7.5 7.5L39 21"/>' +
+      '</svg></div>' +
+      '<h2>تم تأكيد موعدك</h2>' +
+      '<p class="sub">' + esc(result.successText || 'تم حجز موعدك بنجاح.') + '</p>' +
+      '</div></div>';
     html += '<div class="card"><h2>ملخص الموعد</h2>' +
       '<dl class="summary">' +
       row('الطبيب', result.doctorAr) +

@@ -11,6 +11,27 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
 <style>
+  /* One brand colour (Settings → brand_primary) drives every shade below.
+     Each pair: the fallback line first (older browsers), the color-mix line second. */
+  :root {
+    --primary-dark: var(--primary);
+    --primary-dark: color-mix(in srgb, var(--primary), #000 18%);
+    --primary-press: var(--primary);
+    --primary-press: color-mix(in srgb, var(--primary), #000 26%);
+    --tint: var(--soft);
+    --tint: color-mix(in srgb, var(--primary) 8%, #fff);
+    --tint-2: var(--soft);
+    --tint-2: color-mix(in srgb, var(--primary) 15%, #fff);
+    --ring: var(--soft);
+    --ring: color-mix(in srgb, var(--primary) 25%, transparent);
+    --sh-sm: 0 1px 2px rgba(16, 24, 40, .05);
+    --sh-md: 0 8px 20px rgba(16, 24, 40, .10);
+    /* Three speeds, one ease curve: every animation shows progress, selection or success. */
+    --t-fast: .15s;
+    --t-med: .22s;
+    --t-slow: .32s;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+  }
   *, *::before, *::after { box-sizing: border-box; }
   body {
     margin: 0;
@@ -27,7 +48,7 @@
   button, input, select, textarea, a { touch-action: manipulation; }
   .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px calc(48px + env(safe-area-inset-bottom, 0px)); }
   header.top {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    background: linear-gradient(160deg, var(--primary), var(--primary-dark) 92%);
     color: #fff;
     padding: 22px 16px 24px;
     border-radius: 0 0 20px 20px;
@@ -37,71 +58,113 @@
   header.top h1 { font-size: 21px; margin: 0; font-weight: 800; line-height: 1.45; }
   header.top p { margin: 2px 0 0; font-size: 13.5px; opacity: .92; }
 
-  .steps { display: flex; gap: 6px; justify-content: center; margin: 16px 0 10px; }
-  .steps i {
-    width: 34px; height: 6px; border-radius: 3px; background: var(--line);
-    display: block; transition: background .2s;
-  }
-  .steps i.on { background: var(--primary); }
+  /* Booking progress: «الخطوة 2 من 5» + five segments; the current one wears the ring. */
+  .stepper { margin: 14px 2px 12px; }
+  .stepper .lbl { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12.5px; color: var(--muted); margin-bottom: 7px; }
+  .stepper .lbl b { color: var(--primary-dark); font-weight: 700; }
+  .segs { display: flex; gap: 6px; }
+  .segs i { flex: 1 1 0; height: 6px; border-radius: 99px; background: var(--line); transition: background var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease); }
+  .segs i.on { background: var(--primary); }
+  .segs i.now { box-shadow: 0 0 0 3.5px var(--ring); }
 
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-    padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    padding: 16px; margin-bottom: 14px; box-shadow: var(--sh-sm);
   }
   .card h2 { font-size: 18px; margin: 0 0 4px; }
   .card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 12px; }
 
+  /* Tap-first choice rows: big target, instant press feedback, unmistakable selection. */
   button.choice {
-    display: block; width: 100%; text-align: right; background: var(--card);
-    border: 1px solid var(--line); border-radius: 14px; padding: 15px 16px;
-    min-height: 56px;
-    margin-bottom: 10px; font-size: 15.5px; font-family: inherit; color: inherit;
-    cursor: pointer; transition: border-color .15s, transform .05s;
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: right;
+    background: var(--card); border: 1.5px solid var(--line); border-radius: 16px;
+    padding: 13px 14px; min-height: 64px; margin-bottom: 9px;
+    font-size: 15.5px; font-family: inherit; color: inherit; cursor: pointer;
+    transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast) var(--ease);
   }
   button.choice:hover { border-color: var(--primary); }
-  button.choice:active { transform: scale(.995); }
-  button.choice.selected { border-color: var(--primary); border-width: 2px; background: var(--soft); }
+  button.choice:active { transform: scale(.98); }
+  button.choice.selected { border-color: var(--primary); border-width: 2px; padding: 12.5px 13.5px; background: var(--tint); }
+  button.choice .mid { flex: 1 1 auto; min-width: 0; }
+  button.choice .name { display: block; font-weight: 700; line-height: 1.5; }
   button.choice .sub { display: block; font-size: 13.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-  button.choice .badge { float: left; font-size: 12px; color: var(--primary); font-weight: 700; }
+  button.choice .chip { display: inline-block; margin-top: 5px; font-size: 11.5px; font-weight: 700; color: var(--primary-dark); background: var(--tint-2); border-radius: 999px; padding: 2px 10px; }
+  button.choice .avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
+    background: var(--tint-2); color: var(--primary-dark);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 19px;
+  }
+  button.choice .check {
+    width: 24px; height: 24px; border-radius: 50%; flex: 0 0 auto;
+    border: 1.5px solid var(--line); background: #fff; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--t-fast), border-color var(--t-fast);
+  }
+  button.choice .check svg { width: 13px; height: 13px; opacity: 0; transition: opacity var(--t-fast); }
+  button.choice.selected .check { background: var(--primary); border-color: var(--primary); }
+  button.choice.selected .check svg { opacity: 1; }
 
+  /* Buttons: pressed = shrink + darken; loading keeps a spinner inside the button. */
   .btn {
-    display: inline-flex; align-items: center; justify-content: center;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     border: 0; border-radius: 14px; padding: 13px 20px; min-height: 48px;
     font-size: 15.5px; font-family: inherit; font-weight: 700; cursor: pointer;
     background: var(--primary); color: #fff; text-decoration: none;
+    transition: transform var(--t-fast) var(--ease), background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
   }
+  .btn:active { transform: scale(.97); background: var(--primary-press); }
   .btn.wide { display: flex; width: 100%; }
   .btn.ghost { background: transparent; color: var(--primary); border: 1px solid var(--line); }
-  .btn:disabled { opacity: .55; cursor: not-allowed; }
-  .btn.link { background: none; color: var(--primary); text-decoration: underline; padding: 8px 0; min-height: 44px; font-weight: 400; font-size: 14.5px; }
-
-  .daybar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
-  .daybar button {
-    flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-    padding: 10px 14px; min-height: 56px; font-family: inherit; font-size: 13.5px; cursor: pointer; text-align: center; color: inherit;
+  .btn.ghost:hover { border-color: var(--primary); background: var(--tint); }
+  .btn.ghost:active { background: var(--tint-2); }
+  .btn.danger { background: transparent; color: #b42318; border: 1.5px solid rgba(180, 35, 24, .3); }
+  .btn.danger:hover { background: #feeceb; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+  .btn.loading { pointer-events: none; }
+  .btn.loading::after {
+    content: ""; width: 17px; height: 17px; border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, .35);
+    border: 2.5px solid color-mix(in srgb, currentColor 32%, transparent);
+    border-top-color: currentColor;
+    animation: spin .7s linear infinite;
   }
-  .daybar button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn.link { background: none; color: var(--primary); text-decoration: underline; padding: 8px 0; min-height: 44px; font-weight: 400; font-size: 14.5px; box-shadow: none; }
+  .btn.link:active { transform: none; }
+
+  .daybar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+  .daybar button {
+    flex: 0 0 auto; scroll-snap-align: start; background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 10px 14px; min-height: 56px; font-family: inherit; font-size: 13.5px; cursor: pointer; text-align: center; color: inherit;
+    transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast) var(--ease), box-shadow var(--t-med) var(--ease);
+  }
+  .daybar button:active { transform: scale(.95); }
+  .daybar button.on { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 28%, transparent); }
   .daybar button .d { display: block; font-weight: 700; font-size: 14.5px; }
 
   .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
   .slots button {
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
     padding: 14px 6px; min-height: 50px; font-family: inherit; font-size: 15px; cursor: pointer; color: inherit;
+    transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast) var(--ease), box-shadow var(--t-med) var(--ease), color var(--t-fast);
   }
-  .slots button:hover { border-color: var(--primary); background: var(--soft); }
-  .slots button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .slots button:hover { border-color: var(--primary); background: var(--tint); }
+  .slots button:active { transform: scale(.95); }
+  .slots button.on { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 28%, transparent); }
+  /* A taken time should look impossible to pick (defence in depth; the server already filters). */
+  .slots button:disabled { background: #f2f4f6; color: #98a2b3; border-color: #eef0f2; text-decoration: line-through; cursor: not-allowed; }
 
   label.field { display: block; margin-bottom: 14px; font-size: 14.5px; font-weight: 600; }
   label.field input, label.field textarea {
     display: block; width: 100%; margin-top: 6px; padding: 13px 14px; font-size: 16px;
-    font-family: inherit; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--text);
+    font-family: inherit; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: var(--text);
     min-height: 50px;
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
   }
-  label.field input:focus, label.field textarea:focus { outline: 2px solid var(--primary); outline-offset: 0; border-color: var(--primary); }
+  label.field input:focus, label.field textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--ring); }
   label.field .why { font-weight: 400; font-size: 13px; color: var(--muted); display: block; margin-top: 4px; }
   .phone-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; font-weight: 400; background: var(--soft); padding: 12px; border-radius: 12px; }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; font-weight: 400; background: var(--tint); padding: 12px; border-radius: 12px; }
   .consent input { width: 22px; height: 22px; margin-top: 1px; flex: 0 0 auto; }
 
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
@@ -109,13 +172,14 @@
   .msg { border-radius: 12px; padding: 12px 14px; font-size: 14.5px; margin-bottom: 12px; }
   .msg.err { background: #fdecea; color: #8a1c10; border: 1px solid #f5c2bb; }
   .msg.ok { background: #e8f5e9; color: #14532d; border: 1px solid #b7e0bb; }
-  .msg.info { background: var(--soft); color: var(--text); border: 1px solid var(--line); }
+  .msg.info { background: var(--tint); color: var(--text); border: 1px solid var(--line); }
 
   .summary { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 15px; }
   .summary dt { color: var(--muted); }
   .summary dd { margin: 0; font-weight: 600; }
 
-  .ref { font-family: ui-monospace, Consolas, monospace; direction: ltr; text-align: right; font-size: 13px; color: var(--muted); }
+  /* Booking reference: pill, so it reads as «the number to keep», not as body text. */
+  .ref { font-family: ui-monospace, Consolas, monospace; direction: ltr; text-align: right; font-size: 13px; font-weight: 700; color: var(--primary-dark); background: var(--tint-2); border-radius: 999px; padding: 2px 11px; display: inline-block; }
   .spinner { text-align: center; padding: 28px; color: var(--muted); font-size: 14.5px; }
   .footer { text-align: center; font-size: 12.5px; color: var(--muted); margin-top: 22px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
@@ -126,18 +190,32 @@
     flex: 2 1 230px; display: flex; align-items: center; justify-content: space-between;
     gap: 12px; background: var(--primary); color: #fff; text-decoration: none;
     border-radius: 14px; padding: 13px 16px; font-weight: 700; font-size: 15.5px;
-    box-shadow: 0 6px 16px rgba(15, 111, 108, .22);
+    box-shadow: var(--sh-md);
   }
   .call-strip small { display: block; font-weight: 400; font-size: 12.5px; opacity: .92; margin-top: 3px; }
   .call-strip .num { direction: ltr; font-size: 19px; font-weight: 800; letter-spacing: .4px; white-space: nowrap; }
 
+  /* The success moment: a drawn check. The one screen patients screenshot. */
+  .done { text-align: center; padding: 8px 0 2px; }
+  .done-check { margin: 0 auto 10px; width: 86px; height: 86px; border-radius: 50%; background: var(--tint); display: flex; align-items: center; justify-content: center; animation: pop var(--t-slow) var(--ease); }
+  .done-check svg { width: 56px; height: 56px; }
+  .done-check .r { fill: none; stroke: var(--tint-2); stroke-width: 2.5; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw .6s var(--ease) forwards; }
+  .done-check .k { fill: none; stroke: var(--primary); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 44; stroke-dashoffset: 44; animation: draw .45s var(--ease) .3s forwards; }
+  .done h2 { font-size: 19px; margin: 0 0 4px; font-weight: 800; }
+  .done .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 4px; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes pop { from { transform: scale(.72); opacity: .4; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   #toast {
-    position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 50%; transform: translateX(50%);
+    position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 50%;
+    transform: translate(50%, 12px);
     background: #101828; color: #fff; padding: 12px 18px; border-radius: 12px;
-    font-size: 14.5px; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50;
-    max-width: 90vw; text-align: center;
+    font-size: 14.5px; opacity: 0; pointer-events: none;
+    transition: opacity var(--t-med) var(--ease), transform var(--t-med) var(--ease);
+    z-index: 50; max-width: 90vw; text-align: center;
   }
-  #toast.show { opacity: .96; }
+  #toast.show { opacity: .96; transform: translate(50%, 0); }
 
   /* ----- Phones: thumb-first. Everything a step asks for gets a full-width target. ----- */
   @media (max-width: 560px) {
@@ -145,12 +223,16 @@
     .actions { flex-direction: column; }
     .actions .btn, .actions .call-strip { width: 100%; }
   }
+
+  /* Some phones ask for less motion; honour it and show everything instantly. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001s !important; transition-duration: .001s !important; }
+  }
 </style>
 
   <style>
     :root {
       --primary: #0f6f6c;
-      --primary-dark: #0f6f6c;
       --soft: #f4f7f7;
       --bg: #f4f6f8;
       --card: #ffffff;
@@ -168,7 +250,7 @@
     .chip b { color: var(--primary); }
     .upcoming { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
     .upcoming button { flex: 0 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 48px; font-size: 13px; font-family: inherit; cursor: pointer; color: inherit; }
-    .upcoming button.on { border-color: var(--primary); }
+    .upcoming button.on { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 25%, transparent); }
     .bk { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
     .bk.cancelled { opacity: .6; }
     .bk .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
@@ -179,7 +261,7 @@
     .tag { font-size: 12px; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
     .t-confirmed { background: #e7f0ff; color: #11407e; }
     .t-attended { background: #e8f5e9; color: #14532d; }
-    .t-no_show { background: #fdecea; color: #8a1c10; }
+    .t-no_show { background: #fef6e7; color: #b45309; }
     .t-cancelled, .t-rescheduled { background: #f2f4f7; color: #475467; }
     .warn { color: #b54708; font-size: 12.5px; }
     .row-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
@@ -202,6 +284,14 @@
       .bar-days input[type="date"] { grid-column: 1 / -1; width: 100%; }
       .bar-days .btn { width: 100%; }
     }
+
+    /* Same motion language as the patient page: instant touch feedback, calm focus rings. */
+    .bar input, .bar select { transition: border-color var(--t-fast), box-shadow var(--t-fast); }
+    .bar input:focus, .bar select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--ring); }
+    .row-actions button, .row-actions a, .upcoming button, .mini-slots button, .doc-chip, .sched .appt {
+      transition: transform var(--t-fast) var(--ease), border-color var(--t-fast), background var(--t-fast);
+    }
+    .row-actions button:active, .row-actions a:active, .upcoming button:active, .mini-slots button:active, .doc-chip:active, .sched .appt:active { transform: scale(.97); }
     .mini-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; margin-top: 8px; }
     .mini-slots button { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 10px 4px; min-height: 44px; font-family: inherit; font-size: 13.5px; cursor: pointer; color: inherit; }
     .mini-slots button:hover { border-color: var(--primary); background: var(--soft); }
@@ -4010,9 +4100,11 @@ function previewSlots() {
       button.dataset.label = button.textContent;
       button.textContent = labelWhenBusy || '…';
       button.disabled = true;
+      button.classList.add('loading');
     } else {
       button.textContent = button.dataset.label || button.textContent;
       button.disabled = false;
+      button.classList.remove('loading');
     }
   }
 

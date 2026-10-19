@@ -41,6 +41,7 @@ patient link  →  clinic → doctor → reason → the doctor's real free times
 | Reception | Day board, shared colour-coded doctor schedule with per-doctor filters (one or several), statuses, reschedule, block time, patient lookup by phone, audit trail of who changed what |
 | WhatsApp | Four ready Arabic templates sent with one tap; the reminder carries the branch address and map link and says اليوم / غداً / بعد غد by itself |
 | Reports | Real `.xlsx` and CSV, KPI summary, in-sheet report tabs; scoped to one doctor, any few of them for comparison, or all |
+| Design | One colour in the sheet drives the whole palette (derived darks, tints, press states, focus rings); Cairo type, thumb-first targets, 150–220 ms motion that honours reduced-motion |
 | Automation | Shared Google Calendar mirror, `BLOCK` event → blackout sync, daily agenda e-mail, weekly backup (dated master copy + exported file) |
 | Privacy | The spreadsheet stays private; the public web app never returns patient data — the catalogue endpoint is patient-free by construction |
 
