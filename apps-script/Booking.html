@@ -76,6 +76,7 @@
     return '#' + ((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b)).toString(16).slice(1);
   }
 
+  var _lastPaintedStep = 0;
   function paintSteps() {
     var st = S.step || 1;
     var html = '';
@@ -85,6 +86,12 @@
     el('steps').innerHTML = html;
     if (el('step-label')) el('step-label').textContent = 'الخطوة ' + st + ' من ' + TOTAL_STEPS;
     if (el('step-title')) el('step-title').textContent = STEP_TITLES[st - 1] || '';
+    // A new step starts from the top — otherwise a tap at the bottom of one screen
+    // drops the patient into the middle of the next one.
+    if (st !== _lastPaintedStep) {
+      _lastPaintedStep = st;
+      if (window.scrollTo) window.scrollTo(0, 0);
+    }
   }
 
   function view(html) { el('app').innerHTML = html; }
