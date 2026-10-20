@@ -21,11 +21,11 @@ import url from 'node:url';
 const here = path.dirname(url.fileURLToPath(import.meta.url));
 const GS_DIR = path.join(here, '..', 'apps-script');
 
-const HTML_FILES = ['Booking.html', 'Staff.html', 'Styles.html', 'ClientJs.html'];
+const HTML_FILES = ['Booking.html', 'Staff.html', 'Admin.html', 'Styles.html', 'ClientJs.html'];
 const GS_FILES = [
   'Code.gs', 'Config.gs', 'Db.gs', 'Util.gs', 'I18n.gs', 'Catalog.gs',
   'Availability.gs', 'BookingApi.gs', 'Calendar.gs', 'StaffApi.gs', 'WhatsApp.gs',
-  'Reports.gs', 'Notify.gs', 'Setup.gs'
+  'Reports.gs', 'Notify.gs', 'Setup.gs', 'AdminApi.gs'
 ];
 
 let failed = 0;
@@ -134,12 +134,14 @@ const CONFIG_KEYS = (function () {
     fs.readFileSync(path.join(GS_DIR, 'Config.gs'), 'utf8') + '\n' +
     fs.readFileSync(path.join(GS_DIR, 'Catalog.gs'), 'utf8') + '\n' +
     'function getSettings(){ return new Proxy({}, { get: function(){ return "probe"; } }); }\n' +
+    'function str(v){ return v === null || v === undefined ? "" : String(v); }\n' +
+    'function isTrue(v){ var s = String(v).trim().toLowerCase(); return !(s === "" || s === "false" || s === "no" || s === "0"); }\n' +
     'return getPublicConfig();\n' +
     '})()';
   return Object.keys(vm.runInNewContext(source, {}));
 })();
 
-['Booking.html', 'Staff.html'].forEach((f) => {
+['Booking.html', 'Staff.html', 'Admin.html'].forEach((f) => {
   const full = path.join(GS_DIR, f);
   if (!fs.existsSync(full)) return;
   const html = fs.readFileSync(full, 'utf8');
@@ -162,7 +164,7 @@ const scriptOf = (file) => {
   const html = fs.readFileSync(full, 'utf8');
   return [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
 };
-['Booking.html', 'Staff.html'].forEach((f) => {
+['Booking.html', 'Staff.html', 'Admin.html'].forEach((f) => {
   const full = path.join(GS_DIR, f);
   if (!fs.existsSync(full)) return;
   const html = fs.readFileSync(full, 'utf8');

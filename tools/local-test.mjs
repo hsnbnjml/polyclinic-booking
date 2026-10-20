@@ -21,7 +21,7 @@ const GS_DIR = path.join(here, '..', 'apps-script');
 const FILES = [
   'Config.gs', 'Util.gs', 'Db.gs', 'I18n.gs', 'Availability.gs', 'Catalog.gs',
   'Calendar.gs', 'WhatsApp.gs', 'BookingApi.gs', 'Reports.gs', 'StaffApi.gs',
-  'Setup.gs', 'Notify.gs'
+  'Setup.gs', 'Notify.gs', 'AdminApi.gs'
 ];
 
 /* ------------------------------------------------------------------ *
@@ -199,7 +199,7 @@ function createFakeEnv() {
         createFile: () => ({ getUrl: () => 'https://drive.google.com/file/d/x/view' }),
         getFilesByName: () => ({ hasNext: () => true })
       }),
-      getFileById: () => ({ makeCopy: () => ({ getUrl: () => 'x' }), setTrashed: () => {} })
+      getFileById: () => ({ makeCopy: () => ({ getUrl: () => 'https://drive.google.com/file/d/backup/view', getName: () => 'PolyClinic-MASTER-test' }), setTrashed: () => {} })
     },
     ScriptApp: {
       getOAuthToken: () => 'fake-token',
@@ -209,7 +209,15 @@ function createFakeEnv() {
       newTrigger: () => ({ timeBased: () => ({ atHour: () => ({ everyDays: () => ({ create: () => {} }) }), onWeekDay: () => ({ atHour: () => ({ create: () => {} }) }) }) })
     },
     UrlFetchApp: { fetch: () => ({ getBlob: () => ({ setName: () => ({}) }) }) },
-    Utilities: { getUuid: () => 'uuid-' + Math.random().toString(36).slice(2) },
+    Utilities: {
+      getUuid: () => 'uuid-' + Math.random().toString(36).slice(2),
+      formatDate: (date, tz) => {
+        if (tz !== 'UTC' && !/^(Africa|Asia|Europe|America|Australia|Pacific|Atlantic|Indian|Etc)\//.test(tz)) {
+          throw new Error('invalid timezone: ' + tz);
+        }
+        return '2026-01-01';
+      }
+    },
     HtmlService: {
       createTemplateFromFile: () => ({ evaluate: () => ({ setTitle() { return this; }, addMetaTag() { return this; }, setXFrameOptionsMode() { return this; } }) }),
       createHtmlOutput: () => ({ getContent: () => '' }),
@@ -233,7 +241,10 @@ function createFakeEnv() {
     'waLinksFor', 'markWhatsAppSent', 'kpiSummary', 'reportRows', 'Db',
     'doctorCode', 'doctorColorHex', 'dayDoctors', 'checkConfiguration', 'callablePhone',
     'relativeDayAr', 'waTemplateLabelAr', 'templateVars', 'renderTemplate',
-    'doctorIdList', 'filterBookings', 'scopeLabelAr', 'exportScopeSlug', 'exportBaseName', 'exportCsv'
+    'doctorIdList', 'filterBookings', 'scopeLabelAr', 'exportScopeSlug', 'exportBaseName', 'exportCsv',
+    'getPublicConfig', 'getWaTemplates', 'waTemplateSettingKey', 'errorMessageAr', 'sortRowsByOrder',
+    'adminMigrateSchema', 'adminLogin', 'adminBootstrap', 'adminGet', 'adminSave', 'adminDelete',
+    'adminReorder', 'adminSetDoctorPin', 'adminChangePin', 'adminBackup', 'adminRoleFor', 'adminPinHash'
   ];
   const wrapped = '(function(){\n' + source + '\nreturn {' + exported.join(',') + '};\n})()';
   const api = vm.runInContext(wrapped, context, { filename: 'polyclinic.gs' });
@@ -898,6 +909,248 @@ check('a one-doctor CSV drops the other doctor',
 check('a comparison CSV holds both doctors',
   csvTwo.indexOf('د. أحمد') !== -1 && csvTwo.indexOf('د. منى') !== -1 &&
   csvTwo.trim().split(/\r?\n/).length === 5, String(csvTwo.trim().split(/\r?\n/).length));
+
+/* -------------------------------------------------- */
+section('12. Admin settings, doctor PINs and the public pause');
+
+reset();
+const ADMIN = 'ADMIN-123';
+
+check('the first admin code is bootstrapped from the staff code',
+  api.adminBootstrap(CODE, ADMIN).ok === true);
+check('bootstrap creates the Access sheet',
+  !!state.sheets.get(api.SHEET.ACCESS), JSON.stringify(Array.from(state.sheets.keys())));
+check('the Clinics header gained sort_order without shifting existing columns',
+  state.sheets.get(api.SHEET.CLINICS).get(1, 8) === 'sort_order',
+  state.sheets.get(api.SHEET.CLINICS).get(1, 1) + '…' + state.sheets.get(api.SHEET.CLINICS).get(1, 8));
+check('the admin code logs in as admin', api.adminLogin(ADMIN).role === 'admin');
+check('the staff code no longer opens the settings page',
+  api.adminLogin(CODE).ok === false && api.adminLogin(CODE).error === 'USE_ADMIN',
+  JSON.stringify(api.adminLogin(CODE)));
+check('a wrong code is rejected', api.adminLogin('nope').ok === false);
+
+const adminView = api.adminGet(ADMIN);
+const adminJson = JSON.stringify(adminView);
+check('the admin payload never contains the staff code', adminJson.indexOf(CODE) === -1);
+check('the admin payload never contains a PIN or its hash',
+  adminJson.indexOf('pin_hash') === -1 && adminJson.indexOf('pin_salt') === -1 && adminJson.indexOf('123456') === -1);
+check('the settings page receives doctor, branch and reason lists',
+  adminView.clinics.length >= 2 && adminView.doctors.length >= 2 && adminView.reasons.length >= 3);
+check('the overview receives a health report and an audit list',
+  Array.isArray(adminView.health) && Array.isArray(adminView.audit));
+check('the audit recorded the bootstrap', adminView.audit.length > 0 && adminView.audit[0].action.length > 0,
+  JSON.stringify(adminView.audit.slice(0, 1)));
+
+const newClinic = api.adminSave(ADMIN, 'clinic', {
+  nameAr: 'فرع ثالث', addressAr: 'شارع ٣', mapLink: 'https://maps.example/3',
+  phone: '0220000002', hoursAr: '٩–٥', active: true
+});
+check('a new branch gets the next stable id', newClinic.ok === true && newClinic.id === 'C3', JSON.stringify(newClinic));
+check('a new branch is appended after the existing order, not put first',
+  api.getBootstrap().clinics.map((c) => c.id).join(',') === 'C1,C3',
+  api.getBootstrap().clinics.map((c) => c.id).join(','));
+
+const newDoctor = api.adminSave(ADMIN, 'doctor', {
+  nameAr: 'د. سارة', specialtyAr: 'جلدية', clinicIds: ['C1'], color: 'blue', active: true
+});
+check('a new doctor gets a stable id and a two-letter booking code',
+  newDoctor.ok === true && newDoctor.id === 'D3' && /^[a-z]{2}$/.test(newDoctor.code),
+  JSON.stringify(newDoctor));
+const duplicateCode = api.adminSave(ADMIN, 'doctor', {
+  nameAr: 'د. تجريبي', specialtyAr: 'عام', clinicIds: ['C1'], code: newDoctor.code, active: true
+});
+check('a duplicate booking code is refused', duplicateCode.ok === false && duplicateCode.error === 'CODE_TAKEN',
+  JSON.stringify(duplicateCode));
+check('a doctor must have at least one branch',
+  api.adminSave(ADMIN, 'doctor', { nameAr: 'د. بلا فرع', specialtyAr: 'عام', clinicIds: [] }).error === 'BRANCH_REQUIRED');
+check('a doctor cannot be given a nonexistent branch',
+  api.adminSave(ADMIN, 'doctor', { nameAr: 'د. خطأ', specialtyAr: 'عام', clinicIds: ['C99'] }).error === 'BRANCH_NOT_FOUND');
+
+check('a new visit reason is accepted',
+  api.adminSave(ADMIN, 'reason', { nameAr: 'تطعيم', durationMin: 20, leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: true }).ok === true);
+
+const avSaved = api.adminSave(ADMIN, 'availability', {
+  doctorId: 'D1', clinicId: 'C1', reasonId: 'R2', weekdays: [1, 2],
+  fromTime: '08:00', toTime: '10:00', slotMin: 30, maxPerDay: 5, active: true
+});
+check('a weekly block can span two days at once', avSaved.ok === true);
+let avRows = api.Db.rows(api.SHEET.AVAILABILITY).filter((a) =>
+  a.doctor_id === 'D1' && a.clinic_id === 'C1' && a.reason_id === 'R2');
+check('one row was written per selected weekday',
+  avRows.length === 2 && avRows.map((a) => Number(a.weekday)).sort().join(',') === '1,2',
+  JSON.stringify(avRows.map((a) => a.weekday)));
+
+const avIds = avRows.map((a) => a.availability_id);
+const avEdited = api.adminSave(ADMIN, 'availability', {
+  ids: avIds, doctorId: 'D1', clinicId: 'C1', reasonId: 'R2', weekdays: [2, 3],
+  fromTime: '08:30', toTime: '10:30', slotMin: 20, maxPerDay: 0, active: true
+});
+avRows = api.Db.rows(api.SHEET.AVAILABILITY).filter((a) =>
+  a.doctor_id === 'D1' && a.clinic_id === 'C1' && a.reason_id === 'R2');
+check('editing a weekly block removes the unchecked day and adds the new one',
+  avEdited.ok === true && avRows.length === 2 &&
+  avRows.map((a) => Number(a.weekday)).sort().join(',') === '2,3',
+  JSON.stringify(avRows.map((a) => a.weekday)));
+check('the whole block moves to the new time and slot length',
+  avRows.every((a) => a.from_time === '08:30' && a.to_time === '10:30' && Number(a.slot_min) === 20),
+  JSON.stringify(avRows.map((a) => [a.from_time, a.to_time, a.slot_min])));
+check('a backwards time range is refused',
+  api.adminSave(ADMIN, 'availability', {
+    doctorId: 'D1', clinicId: 'C1', reasonId: 'R2', weekdays: [1],
+    fromTime: '10:00', toTime: '09:00', slotMin: 30, active: true
+  }).error === 'BAD_TIME');
+check('a doctor cannot be scheduled in a branch they are not assigned to',
+  api.adminSave(ADMIN, 'availability', {
+    doctorId: 'D2', clinicId: 'C2', reasonId: 'R2', weekdays: [1],
+    fromTime: '09:00', toTime: '10:00', slotMin: 30, active: true
+  }).error === 'CLINIC_NOT_FOUND');
+
+check('a schedule block can be deleted',
+  api.adminDelete(ADMIN, 'availability', avRows.map((a) => a.availability_id)).ok === true);
+check('the deleted block no longer produces rows',
+  api.Db.rows(api.SHEET.AVAILABILITY).filter((a) =>
+    a.doctor_id === 'D1' && a.reason_id === 'R2' && a.clinic_id === 'C1').length === 0);
+
+check('the admin can set a doctor PIN',
+  api.adminSetDoctorPin(ADMIN, 'D1', '123456').ok === true);
+check('an admin code cannot be changed to a doctor PIN',
+  api.adminSave(ADMIN, 'settings', { values: { adminCode: '123456' } }).error === 'CODE_CONFLICT');
+check('the staff code cannot be changed to a doctor PIN',
+  api.adminSave(ADMIN, 'settings', { values: { staffCode: '123456' } }).error === 'CODE_CONFLICT');
+const beforeColor = api.getPublicConfig().brandPrimary;
+const rejectedSettings = api.adminSave(ADMIN, 'settings', {
+  values: { clinicName: '', brandPrimary: '#123456' }
+});
+check('a rejected settings form changes nothing',
+  rejectedSettings.error === 'NAME_REQUIRED' && api.getPublicConfig().brandPrimary === beforeColor,
+  JSON.stringify(rejectedSettings));
+const rejectedTimezone = api.adminSave(ADMIN, 'settings', {
+  values: { clinicName: 'اسم تجريبي', timezone: 'Not/AZone' }
+});
+check('an invalid timezone is rejected before any change',
+  rejectedTimezone.error === 'BAD_TIMEZONE' && api.getPublicConfig().clinicName !== 'اسم تجريبي',
+  JSON.stringify(rejectedTimezone));
+const foreignReason = api.adminSave(ADMIN, 'availability', {
+  ids: [api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => a.reason_id === 'R1')[0].availability_id],
+  doctorId: 'D1', clinicId: 'C1', reasonId: 'R2', weekdays: [1],
+  fromTime: '09:00', toTime: '10:00', slotMin: 30, active: true
+});
+check('mixing schedule ids from another visit reason is refused',
+  foreignReason.error === 'NOT_FOUND', JSON.stringify(foreignReason));
+const doctorLogin = api.adminLogin('123456');
+check('the doctor PIN opens a doctor-scoped session',
+  doctorLogin.ok === true && doctorLogin.role === 'doctor' && doctorLogin.doctorId === 'D1',
+  JSON.stringify(doctorLogin));
+const doctorView = api.adminGet('123456');
+check('the doctor payload has only their own availability',
+  doctorView.role === 'doctor' && doctorView.availability.every((a) => a.doctorId === 'D1'),
+  JSON.stringify(doctorView.availability.map((a) => a.doctorId)));
+check('the doctor payload has no other doctor and no patient data',
+  JSON.stringify(doctorView).indexOf('D2') === -1 && JSON.stringify(doctorView).indexOf('pin_hash') === -1);
+check('a doctor cannot edit branches',
+  api.adminSave('123456', 'clinic', { nameAr: 'فرع الطبيب' }).error === 'ADMIN_ONLY');
+const doctorBlock = api.adminSave('123456', 'availability', {
+  doctorId: 'D2', clinicId: 'C1', reasonId: 'R2', weekdays: [5],
+  fromTime: '09:00', toTime: '10:00', slotMin: 30, active: true
+});
+check('a doctor can add a block, and the server forces it to their own id',
+  doctorBlock.ok === true &&
+  api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => Number(a.weekday) === 5 && a.reason_id === 'R2')
+    .every((a) => a.doctor_id === 'D1'),
+  JSON.stringify(doctorBlock));
+check('two doctors cannot share a PIN',
+  api.adminSetDoctorPin(ADMIN, 'D2', '123456').error === 'PIN_CONFLICT');
+check('a doctor can change their own PIN',
+  api.adminChangePin('123456', '654321').ok === true);
+check('the old PIN stops working and the new one works',
+  api.adminLogin('123456').ok === false && api.adminLogin('654321').role === 'doctor');
+check('the admin can disable a doctor PIN',
+  api.adminSetDoctorPin(ADMIN, 'D2', '777777').ok === true &&
+  api.adminSetDoctorPin(ADMIN, 'D2', '').ok === true &&
+  api.adminLogin('777777').ok === false);
+
+const orderSave = api.adminReorder(ADMIN, 'clinics', ['C3', 'C1', 'C2']);
+check('the admin can reorder branches',
+  orderSave.ok === true && api.getBootstrap().clinics.map((c) => c.id).join(',') === 'C3,C1',
+  api.getBootstrap().clinics.map((c) => c.id).join(','));
+check('archiving a branch removes it from the public booking catalogue',
+  api.adminSave(ADMIN, 'clinic', {
+    id: 'C3', nameAr: 'فرع ثالث', addressAr: 'شارع ٣', mapLink: '', phone: '', hoursAr: '٩–٥', active: false
+  }).ok === true && api.getBootstrap().clinics.every((c) => c.id !== 'C3'));
+
+check('stopping bookings writes the switch and the patient message',
+  api.adminSave(ADMIN, 'pause', { paused: true, message: 'مغلق للعطلة' }).ok === true);
+const pausedConfig = api.getPublicConfig();
+check('the public config carries the pause and its message',
+  pausedConfig.bookingsPaused === true && pausedConfig.pauseMessage === 'مغلق للعطلة',
+  JSON.stringify({ paused: pausedConfig.bookingsPaused, message: pausedConfig.pauseMessage }));
+
+const pausedSlot = firstFreeSlot(api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' }));
+const pausedBooking = api.submitBooking({
+  clinicId: 'C1', doctorId: 'D2', reasonId: 'R2',
+  date: pausedSlot.date, start: pausedSlot.start,
+  name: 'مريض الإيقاف', phone: '01055550000', phoneConfirm: '01055550000', consent: 'true'
+});
+check('a public booking is refused while paused, with the clinic message',
+  pausedBooking.ok === false && pausedBooking.error === 'BOOKINGS_PAUSED' &&
+  pausedBooking.messageAr === 'مغلق للعطلة', JSON.stringify(pausedBooking));
+check('resuming bookings works',
+  api.adminSave(ADMIN, 'pause', { paused: false, message: 'نعود قريباً' }).ok === true &&
+  api.getPublicConfig().bookingsPaused === false);
+
+check('key patient texts are editable',
+  api.adminSave(ADMIN, 'texts', {
+    texts: { subtitle: 'مرحباً بكم', slotTaken: 'هذا الموعد محجوز للتو', consentText: '' }
+  }).ok === true);
+const textConfig = api.getPublicConfig();
+check('the edited subtitle reaches the public config',
+  textConfig.texts.subtitle === 'مرحباً بكم', textConfig.texts.subtitle);
+check('the edited slot-taken text reaches the error mapper',
+  api.errorMessageAr('SLOT_TAKEN') === 'هذا الموعد محجوز للتو');
+check('an empty consent field falls back to the built-in consent, never blank',
+  !!textConfig.consentText && textConfig.consentText.length > 20);
+
+const templateSave = api.adminSave(ADMIN, 'template', {
+  key: 'confirm', text: 'أهلاً {name} — موعدك مع {doctor}'
+});
+check('a WhatsApp template override is saved', templateSave.ok === true);
+check('the override is used by the effective templates',
+  api.getWaTemplates().confirm.text === 'أهلاً {name} — موعدك مع {doctor}');
+const templateBooking = api.submitBooking({
+  clinicId: 'C1', doctorId: 'D2', reasonId: 'R2',
+  date: pausedSlot.date, start: pausedSlot.start,
+  name: 'مريض القالب', phone: '01055550001', phoneConfirm: '01055550001', consent: 'true'
+});
+const templateLinks = api.waLinksFor(api.Db.rows(api.SHEET.BOOKINGS)[0]);
+check('the WhatsApp link is rendered with the patient name and doctor',
+  templateBooking.ok === true && templateLinks[0].text.indexOf('مريض القالب') !== -1 &&
+  templateLinks[0].text.indexOf('د.') !== -1, templateLinks[0].text);
+check('resetting a template restores the built-in text',
+  api.adminSave(ADMIN, 'template', { key: 'confirm', text: '' }).ok === true &&
+  api.getWaTemplates().confirm.text.indexOf('مرحباً') !== -1);
+
+const backup = api.adminBackup(ADMIN);
+check('the backup button creates a Drive copy and returns its link',
+  backup.ok === true && /drive\.google\.com/.test(backup.url), JSON.stringify(backup));
+check('the audit log records the backup', api.adminGet(ADMIN).audit.some((a) => a.action.indexOf('نسخة') !== -1));
+
+const newAdmin = api.adminSave(ADMIN, 'settings', { values: { adminCode: 'NEW-ADMIN' } });
+check('the admin code can be changed separately from the staff code',
+  newAdmin.ok === true && newAdmin.adminCodeChanged === true);
+check('the old admin code stops working and the new one works',
+  api.adminLogin(ADMIN).ok === false && api.adminLogin('NEW-ADMIN').role === 'admin');
+const staffChange = api.adminSave('NEW-ADMIN', 'settings', { values: { staffCode: 'NEW-STAFF' } });
+const staffLogin = api.adminLogin('NEW-STAFF');
+check('the staff code can be changed without touching the admin code',
+  staffChange.ok === true &&
+  staffLogin.error === 'USE_ADMIN' &&
+  api.getStaffBoard(api.todayStr(), 'NEW-STAFF').ok !== false &&
+  api.adminLogin('NEW-ADMIN').role === 'admin',
+  JSON.stringify({ change: staffChange, login: staffLogin }));
+check('the admin code still works on the reception board',
+  api.getStaffBoard(api.todayStr(), 'NEW-ADMIN').ok !== false);
+check('a second bootstrap is refused once an admin code exists',
+  api.adminBootstrap('NEW-STAFF', 'ANOTHER').error === 'ALREADY_SET');
 
 /* -------------------------------------------------- */
 

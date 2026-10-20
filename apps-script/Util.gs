@@ -182,6 +182,21 @@ function csvFromRows(header, rows) {
   return '\ufeff' + lines.join('\r\n');
 }
 
+/**
+ * Stable ordering for config rows: explicit sort_order first, then the sheet's
+ * existing row order. Blank sort_order is normal for rows created before the
+ * admin page existed, so it must never jump to the top.
+ */
+function sortRowsByOrder(rows) {
+  return rows.map(function (r, i) { return { r: r, i: i }; }).sort(function (a, b) {
+    const ao = Number(a.r.sort_order);
+    const bo = Number(b.r.sort_order);
+    const av = ao > 0 ? ao : a.i + 1;
+    const bv = bo > 0 ? bo : b.i + 1;
+    return av - bv;
+  }).map(function (x) { return x.r; });
+}
+
 function logInfo(context, message) {
   logLine('INFO', context, message);
 }

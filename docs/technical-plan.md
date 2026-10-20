@@ -45,6 +45,7 @@ calendar event titled `BLOCK [doctor:D1]`, which the nightly job converts into a
 | `BookingApi.gs` | the only patient write path: validate, lock, insert, event |
 | `Calendar.gs` | event create/move/delete, `BLOCK` → blackout sync |
 | `StaffApi.gs` | staff-code-gated actions: board, status, reschedule, block, lookup |
+| `AdminApi.gs` | admin/doctor access, config CRUD, weekly blocks, blackouts, texts, pause, PINs, backup, audit |
 | `WhatsApp.gs` | wa.me links, template variables, add-to-calendar link |
 | `Reports.gs` | report rows, KPIs, CSV, real .xlsx via Drive export |
 | `Notify.gs` | internal only: daily agenda, weekly backup, trigger entry points |
@@ -52,6 +53,7 @@ calendar event titled `BLOCK [doctor:D1]`, which the nightly job converts into a
 | `Code.gs` | `doGet` routing, public + staff API surface, exports |
 | `Booking.html` | the 5-step patient page |
 | `Staff.html` | reception screen |
+| `Admin.html` | Arabic settings page; admin tabs plus the doctor-scoped schedule view |
 | `Styles.html`, `ClientJs.html` | shared CSS and helpers |
 
 ## Data model
@@ -62,13 +64,14 @@ minutes-since-midnight, which also makes the engine deterministic in tests.
 
 | Sheet | Columns |
 |-------|---------|
-| `Clinics` | clinic_id, name_ar, address_ar, map_link, phone, working_hours_ar, active |
-| `Doctors` | doctor_id, name_ar, specialty_ar, clinic_ids, color, active, code |
+| `Clinics` | clinic_id, name_ar, address_ar, map_link, phone, working_hours_ar, active, sort_order |
+| `Doctors` | doctor_id, name_ar, specialty_ar, clinic_ids, color, active, code, sort_order |
 | `Reasons` | reason_id, name_ar, description_ar, duration_min, lead_hours, book_days_ahead, max_per_day, active, sort_order |
 | `Availability` | availability_id, doctor_id, clinic_id, reason_id, weekday, from_time, to_time, slot_min, max_per_day_override, valid_from, valid_to, active |
 | `Blackouts` | blackout_id, date, scope_type, scope_id, from_time, to_time, note |
 | `Bookings` | booking_id, created_at, clinic_id, doctor_id, reason_id, date, start_time, end_time, name, phone_raw, phone_norm, email, extra_json, status, status_at, status_by, rescheduled_from, staff_note, wa_sent_at, wa_template, event_id, source |
 | `Settings` | key, value, note |
+| `Access` | doctor_id, pin_hash, pin_salt, updated_at — hashed doctor PINs, never exposed publicly |
 | `Log` | timestamp, level, context, message |
 
 `weekday`: 0 = Sunday … 6 = Saturday. `Blackouts.date` accepts a single date or a range
@@ -79,6 +82,17 @@ minutes-since-midnight, which also makes the engine deterministic in tests.
 data in an existing sheet. It holds the two Latin letters used in the patient's booking reference
 (`AE` → `ae-20261018-1`). Left empty, the letters are guessed from the name (first and last word);
 `checkConfiguration()` warns when two active doctors end up with the same code.
+
+The settings page archives branches/doctors/reasons (`active = FALSE`) instead of deleting rows.
+Schedules can be deleted, but archiving keeps history and old bookings readable. `sort_order` is
+also appended last; blank values fall back to sheet order, so an upgraded sheet keeps its current
+order until the clinic reorders it. `adminMigrateSchema()` adds missing `Access`, `code` and
+`sort_order` columns on the first settings visit — additively, without moving existing data.
+
+Settings keys added for the admin page include `admin_code`, `bookings_paused`, `pause_message_ar`,
+the patient-page text overrides (`booking_subtitle_ar`, `name_hint_ar`, `phone_hint_ar`,
+`extra_label_ar`, `consent_text_ar`, `success_text_ar`, `no_slots_text_ar`, `slot_taken_text_ar`),
+and the `wa_template_*` overrides. A blank text override means the built-in default.
 
 ## Slot engine rules (in order)
 
@@ -185,8 +199,12 @@ marker could be one, new booking) — by design, so "she moved twice" stays answ
 - Therefore: every server function is reachable by anyone who has the URL. Nothing is protected by obscurity.
 - Patient data is never returned by any unauthenticated function. `getBootstrap` and `generateSlots` return names, hours and slot times only.
 - Every staff action takes a `code` argument compared against `settings.staff_code`, and fails closed when the code is missing.
+- The settings page uses a separate `settings.admin_code`; the first one is bootstrapped from the staff code, then the staff code is refused there. Both codes are refused if they equal a doctor PIN, so one credential can never silently grant a higher role.
+- Doctor PINs are 4–8 digits, hashed with a per-doctor salt in the separate `Access` sheet. The admin payload exposes only `hasPin`; hashes and salts never leave the server. A doctor session is scoped to that doctor's availability, and the server forces `doctor_id` on writes.
+- Pausing bookings is checked in both `apiSlots` and `submitBooking`; it never blocks the staff reschedule/cancel paths.
+- Every admin write is validated server-side under a script lock and recorded in the `Log` sheet; the browser is never trusted.
 - Anti-abuse: slot locking, per-phone booking cap, honeypot field, server-side validation of every field.
-- The spreadsheet itself is not shared publicly; access is per-account.
+- The spreadsheet itself is not shared publicly; access is per-account. The settings page never returns patient rows, only aggregate counts.
 
 ## Free-tier reality check
 
@@ -200,8 +218,8 @@ marker could be one, new booking) — by design, so "she moved twice" stays answ
 ## Phases
 
 1. **Config freeze** — real clinics, doctors, reasons, availability, wording. (blocked on the clinic)
-2. **Provisioning** — run `setupEverything()`, fill the config sheets, set the staff code.
-3. **Internal trial** — dummy bookings, verify the staff screen, exports and calendar events.
+2. **Provisioning** — run `setupEverything()`, deploy, then fill the config from the admin settings page and set the staff/admin codes.
+3. **Internal trial** — dummy bookings, verify the staff screen, settings page, exports and calendar events.
 4. **Pilot** — one doctor, one visit reason, two weeks. Measure no-shows and phone-call volume.
 5. **Rollout** — remaining doctors and reasons.
 6. **Optional** — legacy history import, Looker Studio dashboard, automated WhatsApp.
@@ -209,7 +227,7 @@ marker could be one, new booking) — by design, so "she moved twice" stays answ
 ## Test coverage
 
 `tools/local-test.mjs` runs the actual `.gs` source against an in-memory fake of the Google
-services and asserts 120 behaviours, including: phone normalisation (local, international, 00-prefix,
+services and asserts 200 behaviours, including: phone normalisation (local, international, 00-prefix,
 Arabic-Indic digits), Sunday/Wednesday-only availability, 45-minute grid boundaries, inactive
 rows being ignored, one-patient-per-slot, idempotent double-tap, consent/phone/mismatch/honeypot
 rejection, the 3-booking cap, cancel freeing a slot and deleting its event, reschedule keeping all
@@ -217,10 +235,12 @@ rows, no-show not freeing a slot, partial and whole-day blackouts, blackout scop
 daily caps, patient history by phone, KPIs, WhatsApp template contents and number formatting,
 booking references (one per doctor per day, explicit code wins, duplicate codes warned about), the
 reception roster the scheduler filters by, report scoping (one doctor, a comma list, an array, all,
-and the file names they produce), and that the public catalogue leaks nothing patient-related.
+and the file names they produce), the admin/doctor access split, PIN hashing and conflicts, settings
+validation, schedule block editing, pause gating, backups, archive/reorder, and that the public
+catalogue leaks nothing patient-related.
 
 ```
-node tools/local-test.mjs      →   120 passed, 0 failed
+node tools/local-test.mjs      →   200 passed, 0 failed
 node tools/check-html.mjs      →   front-end checks passed
 node tools/check-xlsx.mjs      →   30 passed, 0 failed   (the demo's .xlsx, via .NET's ZIP reader)
 ```

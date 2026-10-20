@@ -89,7 +89,7 @@
   </header>
 
   <section>
-    <h2>ابدأ العرض <span class="sub">— افتح الصفحتين بالترتيب، ثم عُد إلى هذه الصفحة لرؤية التقويم</span></h2>
+    <h2>ابدأ العرض <span class="sub">— افتح الصفحات بالترتيب، ثم عُد إلى هذه الصفحة لرؤية التقويم</span></h2>
     <div class="btns">
       <a class="big" href="patient.html" target="_blank">
         ١ — صفحة المريض
@@ -98,6 +98,10 @@
       <a class="big alt" href="reception.html" target="_blank">
         ٢ — شاشة الاستقبال
         <small>كود الدخول التجريبي: <span class="code">1234</span></small>
+      </a>
+      <a class="big admin" href="admin.html" target="_blank">
+        ٣ — إعدادات العيادة
+        <small>كود الإدارة: <span class="code">admin123</span> · كود الطبيب: <span class="code">123456</span></small>
       </a>
     </div>
     <p class="status" id="store-state" style="margin-top:12px">…</p>
@@ -121,6 +125,11 @@
         <td class="tag real">حقيقي</td>
         <td>إجراءات الاستقبال</td>
         <td>حضر / لم يحضر / إلغاء / تغيير الموعد مع تسجيل من غيّره ومتى، حجب وقت، البحث بالجوال، وسجل المريض.</td>
+      </tr>
+      <tr>
+        <td class="tag real">حقيقي</td>
+        <td>صفحة إعدادات العيادة</td>
+        <td>نفس واجهة الإدارة: تعديل الفروع والأطباء وأسباب الزيارة والجدول الأسبوعي والإجازات والنصوص وكود كل طبيب وإيقاف الحجز. التغييرات تُحفظ في متصفح العرض حتى إعادة تعيين البيانات.</td>
       </tr>
       <tr>
         <td class="tag real">حقيقي</td>
@@ -203,7 +212,7 @@
 
 <script>
 (function () {
-  var KEY = 'polyclinic_demo_v3';
+  var KEY = 'polyclinic_demo_v4';
   var WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   var MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
   // Same palette as DOCTOR_COLOR_HEX in apps-script/Config.gs — the mirror must match

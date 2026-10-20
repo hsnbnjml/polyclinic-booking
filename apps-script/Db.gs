@@ -106,6 +106,24 @@ const Db = (function () {
     return block.length;
   }
 
+  /**
+   * Clear the rows whose idField is in idValues. The physical blank row stays,
+   * which is harmless: rows() skips blanks, and it avoids shifting other rows.
+   */
+  function remove(name, idField, idValues) {
+    const wanted = {};
+    (Array.isArray(idValues) ? idValues : [idValues]).forEach(function (v) { wanted[String(v)] = true; });
+    const sh = sheet(name);
+    const hdr = headers(name);
+    let removed = 0;
+    rows(name).forEach(function (r) {
+      if (!wanted[String(r[idField])]) return;
+      sh.getRange(r._row, 1, 1, hdr.length).clearContent();
+      removed++;
+    });
+    return removed;
+  }
+
   /** Remove every row of a data sheet except the header (used only by seeding/backup tools). */
   function truncate(name) {
     const sh = sheet(name);
@@ -122,6 +140,7 @@ const Db = (function () {
     append: append,
     appendMany: appendMany,
     update: update,
+    remove: remove,
     truncate: truncate,
     sheet: sheet,
     reset: reset

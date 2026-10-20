@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Styles') ?>
+  <style>
+    :root {
+      --primary: <?= config.brandPrimary ?>;
+      --soft: <?= config.brandSecondary ?>;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e4e7ec;
+    }
+    header.top .inner { align-items: flex-start; }
+    .hdr-actions { margin-inline-start: auto; display: flex; gap: 8px; }
+    .hdr-btn {
+      background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.28);
+      border-radius: 10px; min-height: 40px; padding: 7px 13px; font-family: inherit;
+      font-size: 13px; cursor: pointer;
+    }
+    .hdr-btn:active { background: rgba(255,255,255,.26); }
+
+    .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 8px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
+    .tabs button {
+      flex: 0 0 auto; border: 1px solid var(--line); background: var(--card); color: var(--text);
+      border-radius: 999px; min-height: 38px; padding: 7px 14px; font-family: inherit; font-size: 13.5px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .tabs button.on { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700; }
+
+    .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 14px; }
+    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .stat b { display: block; font-size: 24px; line-height: 1.2; color: var(--primary-dark); }
+    .stat span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+    .entity {
+      background: var(--card); border: 1px solid var(--line); border-radius: 15px;
+      padding: 13px 14px; margin-bottom: 10px; box-shadow: var(--sh-sm);
+    }
+    .ent-head { display: flex; gap: 10px; align-items: flex-start; }
+    .ent-head > div:first-child { flex: 1 1 auto; min-width: 0; }
+    .ent-head h3 { margin: 0; font-size: 16px; line-height: 1.5; }
+    .ent-head .mini { margin: 3px 0 0; }
+    .ent-head .badge { flex: 0 0 auto; margin-top: 2px; }
+    .mini { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+    .badge { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; background: var(--tint-2); color: var(--primary-dark); }
+    .badge.off { background: #f2f4f6; color: #667085; }
+    .badge.warn { background: #fff4d6; color: #8a5a00; }
+    .row-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+    .btn.mini-btn { min-height: 38px; padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+    .icon-btn { min-width: 38px; padding: 7px 9px; }
+    .addbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .addbar .btn { flex: 1 1 180px; }
+    .empty { text-align: center; color: var(--muted); padding: 20px 10px; font-size: 14px; }
+
+    .group { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 10px; background: var(--card); }
+    .group.inactive { opacity: .72; }
+    .group .head { display: flex; gap: 8px; align-items: flex-start; }
+    .group .head > div { flex: 1 1 auto; }
+    .group h3 { margin: 0; font-size: 15.5px; }
+    .weeklist { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .weeklist span { background: var(--tint); color: var(--primary-dark); border-radius: 7px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+    .timebig { font-weight: 800; color: var(--primary-dark); direction: ltr; display: inline-block; }
+
+    .field select {
+      display: block; width: 100%; margin-top: 6px; padding: 12px 13px; font-size: 15px;
+      font-family: inherit; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); min-height: 48px;
+    }
+    .field input[type="date"], .field input[type="time"], .field input[type="number"], .field input[type="color"] {
+      display: block; width: 100%; margin-top: 6px; padding: 11px 12px; font-size: 15px;
+      font-family: inherit; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); min-height: 48px;
+    }
+    .field input[type="color"] { padding: 4px; height: 48px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .check { display: flex; align-items: center; gap: 9px; font-size: 14px; margin: 4px 0 14px; }
+    .check input { width: 20px; height: 20px; }
+    .weekdays { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+    .weekdays button {
+      border: 1.5px solid var(--line); background: #fff; color: var(--text); border-radius: 10px;
+      min-height: 40px; padding: 7px 11px; font-family: inherit; font-size: 13px; cursor: pointer;
+    }
+    .weekdays button.on { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700; }
+
+    .modal {
+      position: fixed; inset: 0; background: rgba(16, 24, 40, .48); z-index: 60;
+      display: none; overflow-y: auto; padding: 16px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+    .modal.open { display: block; }
+    .sheet {
+      background: var(--card); border-radius: 18px; width: 100%; max-width: 620px;
+      margin: 10px auto; padding: 17px; box-shadow: var(--sh-md); animation: sheetin var(--t-med) var(--ease);
+    }
+    @keyframes sheetin { from { transform: translateY(14px); opacity: .65; } }
+    .sheet h2 { margin: 0 0 4px; font-size: 18px; }
+    .sheet .hint { margin: 0 0 12px; }
+    .sheet .actions { margin-top: 14px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+    .chips button {
+      border: 1px solid var(--line); background: var(--tint); color: var(--primary-dark);
+      border-radius: 999px; padding: 3px 9px; font-family: inherit; font-size: 11.5px; cursor: pointer; direction: ltr;
+    }
+    textarea { resize: vertical; }
+    .preview {
+      background: #eef7f5; border: 1px dashed #b9d9d2; border-radius: 11px; padding: 10px 12px;
+      font-size: 13.5px; white-space: pre-wrap; line-height: 1.7; color: #174a43; margin: 8px 0;
+    }
+    .preview .unknown { color: #b42318; font-weight: 700; }
+
+    .health { margin: 0; padding: 0; list-style: none; }
+    .health li { border-radius: 10px; padding: 9px 11px; margin-bottom: 6px; font-size: 13px; line-height: 1.6; }
+    .health li.warn { background: #fff8e6; color: #6b4a00; border: 1px solid #f2d48a; }
+    .health li.info { background: var(--tint); color: var(--text); border: 1px solid var(--line); }
+
+    .audit { padding: 0; margin: 0; list-style: none; }
+    .audit li { border-bottom: 1px solid var(--line); padding: 10px 0; }
+    .audit li:last-child { border-bottom: 0; }
+    .audit b { font-size: 14px; }
+    .audit .mini { margin: 2px 0 0; }
+    .nowrap { white-space: nowrap; }
+
+    @media (max-width: 560px) {
+      .two, .three { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div>
+      <h1>إعدادات العيادة</h1>
+      <p id="hdr-sub"><?= config.clinicName ?></p>
+    </div>
+    <div class="hdr-actions">
+      <button class="hdr-btn" id="hdr-logout" onclick="logout()">خروج</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="app"></div>
+<div id="modal" class="modal" onclick="modalBackdrop(event)"></div>
+<div id="toast"></div>
+
+<?!= include('ClientJs') ?>
+<script>
+  var CONFIG = <?!= JSON.stringify(config) ?>;
+  var LINKS = <?!= JSON.stringify(links) ?>;
+  var ADMIN_KEY = 'polyclinic_admin_code';
+
+  var S = {
+    code: '',
+    role: '',
+    data: null,
+    tab: 'overview',
+    doctorId: '',
+    clinicId: '',
+    editor: null
+  };
+
+  /* ------------------------------------------------------------------ *
+   * Small helpers
+   * ------------------------------------------------------------------ */
+
+  function view(html) { el('app').innerHTML = html; }
+  function failText(res, fallback) {
+    return (res && res.messageAr) ? res.messageAr : (fallback || 'تعذّر إتمام العملية. حاول مرة أخرى.');
+  }
+  function find(list, id) {
+    for (var i = 0; i < (list || []).length; i++) if (String(list[i].id) === String(id)) return list[i];
+    return null;
+  }
+  function byId(list, field, id) {
+    for (var i = 0; i < (list || []).length; i++) if (String(list[i][field]) === String(id)) return list[i];
+    return null;
+  }
+  function activeBadge(on) {
+    return '<span class="badge ' + (on ? '' : 'off') + '">' + (on ? 'نشط' : 'مؤرشف') + '</span>';
+  }
+  function time12(hhmm) {
+    var parts = String(hhmm || '').split(':');
+    if (parts.length < 2) return hhmm || '';
+    var h = parseInt(parts[0], 10), m = parts[1], suffix = h < 12 ? 'ص' : 'م', h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + m + ' ' + suffix;
+  }
+  function weekName(n) {
+    var names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    return names[Number(n)] || '';
+  }
+  function daysText(arr) {
+    return (arr || []).slice().sort(function (a, b) { return a - b; }).map(weekName).join('، ');
+  }
+  function whenText(iso) {
+    if (!iso) return '';
+    return String(iso).replace('T', ' ').replace(/\..*$/, '').replace('Z', '');
+  }
+  function dateRangeText(from, to) {
+    if (!from && !to) return '';
+    if (from && to && from !== to) return 'من ' + from + ' إلى ' + to;
+    return from || to;
+  }
+  function clinicName(id) { var c = byId(S.data.clinics, 'id', id); return c ? c.nameAr : String(id || ''); }
+  function doctorName(id) {
+    if (S.role === 'doctor') return S.data.doctor.nameAr;
+    var d = byId(S.data.doctors, 'id', id); return d ? d.nameAr : String(id || '');
+  }
+  function reasonName(id) { var r = byId(S.data.reasons, 'id', id); return r ? r.nameAr : String(id || ''); }
+  function reasonObj(id) { return byId(S.data.reasons, 'id', id); }
+  function doctorObj(id) { return byId(S.data.doctors, 'id', id); }
+
+  /* ------------------------------------------------------------------ *
+   * Authentication
+   * ------------------------------------------------------------------ */
+
+  function start() {
+    var saved = '';
+    try { saved = localStorage.getItem(ADMIN_KEY) || ''; } catch (e) {}
+    if (saved) {
+      S.code = saved;
+      loadData();
+    } else {
+      showLogin();
+    }
+  }
+
+  function showLogin(message) {
+    S.data = null; S.role = '';
+    el('hdr-sub').textContent = CONFIG.clinicName || '';
+    el('hdr-logout').style.display = 'none';
+    closeModal();
+    view(
+      '<div class="card"><h2>دخول الإعدادات</h2>' +
+      '<p class="hint">أدخل كود الإدارة لتعديل كل الإعدادات، أو كود الطبيب لتعديل جدولك فقط.</p>' +
+      '<label class="field">كود الدخول<input id="login-code" type="password" autocomplete="off"></label>' +
+      '<div id="login-msg">' + (message ? '<div class="msg err">' + esc(message) + '</div>' : '') + '</div>' +
+      '<button class="btn wide" id="login-btn" onclick="tryLogin()">دخول</button></div>'
+    );
+    var input = el('login-code');
+    if (input) input.focus();
+  }
+
+  function tryLogin() {
+    var code = (el('login-code').value || '').trim();
+    if (!code) return;
+    busy(el('login-btn'), true, 'جاري التحقق…');
+    api('adminLogin', code).then(function (res) {
+      if (!res || !res.ok) {
+        busy(el('login-btn'), false);
+        if (res && res.needSetup) { showBootstrap(code, res.messageAr); return; }
+        el('login-msg').innerHTML = '<div class="msg err">' + esc(failText(res, 'كود الدخول غير صحيح.')) + '</div>';
+        return;
+      }
+      rememberCode(code);
+      S.code = code;
+      loadData();
+    }).catch(function (err) {
+      busy(el('login-btn'), false);
+      el('login-msg').innerHTML = '<div class="msg err">خطأ في الاتصال: ' + esc(err) + '</div>';
+    });
+  }
+
+  function showBootstrap(staffCode, message) {
+    closeModal();
+    view(
+      '<div class="card"><h2>إنشاء كود الإدارة</h2>' +
+      '<p class="hint">هذه أول مرة. أدخل كود الاستقبال الحالي، ثم اختر كود إدارة جديداً (6 أحرف على الأقل). سيبقى كود الاستقبال كما هو لشاشة الاستقبال.</p>' +
+      (message ? '<div class="msg info">' + esc(message) + '</div>' : '') +
+      '<label class="field">كود الاستقبال الحالي<input id="boot-staff" type="password" autocomplete="off" value="' + esc(staffCode || '') + '"></label>' +
+      '<label class="field">كود الإدارة الجديد<input id="boot-code" type="password" autocomplete="off"></label>' +
+      '<label class="field">تأكيد كود الإدارة<input id="boot-code2" type="password" autocomplete="off"></label>' +
+      '<div id="boot-msg"></div>' +
+      '<button class="btn wide" id="boot-btn" onclick="doBootstrap()">إنشاء كود الإدارة</button>' +
+      '<div class="actions"><button class="btn ghost wide" onclick="showLogin()">رجوع</button></div></div>'
+    );
+    var input = el('boot-code');
+    if (input) input.focus();
+  }
+
+  function doBootstrap() {
+    var staff = (el('boot-staff').value || '').trim();
+    var code = (el('boot-code').value || '').trim();
+    var code2 = (el('boot-code2').value || '').trim();
+    var msg = el('boot-msg');
+    if (!staff) { msg.innerHTML = '<div class="msg err">أدخل كود الاستقبال.</div>'; return; }
+    if (code.length < 6) { msg.innerHTML = '<div class="msg err">كود الإدارة يجب أن يكون 6 أحرف على الأقل.</div>'; return; }
+    if (code !== code2) { msg.innerHTML = '<div class="msg err">الكود وتأكيده غير متطابقين.</div>'; return; }
+    msg.innerHTML = '';
+    busy(el('boot-btn'), true, 'جاري الإنشاء…');
+    api('adminBootstrap', staff, code).then(function (res) {
+      if (!res || !res.ok) {
+        busy(el('boot-btn'), false);
+        msg.innerHTML = '<div class="msg err">' + esc(failText(res, 'تعذّر إنشاء الكود.')) + '</div>';
+        return;
+      }
+      rememberCode(code);
+      S.code = code;
+      toast('تم إنشاء كود الإدارة. احفظه في مكان آمن.');
+      loadData();
+    }).catch(function (err) {
+      busy(el('boot-btn'), false);
+      msg.innerHTML = '<div class="msg err">خطأ في الاتصال: ' + esc(err) + '</div>';
+    });
+  }
+
+  function rememberCode(code) {
+    try { localStorage.setItem(ADMIN_KEY, code); } catch (e) {}
+  }
+
+  function logout(message) {
+    try { localStorage.removeItem(ADMIN_KEY); } catch (e) {}
+    S.code = ''; S.data = null; S.role = ''; S.tab = 'overview';
+    showLogin(message || '');
+  }
+
+  function loadData() {
+    api('adminGet', S.code).then(function (res) {
+      if (!res || !res.ok) {
+        if (res && res.needSetup) { showBootstrap('', res.messageAr); return; }
+        logout(failText(res, 'انتهت الجلسة. سجّل الدخول من جديد.'));
+        return;
+      }
+      S.data = res;
+      S.role = res.role;
+      if (S.role === 'doctor') {
+        S.tab = 'schedule';
+      } else if (['overview', 'clinics', 'doctors', 'reasons', 'schedule', 'blackouts', 'messages', 'texts', 'settings', 'audit'].indexOf(S.tab) === -1) {
+        S.tab = 'overview';
+      }
+      ensureScheduleSelection();
+      render();
+    }).catch(function (err) {
+      logout('خطأ في الاتصال: ' + err);
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Layout
+   * ------------------------------------------------------------------ */
+
+  function render() {
+    if (!S.data) return;
+    el('hdr-logout').style.display = 'inline-flex';
+    if (S.role === 'doctor') {
+      el('hdr-sub').textContent = (S.data.doctor.nameAr || '') + ' — جدول مواعيدك';
+      view(navDoctor() + contentDoctor());
+    } else {
+      el('hdr-sub').textContent = (S.data.settings.clinicName || CONFIG.clinicName) + ' — الإدارة';
+      view(navAdmin() + contentAdmin());
+    }
+    afterRender();
+  }
+
+  function navAdmin() {
+    var items = [
+      ['overview', 'نظرة عامة'], ['clinics', 'الفروع'], ['doctors', 'الأطباء'],
+      ['reasons', 'أسباب الزيارة'], ['schedule', 'الجدول'], ['blackouts', 'الإجازات'],
+      ['messages', 'رسائل واتساب'], ['texts', 'النصوص'], ['settings', 'الإعدادات'], ['audit', 'السجل']
+    ];
+    return '<div class="tabs">' + items.map(function (it) {
+      return '<button class="' + (S.tab === it[0] ? 'on' : '') + '" onclick="setTab(\'' + it[0] + '\')">' + it[1] + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function navDoctor() {
+    return '<div class="tabs">' +
+      '<button class="' + (S.tab === 'schedule' ? 'on' : '') + '" onclick="setTab(\'schedule\')">مواعيدي</button>' +
+      '<button class="' + (S.tab === 'security' ? 'on' : '') + '" onclick="setTab(\'security\')">كود الدخول</button>' +
+      '</div>';
+  }
+
+  function setTab(tab) {
+    S.tab = tab;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function contentAdmin() {
+    switch (S.tab) {
+      case 'clinics': return renderClinics();
+      case 'doctors': return renderDoctors();
+      case 'reasons': return renderReasons();
+      case 'schedule': return renderSchedule();
+      case 'blackouts': return renderBlackouts();
+      case 'messages': return renderMessages();
+      case 'texts': return renderTexts();
+      case 'settings': return renderSettings();
+      case 'audit': return renderAudit();
+      default: return renderOverview();
+    }
+  }
+
+  function contentDoctor() {
+    if (S.tab === 'security') return renderDoctorSecurity();
+    return renderSchedule();
+  }
+
+  function afterRender() {
+    if (S.tab === 'messages' && S.role === 'admin') {
+      (S.data.templates || []).forEach(function (t) { previewTemplate(t.key); });
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Overview
+   * ------------------------------------------------------------------ */
+
+  function renderOverview() {
+    var d = S.data, c = d.counts;
+    var html = '<div class="stats">' +
+      stat(c.activeClinics, 'فروع نشطة') + stat(c.activeDoctors, 'أطباء نشطون') +
+      stat(c.activeReasons, 'أسباب زيارة') + stat(c.upcomingBookings, 'حجوزات قادمة') +
+      '</div>';
+    html += healthCard();
+    if (d.settings.bookingsPaused) {
+      html += '<div class="msg err"><b>استقبال الحجوزات متوقف الآن.</b><br>' + esc(d.settings.pauseMessage || '') + '</div>';
+    }
+    html += '<div class="card"><h2>اختصارات</h2><div class="actions">';
+    if (LINKS.booking) html += '<a class="btn ghost" href="' + esc(LINKS.booking) + '" target="_blank" rel="noopener">معاينة صفحة الحجز</a>';
+    if (LINKS.staff) html += '<a class="btn ghost" href="' + esc(LINKS.staff) + '" target="_blank" rel="noopener">شاشة الاستقبال</a>';
+    html += '<button class="btn ghost" onclick="setTab(\'schedule\')">تعديل الجدول</button>';
+    html += '<button class="btn ghost" id="btn-backup" onclick="doBackup()">نسخة احتياطية الآن</button>';
+    html += '</div></div>';
+    html += '<div class="card"><h2>آخر التعديلات</h2>' + auditList(d.audit.slice(0, 5)) + '</div>';
+    return html;
+  }
+
+  function stat(value, label) {
+    return '<div class="stat"><b>' + Number(value || 0) + '</b><span>' + esc(label) + '</span></div>';
+  }
+
+  function healthCard() {
+    var h = S.data.health || [];
+    var html = '<div class="card"><h2>فحص سريع</h2><p class="hint">هذه الأشياء قد تمنع المرضى من الحجز أو تجعل البيانات ناقصة.</p>';
+    if (!h.length) {
+      html += '<div class="msg ok">كل الإعدادات الأساسية جاهزة.</div>';
+    } else {
+      html += '<ul class="health">';
+      h.forEach(function (w) { html += '<li class="' + (w.level === 'info' ? 'info' : 'warn') + '">' + esc(w.text) + '</li>'; });
+      html += '</ul>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function auditList(rows) {
+    if (!rows || !rows.length) return '<div class="empty">لا توجد تعديلات مسجلة بعد.</div>';
+    return '<ul class="audit">' + rows.map(function (r) {
+      return '<li><b>' + esc(r.action) + '</b>' +
+        '<p class="mini">' + esc(r.detail) + ' — ' + esc(r.actor) + ' — <span class="nowrap">' + esc(whenText(r.at)) + '</span></p></li>';
+    }).join('') + '</ul>';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Branches
+   * ------------------------------------------------------------------ */
+
+  function renderClinics() {
+    var rows = S.data.clinics || [];
+    var html = '<div class="card"><h2>الفروع</h2><p class="hint">الفرع هو أول سؤال يراه المريض. ترتيب الفروع هنا هو ترتيب ظهورها.</p>' +
+      '<div class="addbar"><button class="btn" onclick="openClinic()">+ إضافة فرع</button></div>';
+    if (!rows.length) {
+      html += '<div class="empty">لا توجد فروع بعد. أضف أول فرع ليبدأ الحجز.</div></div>';
+      return html;
+    }
+    rows.forEach(function (c, i) {
+      html += '<div class="entity"><div class="ent-head"><div><h3>' + esc(c.nameAr) + '</h3>' +
+        '<p class="mini">' + esc(c.addressAr || 'بدون عنوان') + '</p>' +
+        '<p class="mini">' + (c.phone ? 'هاتف: <span dir="ltr">' + esc(c.phone) + '</span> · ' : '') + esc(c.hoursAr || '') + '</p></div>' +
+        activeBadge(c.active) + '</div>' +
+        '<div class="row-actions">' +
+        '<button class="btn ghost mini-btn" onclick="openClinic(\'' + c.id + '\')">تعديل</button>' +
+        '<button class="btn ghost mini-btn icon-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="moveEntity(\'clinics\',\'' + c.id + '\',-1)">↑</button>' +
+        '<button class="btn ghost mini-btn icon-btn" ' + (i === rows.length - 1 ? 'disabled' : '') + ' onclick="moveEntity(\'clinics\',\'' + c.id + '\',1)">↓</button>' +
+        '<button class="btn ghost mini-btn" onclick="toggleClinic(\'' + c.id + '\')">' + (c.active ? 'أرشفة' : 'تفعيل') + '</button>' +
+        '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function openClinic(id) {
+    var c = id ? byId(S.data.clinics, 'id', id) : { id: '', nameAr: '', addressAr: '', mapLink: '', phone: '', hoursAr: '', active: true };
+    if (!c) return;
+    openModal(
+      '<h2>' + (id ? 'تعديل فرع' : 'إضافة فرع') + '</h2>' +
+      '<p class="hint">هذه البيانات تظهر للمريض داخل صفحة الحجز.</p>' +
+      '<label class="field">اسم الفرع *<input id="cl-name" value="' + esc(c.nameAr) + '" maxlength="120"></label>' +
+      '<label class="field">العنوان<input id="cl-address" value="' + esc(c.addressAr) + '" maxlength="220"></label>' +
+      '<label class="field">رابط الخريطة<input id="cl-map" value="' + esc(c.mapLink) + '" maxlength="500" dir="ltr"></label>' +
+      '<label class="field">هاتف الفرع<input id="cl-phone" value="' + esc(c.phone) + '" maxlength="40" inputmode="tel" dir="ltr"></label>' +
+      '<label class="field">ساعات العمل<input id="cl-hours" value="' + esc(c.hoursAr) + '" maxlength="160" placeholder="مثال: يومياً 9 ص – 9 م"></label>' +
+      '<label class="check"><input id="cl-active" type="checkbox" ' + (c.active ? 'checked' : '') + '> نشط ويظهر للمرضى</label>' +
+      '<div class="actions"><button class="btn" id="btn-save" onclick="saveClinic(\'' + esc(c.id) + '\')">حفظ</button>' +
+      '<button class="btn ghost" onclick="closeModal()">إلغاء</button></div>'
+    );
+  }
+
+  function saveClinic(id) {
+    var payload = {
+      id: id || '',
+      nameAr: el('cl-name').value,
+      addressAr: el('cl-address').value,
+      mapLink: el('cl-map').value,
+      phone: el('cl-phone').value,
+      hoursAr: el('cl-hours').value,
+      active: el('cl-active').checked
+    };
+    if (!String(payload.nameAr).trim()) { toast('اكتب اسم الفرع.'); return; }
+    busy(el('btn-save'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'clinic', payload).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ الفرع.')); return; }
+      finishSave('تم حفظ الفرع.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
+  }
+
+  function toggleClinic(id) {
+    var c = byId(S.data.clinics, 'id', id);
+    if (!c) return;
+    var payload = { id: c.id, nameAr: c.nameAr, addressAr: c.addressAr, mapLink: c.mapLink, phone: c.phone, hoursAr: c.hoursAr, active: !c.active };
+    busy(null, false);
+    api('adminSave', S.code, 'clinic', payload).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر التحديث.')); return; }
+      toast(c.active ? 'تمت أرشفة الفرع. لن يظهر للحجز الجديد.' : 'تم تفعيل الفرع.');
+      loadData();
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Doctors
+   * ------------------------------------------------------------------ */
+
+  function renderDoctors() {
+    var rows = S.data.doctors || [];
+    var html = '<div class="card"><h2>الأطباء</h2><p class="hint">كل طبيب يمكن أن يعمل في أكثر من فرع. كود الحجز حرفان لاتينيان ويظهر في رقم الحجز.</p>' +
+      '<div class="addbar"><button class="btn" onclick="openDoctor()">+ إضافة طبيب</button></div>';
+    if (!rows.length) {
+      html += '<div class="empty">لا يوجد أطباء بعد.</div></div>';
+      return html;
+    }
+    rows.forEach(function (d, i) {
+      var branches = (d.clinicIds || []).map(function (id) {
+        var c = byId(S.data.clinics, 'id', id); return c ? c.nameAr : id;
+      }).join('، ');
+      html += '<div class="entity"><div class="ent-head"><div><h3>' + esc(d.nameAr) + '</h3>' +
+        '<p class="mini">' + esc(d.specialtyAr) + (d.code ? ' · كود الحجز: <span dir="ltr">' + esc(d.code) + '</span>' : '') + '</p>' +
+        '<p class="mini">' + esc(branches || 'بدون فروع') + (d.hasPin ? ' · له كود دخول' : ' · بدون كود دخول') + '</p></div>' +
+        activeBadge(d.active) + '</div>' +
+        '<div class="row-actions">' +
+        '<button class="btn ghost mini-btn" onclick="openDoctor(\'' + d.id + '\')">تعديل</button>' +
+        '<button class="btn ghost mini-btn" onclick="openDoctorPin(\'' + d.id + '\')">كود الدخول</button>' +
+        '<button class="btn ghost mini-btn icon-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="moveEntity(\'doctors\',\'' + d.id + '\',-1)">↑</button>' +
+        '<button class="btn ghost mini-btn icon-btn" ' + (i === rows.length - 1 ? 'disabled' : '') + ' onclick="moveEntity(\'doctors\',\'' + d.id + '\',1)">↓</button>' +
+        '<button class="btn ghost mini-btn" onclick="toggleDoctor(\'' + d.id + '\')">' + (d.active ? 'أرشفة' : 'تفعيل') + '</button>' +
+        '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function doctorBranchChecks(selected) {
+    var html = '<div class="weekdays">';
+    (S.data.clinics || []).forEach(function (c) {
+      var on = (selected || []).indexOf(c.id) !== -1;
+      html += '<button type="button" class="' + (on ? 'on' : '') + '" id="db-' + c.id + '" onclick="toggleBranch(\'' + c.id + '\',this)">' + esc(c.nameAr) + (c.active ? '' : ' (مؤرشف)') + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function openDoctor(id) {
+    var d = id ? byId(S.data.doctors, 'id', id) : { id: '', nameAr: '', specialtyAr: '', code: '', clinicIds: [], color: 'teal', active: true };
+    if (!d) return;
+    S.editor = { clinicIds: (d.clinicIds || []).slice() };
+    var colorNames = { red: 'أحمر', orange: 'برتقالي', yellow: 'أصفر', green: 'أخضر', teal: 'تركوازي', blue: 'أزرق', purple: 'بنفسجي', gray: 'رمادي' };
+    var colors = (S.data.meta.colors || []).map(function (c) {
+      return '<option value="' + c + '" ' + (c === d.color ? 'selected' : '') + '>' + (colorNames[c] || c) + '</option>';
+    }).join('');
+    openModal(
+      '<h2>' + (id ? 'تعديل طبيب' : 'إضافة طبيب') + '</h2>' +
+      '<p class="hint">اختر الفروع التي يعمل بها. كود الحجز يُستخدم في رقم الحجز الذي يقرأه المريض.</p>' +
+      '<label class="field">اسم الطبيب *<input id="doc-name" value="' + esc(d.nameAr) + '" maxlength="120"></label>' +
+      '<label class="field">التخصص *<input id="doc-specialty" value="' + esc(d.specialtyAr) + '" maxlength="160"></label>' +
+      '<label class="field">كود الحجز (حرفان لاتينيان)<input id="doc-code" value="' + esc(d.code) + '" maxlength="2" dir="ltr" placeholder="اتركه فارغاً للتوليد"></label>' +
+      '<label class="field">لون الطبيب في شاشة الاستقبال<select id="doc-color">' + colors + '</select></label>' +
+      '<div class="field">الفروع *' + doctorBranchChecks(S.editor.clinicIds) + '</div>' +
+      '<label class="check"><input id="doc-active" type="checkbox" ' + (d.active ? 'checked' : '') + '> نشط ويظهر للمرضى</label>' +
+      '<div class="actions"><button class="btn" id="btn-save" onclick="saveDoctor(\'' + esc(d.id) + '\')">حفظ</button>' +
+      '<button class="btn ghost" onclick="closeModal()">إلغاء</button></div>'
+    );
+  }
+
+  function toggleBranch(id, btn) {
+    var list = S.editor.clinicIds || [];
+    var i = list.indexOf(id);
+    if (i === -1) { list.push(id); btn.classList.add('on'); }
+    else { list.splice(i, 1); btn.classList.remove('on'); }
+    S.editor.clinicIds = list;
+  }
+
+  function saveDoctor(id) {
+    var payload = {
+      id: id || '',
+      nameAr: el('doc-name').value,
+      specialtyAr: el('doc-specialty').value,
+      code: el('doc-code').value,
+      color: el('doc-color').value,
+      clinicIds: (S.editor && S.editor.clinicIds) || [],
+      active: el('doc-active').checked
+    };
+    if (!String(payload.nameAr).trim()) { toast('اكتب اسم الطبيب.'); return; }
+    if (!String(payload.specialtyAr).trim()) { toast('اكتب التخصص.'); return; }
+    if (!payload.clinicIds.length) { toast('اختر فرعاً واحداً على الأقل.'); return; }
+    busy(el('btn-save'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'doctor', payload).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ الطبيب.')); return; }
+      finishSave('تم حفظ الطبيب.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
+  }
+
+  function toggleDoctor(id) {
+    var d = byId(S.data.doctors, 'id', id);
+    if (!d) return;
+    api('adminSave', S.code, 'doctor', {
+      id: d.id, nameAr: d.nameAr, specialtyAr: d.specialtyAr, code: d.code,
+      color: d.color, clinicIds: d.clinicIds, active: !d.active
+    }).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر التحديث.')); return; }
+      toast(d.active ? 'تمت أرشفة الطبيب. الحجوزات القديمة تبقى.' : 'تم تفعيل الطبيب.');
+      loadData();
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  function openDoctorPin(id) {
+    var d = byId(S.data.doctors, 'id', id);
+    if (!d) return;
+    openModal(
+      '<h2>كود دخول ' + esc(d.nameAr) + '</h2>' +
+      '<p class="hint">كود من 4 إلى 8 أرقام. يستطيع الطبيب الدخول به إلى صفحة الإعدادات وتعديل جدوله فقط. لا يمكن عرض الكود بعد الحفظ.</p>' +
+      '<label class="field">كود الطبيب<input id="pin-value" type="text" inputmode="numeric" autocomplete="off" maxlength="8" dir="ltr" placeholder="مثال: 123456"></label>' +
+      '<div class="actions"><button class="btn" id="btn-save" onclick="saveDoctorPin(\'' + d.id + '\')">حفظ الكود</button>' +
+      '<button class="btn ghost" onclick="fillRandomPin()">توليد كود</button></div>' +
+      (d.hasPin ? '<div class="actions"><button class="btn danger wide" onclick="clearDoctorPin(\'' + d.id + '\')">إيقاف دخول هذا الطبيب</button></div>' : '') +
+      '<div class="actions"><button class="btn ghost wide" onclick="closeModal()">إلغاء</button></div>'
+    );
+  }
+
+  function fillRandomPin() {
+    var n = '';
+    for (var i = 0; i < 6; i++) n += Math.floor(Math.random() * 10);
+    el('pin-value').value = n;
+    el('pin-value').focus();
+  }
+
+  function saveDoctorPin(id) {
+    var pin = (el('pin-value').value || '').trim();
+    if (!pin) { toast('اكتب كود الطبيب أو استخدم زر التوليد.'); return; }
+    busy(el('btn-save'), true, 'جاري الحفظ…');
+    api('adminSetDoctorPin', S.code, id, pin).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ الكود.')); return; }
+      finishSave('تم حفظ كود الطبيب. أعطه للطبيب الآن.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
+  }
+
+  function clearDoctorPin(id) {
+    if (!window.confirm('إيقاف دخول هذا الطبيب إلى صفحة الإعدادات؟')) return;
+    api('adminSetDoctorPin', S.code, id, '').then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر الإيقاف.')); return; }
+      finishSave('تم إيقاف دخول الطبيب.');
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Visit reasons
+   * ------------------------------------------------------------------ */
+
+  function renderReasons() {
+    var rows = S.data.reasons || [];
+    var html = '<div class="card"><h2>أسباب الزيارة</h2><p class="hint">مدة الزيارة والمهلة وحد الحجز اليومي تُستخدم في حساب المواعيد. ترتيبها هنا هو ترتيب ظهورها للمريض.</p>' +
+      '<div class="addbar"><button class="btn" onclick="openReason()">+ إضافة سبب زيارة</button></div>';
+    if (!rows.length) {
+      html += '<div class="empty">لا توجد أسباب زيارة بعد.</div></div>';
+      return html;
+    }
+    rows.forEach(function (r, i) {
+      html += '<div class="entity"><div class="ent-head"><div><h3>' + esc(r.nameAr) + '</h3>' +
+        '<p class="mini">' + Number(r.durationMin) + ' دقيقة · مهلة ' + Number(r.leadHours) + ' ساعة · حتى ' + Number(r.bookDaysAhead) + ' يوماً مقدماً' +
+        (r.maxPerDay ? ' · ' + Number(r.maxPerDay) + ' يومياً' : ' · بلا حد يومي') + '</p>' +
+        (r.descriptionAr ? '<p class="mini">' + esc(r.descriptionAr) + '</p>' : '') + '</div>' + activeBadge(r.active) + '</div>' +
+        '<div class="row-actions">' +
+        '<button class="btn ghost mini-btn" onclick="openReason(\'' + r.id + '\')">تعديل</button>' +
+        '<button class="btn ghost mini-btn icon-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="moveEntity(\'reasons\',\'' + r.id + '\',-1)">↑</button>' +
+        '<button class="btn ghost mini-btn icon-btn" ' + (i === rows.length - 1 ? 'disabled' : '') + ' onclick="moveEntity(\'reasons\',\'' + r.id + '\',1)">↓</button>' +
+        '<button class="btn ghost mini-btn" onclick="toggleReason(\'' + r.id + '\')">' + (r.active ? 'أرشفة' : 'تفعيل') + '</button>' +
+        '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function openReason(id) {
+    var r = id ? byId(S.data.reasons, 'id', id) : { id: '', nameAr: '', descriptionAr: '', durationMin: 30, leadHours: 4, bookDaysAhead: 14, maxPerDay: 0, active: true };
+    if (!r) return;
+    openModal(
+      '<h2>' + (id ? 'تعديل سبب زيارة' : 'إضافة سبب زيارة') + '</h2>' +
+      '<p class="hint">المدة الفعلية للموعد تأتي من هنا، إلا إذا وضعت مدة مختلفة داخل جدول الطبيب.</p>' +
+      '<label class="field">الاسم *<input id="rs-name" value="' + esc(r.nameAr) + '" maxlength="120"></label>' +
+      '<label class="field">وصف مختصر<input id="rs-desc" value="' + esc(r.descriptionAr) + '" maxlength="220"></label>' +
+      '<div class="two"><label class="field">مدة الموعد (دقيقة)<input id="rs-duration" type="number" min="5" max="240" value="' + Number(r.durationMin) + '"></label>' +
+      '<label class="field">أقل مهلة قبل الموعد (ساعات)<input id="rs-lead" type="number" min="0" max="168" value="' + Number(r.leadHours) + '"></label></div>' +
+      '<div class="two"><label class="field">الحجز حتى كم يوماً مقدماً<input id="rs-days" type="number" min="1" max="90" value="' + Number(r.bookDaysAhead) + '"></label>' +
+      '<label class="field">حد الحجز اليومي (0 = بلا حد)<input id="rs-max" type="number" min="0" max="100" value="' + Number(r.maxPerDay) + '"></label></div>' +
+      '<label class="check"><input id="rs-active" type="checkbox" ' + (r.active ? 'checked' : '') + '> نشط ويظهر للمرضى</label>' +
+      '<div class="actions"><button class="btn" id="btn-save" onclick="saveReason(\'' + esc(r.id) + '\')">حفظ</button>' +
+      '<button class="btn ghost" onclick="closeModal()">إلغاء</button></div>'
+    );
+  }
+
+  function saveReason(id) {
+    var payload = {
+      id: id || '', nameAr: el('rs-name').value, descriptionAr: el('rs-desc').value,
+      durationMin: el('rs-duration').value, leadHours: el('rs-lead').value,
+      bookDaysAhead: el('rs-days').value, maxPerDay: el('rs-max').value,
+      active: el('rs-active').checked
+    };
+    if (!String(payload.nameAr).trim()) { toast('اكتب اسم سبب الزيارة.'); return; }
+    busy(el('btn-save'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'reason', payload).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ سبب الزيارة.')); return; }
+      finishSave('تم حفظ سبب الزيارة.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
+  }
+
+  function toggleReason(id) {
+    var r = byId(S.data.reasons, 'id', id);
+    if (!r) return;
+    api('adminSave', S.code, 'reason', {
+      id: r.id, nameAr: r.nameAr, descriptionAr: r.descriptionAr,
+      durationMin: r.durationMin, leadHours: r.leadHours,
+      bookDaysAhead: r.bookDaysAhead, maxPerDay: r.maxPerDay, active: !r.active
+    }).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر التحديث.')); return; }
+      toast(r.active ? 'تمت أرشفة سبب الزيارة.' : 'تم تفعيل سبب الزيارة.');
+      loadData();
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Weekly schedule
+   * ------------------------------------------------------------------ */
+
+  function ensureScheduleSelection() {
+    if (!S.data) return;
+    if (S.role === 'doctor') {
+      var branches = S.data.branches || [];
+      if (!S.clinicId || !find(branches, S.clinicId)) S.clinicId = branches.length ? branches[0].id : '';
+      return;
+    }
+    var docs = (S.data.doctors || []).filter(function (d) { return d.active; });
+    if (!S.doctorId || !find(docs, S.doctorId)) S.doctorId = docs.length ? docs[0].id : '';
+    var bs = branchesFor(S.doctorId);
+    if (!S.clinicId || !find(bs, S.clinicId)) S.clinicId = bs.length ? bs[0].id : '';
+  }
+
+  function branchesFor(doctorId) {
+    if (S.role === 'doctor') return S.data.branches || [];
+    var d = doctorObj(doctorId);
+    if (!d) return [];
+    return (S.data.clinics || []).filter(function (c) {
+      return c.active && (d.clinicIds || []).indexOf(c.id) !== -1;
+    });
+  }
+
+  function scheduleRows() {
+    var rows = S.data.availability || [];
+    if (S.role === 'doctor') {
+      return rows.filter(function (a) { return a.clinicId === S.clinicId; });
+    }
+    return rows.filter(function (a) { return a.doctorId === S.doctorId && a.clinicId === S.clinicId; });
+  }
+
+  function groupBlocks(rows) {
+    var map = {};
+    rows.forEach(function (a) {
+      var key = [a.doctorId, a.clinicId, a.reasonId, a.fromTime, a.toTime, a.slotMin, a.maxPerDay, a.validFrom, a.validTo, a.active].join('|');
+      if (!map[key]) {
+        map[key] = {
+          doctorId: a.doctorId, clinicId: a.clinicId, reasonId: a.reasonId,
+          fromTime: a.fromTime, toTime: a.toTime, slotMin: a.slotMin,
+          maxPerDay: a.maxPerDay, validFrom: a.validFrom, validTo: a.validTo,
+          active: a.active, ids: [], weekdays: []
+        };
+      }
+      map[key].ids.push(a.id);
+      map[key].weekdays.push(Number(a.weekday));
+    });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) {
+      return (reasonName(a.reasonId) + a.fromTime).localeCompare(reasonName(b.reasonId) + b.fromTime);
+    });
+  }
+
+  function renderSchedule() {
+    var docs = S.role === 'doctor' ? null : (S.data.doctors || []).filter(function (d) { return d.active; });
+    var branches = branchesFor(S.role === 'doctor' ? S.data.doctor.id : S.doctorId);
+    var html = '<div class="card"><h2>الجدول الأسبوعي</h2><p class="hint">' +
+      (S.role === 'doctor' ? 'هذه مواعيدك. أي تعديل يظهر للمرضى فوراً.' : 'اختر الطبيب والفرع، ثم أضف أو عدّل أوقات كل سبب زيارة.') + '</p>';
+
+    if (S.role !== 'doctor') {
+      if (!docs || !docs.length) {
+        html += '<div class="empty">أضف طبيباً أولاً من قسم الأطباء.</div></div>';
+        return html;
+      }
+      html += '<label class="field">الطبيب<select id="sched-doctor" onchange="setScheduleDoctor(this.value)">' +
+        docs.map(function (d) {
+          return '<option value="' + d.id + '" ' + (d.id === S.doctorId ? 'selected' : '') + '>' +
+            esc(d.nameAr) + (d.active ? '' : ' (مؤرشف)') + '</option>';
+        }).join('') + '</select></label>';
+    } else {
+      html += '<div class="msg info"><b>' + esc(S.data.doctor.nameAr) + '</b> — ' + esc(S.data.doctor.specialtyAr || '') + '</div>';
+    }
+
+    if (!branches.length) {
+      html += '<div class="empty">لا يوجد فرع نشط مرتبط بهذا الطبيب. راجع الإدارة أو أضف فرعاً للطبيب.</div></div>';
+      return html;
+    }
+    html += '<label class="field">الفرع<select id="sched-clinic" onchange="setScheduleClinic(this.value)">' +
+      branches.map(function (c) {
+        return '<option value="' + c.id + '" ' + (c.id === S.clinicId ? 'selected' : '') + '>' + esc(c.nameAr) + '</option>';
+      }).join('') + '</select></label>';
+
+    var groups = groupBlocks(scheduleRows());
+    html += '<div class="addbar"><button class="btn" onclick="openBlock()">+ إضافة وقت</button></div>';
+    if (!groups.length) {
+      html += '<div class="empty">لا توجد أوقات لهذا الطبيب في هذا الفرع بعد.</div></div>';
+      return html;
+    }
+    groups.forEach(function (g) {
+      var r = reasonObj(g.reasonId);
+      var slot = Number(g.slotMin) > 0 ? (Number(g.slotMin) + ' دقيقة') : ('مدة سبب الزيارة' + (r ? ' (' + Number(r.durationMin) + ' د)' : ''));
+      html += '<div class="group ' + (g.active ? '' : 'inactive') + '">' +
+        '<div class="head"><div><h3>' + esc(r ? r.nameAr : g.reasonId) + '</h3>' +
+        '<div class="weeklist">' + g.weekdays.slice().sort(function (a, b) { return a - b; }).map(function (w) { return '<span>' + weekName(w) + '</span>'; }).join('') + '</div></div>' +
+        activeBadge(g.active) + '</div>' +
+        '<p class="mini" style="margin:9px 0 0"><span class="timebig">' + esc(time12(g.fromTime)) + ' – ' + esc(time12(g.toTime)) + '</span> · ' + esc(slot) +
+        (g.maxPerDay ? ' · حتى ' + Number(g.maxPerDay) + ' موعداً يومياً' : '') +
+        (g.validFrom || g.validTo ? ' · ' + esc(dateRangeText(g.validFrom, g.validTo)) : '') + '</p>' +
+        '<div class="row-actions">' +
+        '<button class="btn ghost mini-btn" onclick="openBlock(\'' + g.ids.join(',') + '\')">تعديل</button>' +
+        '<button class="btn ghost mini-btn" onclick="deleteBlock(\'' + g.ids.join(',') + '\')">حذف</button>' +
+        '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function setScheduleDoctor(id) {
+    S.doctorId = id;
+    S.clinicId = '';
+    ensureScheduleSelection();
+    render();
+  }
+
+  function setScheduleClinic(id) {
+    S.clinicId = id;
+    render();
+  }
+
+  function openBlock(idsCsv) {
+    var ids = idsCsv ? String(idsCsv).split(',') : [];
+    var current = scheduleRows();
+    var rows = ids.length ? current.filter(function (a) { return ids.indexOf(a.id) !== -1; }) : [];
+    var base = rows.length ? rows[0] : {
+      reasonId: '', fromTime: '09:00', toTime: '17:00', slotMin: 0,
+      maxPerDay: 0, validFrom: '', validTo: '', active: true
+    };
+    var activeReasons = (S.data.reasons || []).filter(function (r) { return r.active; });
+    if (!activeReasons.length) { toast('أضف سبب زيارة نشطاً أولاً.'); return; }
+    if (base.reasonId && reasonObj(base.reasonId) && !reasonObj(base.reasonId).active) {
+      toast('سبب الزيارة المرتبط بهذا الوقت مؤرشف. فعّله من قسم أسباب الزيارة أولاً، أو احذف الوقت.');
+      return;
+    }
+    if (!base.reasonId || !reasonObj(base.reasonId)) base.reasonId = activeReasons[0].id;
+    S.editor = {
+      ids: ids,
+      weekdays: rows.map(function (a) { return Number(a.weekday); }),
+      doctorId: S.role === 'doctor' ? S.data.doctor.id : S.doctorId,
+      clinicId: S.clinicId
+    };
+    var reasonOpts = activeReasons.map(function (r) {
+      return '<option value="' + r.id + '" ' + (r.id === base.reasonId ? 'selected' : '') + '>' + esc(r.nameAr) + '</option>';
+    }).join('');
+    var wd = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map(function (label, i) {
+      return '<button type="button" class="' + (S.editor.weekdays.indexOf(i) !== -1 ? 'on' : '') + '" onclick="toggleWeekday(' + i + ',this)">' + label + '</button>';
+    }).join('');
+    openModal(
+      '<h2>' + (ids.length ? 'تعديل وقت' : 'إضافة وقت') + '</h2>' +
+      '<p class="hint">اختر سبب الزيارة والأيام، ثم وقت البداية والنهاية. يمكنك اختيار أكثر من يوم بنفس التوقيت.' +
+      (ids.length ? ' لتغيير سبب هذا الوقت، احذفه وأضف وقتاً جديداً.' : '') + '</p>' +
+      '<label class="field">سبب الزيارة<select id="bl-reason"' + (ids.length ? ' disabled' : '') + '>' + reasonOpts + '</select></label>' +
+      '<div class="field">أيام الأسبوع<div class="weekdays" id="bl-weekdays">' + wd + '</div></div>' +
+      '<div class="two"><label class="field">من<input id="bl-from" type="time" value="' + esc(base.fromTime) + '"></label>' +
+      '<label class="field">إلى<input id="bl-to" type="time" value="' + esc(base.toTime) + '"></label></div>' +
+      '<div class="two"><label class="field">مدة الموعد (دقيقة، 0 = مدة السبب)<input id="bl-slot" type="number" min="0" max="240" value="' + Number(base.slotMin) + '"></label>' +
+      '<label class="field">حد يومي (0 = حد السبب)<input id="bl-max" type="number" min="0" max="100" value="' + Number(base.maxPerDay) + '"></label></div>' +
+      '<div class="two"><label class="field">من تاريخ (اختياري)<input id="bl-valid-from" type="date" value="' + esc(base.validFrom) + '"></label>' +
+      '<label class="field">إلى تاريخ (اختياري)<input id="bl-valid-to" type="date" value="' + esc(base.validTo) + '"></label></div>' +
+      '<label class="check"><input id="bl-active" type="checkbox" ' + (base.active ? 'checked' : '') + '> نشط</label>' +
+      '<div class="actions"><button class="btn" id="btn-save" onclick="saveBlock()">حفظ</button>' +
+      '<button class="btn ghost" onclick="closeModal()">إلغاء</button></div>'
+    );
+  }
+
+  function toggleWeekday(n, btn) {
+    var list = (S.editor && S.editor.weekdays) || [];
+    var i = list.indexOf(n);
+    if (i === -1) { list.push(n); btn.classList.add('on'); }
+    else { list.splice(i, 1); btn.classList.remove('on'); }
+    S.editor.weekdays = list;
+  }
+
+  function saveBlock() {
+    var weekdays = (S.editor && S.editor.weekdays) || [];
+    var from = el('bl-from').value, to = el('bl-to').value;
+    var validFrom = el('bl-valid-from').value, validTo = el('bl-valid-to').value;
+    if (!weekdays.length) { toast('اختر يوماً واحداً على الأقل.'); return; }
+    if (!from || !to || from >= to) { toast('وقت البداية يجب أن يكون قبل وقت النهاية.'); return; }
+    if (validFrom && validTo && validFrom > validTo) { toast('تاريخ البداية بعد تاريخ النهاية.'); return; }
+    var payload = {
+      ids: (S.editor && S.editor.ids) || [],
+      doctorId: S.role === 'doctor' ? S.data.doctor.id : S.doctorId,
+      clinicId: S.clinicId,
+      reasonId: el('bl-reason').value,
+      weekdays: weekdays,
+      fromTime: from,
+      toTime: to,
+      slotMin: el('bl-slot').value,
+      maxPerDay: el('bl-max').value,
+      validFrom: validFrom,
+      validTo: validTo,
+      active: el('bl-active').checked
+    };
+    busy(el('btn-save'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'availability', payload).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ الجدول.')); return; }
+      finishSave('تم حفظ الجدول.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
+  }
+
+  function deleteBlock(idsCsv) {
+    if (!window.confirm('حذف هذا الوقت من الجدول؟ الحجوزات القائمة لا تتأثر.')) return;
+    var ids = String(idsCsv || '').split(',').filter(Boolean);
+    if (!ids.length) return;
+    api('adminDelete', S.code, 'availability', ids).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر الحذف.')); return; }
+      finishSave('تم حذف الوقت.');
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Closures
+   * ------------------------------------------------------------------ */
+
+  function renderBlackouts() {
+    var rows = S.data.blackouts || [];
+    var html = '<div class="card"><h2>الإجازات والإغلاقات</h2><p class="hint">أغلق يوماً أو فترة لكل العيادة، أو لفرع، أو لطبيب واحد. تظهر هذه الإغلاقات فوراً في الحجز.</p>' +
+      '<div class="addbar"><button class="btn" onclick="openBlackout()">+ إضافة إغلاق</button></div>';
+    if (!rows.length) {
+      html += '<div class="empty">لا توجد إغلاقات مسجلة.</div></div>';
+      return html;
+    }
+    rows.forEach(function (b) {
+      var scope = b.scopeType === 'clinic' ? ('فرع: ' + clinicName(b.scopeId)) :
+        b.scopeType === 'doctor' ? ('طبيب: ' + doctorName(b.scopeId)) : 'كل العيادة';
+      html += '<div class="entity"><div class="ent-head"><div><h3>' + esc(scope) + '</h3>' +
+        '<p class="mini">' + esc(b.date) + ' · ' + (b.fromTime ? esc(time12(b.fromTime)) + ' – ' + esc(time12(b.toTime)) : 'يوم كامل') + '</p>' +
+        (b.note ? '<p class="mini">' + esc(b.note) + '</p>' : '') + '</div></div>' +
+        '<div class="row-actions"><button class="btn ghost mini-btn" onclick="deleteBlackout(\'' + b.id + '\')">حذف</button></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function openBlackout() {
+    var today = (S.data.meta && S.data.meta.today) || '';
+    openModal(
+      '<h2>إضافة إغلاق</h2><p class="hint">اترك الوقت فارغاً لإغلاق اليوم كله.</p>' +
+      '<div class="two"><label class="field">من تاريخ<input id="bk-from-date" type="date" value="' + esc(today) + '"></label>' +
+      '<label class="field">إلى تاريخ<input id="bk-to-date" type="date" value="' + esc(today) + '"></label></div>' +
+      '<label class="field">النطاق<select id="bk-scope" onchange="updateBlackoutScope()">' +
+      '<option value="all">كل العيادة</option><option value="clinic">فرع واحد</option><option value="doctor">طبيب واحد</option></select></label>' +
+      '<div id="bk-scope-wrap"></div>' +
+      '<div class="two"><label class="field">من وقت (اختياري)<input id="bk-from-time" type="time"></label>' +
+      '<label class="field">إلى وقت (اختياري)<input id="bk-to-time" type="time"></label></div>' +
+      '<label class="field">ملاحظة<input id="bk-note" maxlength="220" placeholder="مثال: عطلة رسمية"></label>' +
+      '<div class="actions"><button class="btn" id="btn-save" onclick="saveBlackout()">حفظ الإغلاق</button>' +
+      '<button class="btn ghost" onclick="closeModal()">إلغاء</button></div>'
+    );
+    updateBlackoutScope();
+  }
+
+  function updateBlackoutScope() {
+    var wrap = el('bk-scope-wrap');
+    if (!wrap) return;
+    var type = el('bk-scope').value;
+    if (type === 'all') { wrap.innerHTML = ''; return; }
+    var options = '';
+    if (type === 'clinic') {
+      options = (S.data.clinics || []).filter(function (c) { return c.active; }).map(function (c) {
+        return '<option value="' + c.id + '">' + esc(c.nameAr) + '</option>';
+      }).join('');
+    } else {
+      options = (S.data.doctors || []).filter(function (d) { return d.active; }).map(function (d) {
+        return '<option value="' + d.id + '">' + esc(d.nameAr) + '</option>';
+      }).join('');
+    }
+    wrap.innerHTML = options
+      ? '<label class="field">' + (type === 'clinic' ? 'الفرع' : 'الطبيب') + '<select id="bk-scope-id">' + options + '</select></label>'
+      : '<div class="msg info">لا يوجد عنصر نشط لهذا النطاق.</div>';
+  }
+
+  function saveBlackout() {
+    var type = el('bk-scope').value;
+    var scopeEl = el('bk-scope-id');
+    var payload = {
+      dateFrom: el('bk-from-date').value,
+      dateTo: el('bk-to-date').value,
+      scopeType: type,
+      scopeId: type === 'all' ? '' : (scopeEl ? scopeEl.value : ''),
+      fromTime: el('bk-from-time').value,
+      toTime: el('bk-to-time').value,
+      note: el('bk-note').value
+    };
+    if (!payload.dateFrom || !payload.dateTo) { toast('اختر التاريخ.'); return; }
+    if (type !== 'all' && !payload.scopeId) { toast('اختر الفرع أو الطبيب.'); return; }
+    busy(el('btn-save'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'blackout', payload).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ الإغلاق.')); return; }
+      finishSave('تم حفظ الإغلاق.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
+  }
+
+  function deleteBlackout(id) {
+    if (!window.confirm('حذف هذا الإغلاق؟')) return;
+    api('adminDelete', S.code, 'blackout', [id]).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر الحذف.')); return; }
+      finishSave('تم حذف الإغلاق.');
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * WhatsApp templates
+   * ------------------------------------------------------------------ */
+
+  function renderMessages() {
+    var html = '<div class="card"><h2>رسائل واتساب</h2><p class="hint">هذه هي الرسائل التي يفتحها الاستقبال بضغطة واحدة. اترك القالب فارغاً لاستعادة النص الأصلي.</p></div>';
+    (S.data.templates || []).forEach(function (t) {
+      html += '<div class="card"><div class="ent-head"><div><h2>' + esc(t.labelAr) + '</h2>' +
+        '<p class="hint" style="margin:2px 0 0">المتغيرات بين الأقواس تُستبدل تلقائياً ببيانات كل حجز.</p></div>' +
+        (t.isCustom ? '<span class="badge">معدّل</span>' : '<span class="badge off">افتراضي</span>') + '</div>' +
+        '<textarea id="tpl-' + t.key + '" rows="7" maxlength="1500" oninput="previewTemplate(\'' + t.key + '\')">' + esc(t.text) + '</textarea>' +
+        '<div class="chips">' + (S.data.meta.waPlaceholders || []).map(function (p) {
+          return '<button type="button" onclick="insertPlaceholder(\'' + t.key + '\',\'{' + p + '}\')">{' + p + '}</button>';
+        }).join('') + '</div>' +
+        '<div class="preview" id="prev-' + t.key + '"></div>' +
+        '<div class="row-actions"><button class="btn mini-btn" onclick="saveTemplate(\'' + t.key + '\')">حفظ الرسالة</button>' +
+        '<button class="btn ghost mini-btn" onclick="resetTemplate(\'' + t.key + '\')">استعادة الافتراضي</button></div></div>';
+    });
+    return html;
+  }
+
+  function sampleVars() {
+    var d = S.data;
+    var doc = (d.doctors || []).filter(function (x) { return x.active; })[0];
+    var clinic = (d.clinics || []).filter(function (x) { return x.active; })[0];
+    var reason = (d.reasons || []).filter(function (x) { return x.active; })[0];
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var dateStr = tomorrow.getFullYear() + '-' + ('0' + (tomorrow.getMonth() + 1)).slice(-2) + '-' + ('0' + tomorrow.getDate()).slice(-2);
+    var mapLink = clinic ? clinic.mapLink : '';
+    var address = clinic ? clinic.addressAr : '';
+    return {
+      name: 'أحمد',
+      bookingId: (doc ? doc.code : 'dr') + '-' + dateStr.replace(/-/g, '') + '-1',
+      doctor: doc ? doc.nameAr : 'د. أحمد',
+      clinic: d.settings.clinicName,
+      address: address,
+      mapLink: mapLink,
+      addressBlock: (address ? '📍 ' + address + '\n' : '') + (mapLink ? 'الموقع على الخريطة:\n' + mapLink + '\n\n' : ''),
+      reason: reason ? reason.nameAr : 'استشارة',
+      dateAr: 'غداً ' + tomorrow.getDate() + '/' + (tomorrow.getMonth() + 1),
+      whenAr: 'غداً',
+      timeAr: '9:00 ص',
+      phone: '+201000000000'
+    };
+  }
+
+  function previewText(text) {
+    var vars = sampleVars();
+    return String(text || '').replace(/\{(\w+)\}/g, function (m, key) {
+      return vars[key] === undefined ? m : vars[key];
+    });
+  }
+
+  function previewTemplate(key) {
+    var box = el('prev-' + key);
+    var input = el('tpl-' + key);
+    if (!box || !input) return;
+    var shown = previewText(input.value);
+    box.innerHTML = esc(shown).replace(/\n/g, '<br>');
+    var unknown = shown.match(/\{\w+\}/g);
+    if (unknown) box.innerHTML += '<div class="unknown">متغير غير معروف: ' + esc(unknown.join('، ')) + '</div>';
+  }
+
+  function insertPlaceholder(key, token) {
+    var input = el('tpl-' + key);
+    if (!input) return;
+    input.value += token;
+    input.focus();
+    previewTemplate(key);
+  }
+
+  function saveTemplate(key) {
+    var text = el('tpl-' + key).value;
+    busy(null, false);
+    api('adminSave', S.code, 'template', { key: key, text: text }).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر حفظ الرسالة.')); return; }
+      finishSave('تم حفظ الرسالة.');
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  function resetTemplate(key) {
+    if (!window.confirm('استعادة النص الافتراضي لهذه الرسالة؟')) return;
+    api('adminSave', S.code, 'template', { key: key, text: '' }).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّرت الاستعادة.')); return; }
+      finishSave('تمت استعادة النص الافتراضي.');
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Page texts
+   * ------------------------------------------------------------------ */
+
+  function renderTexts() {
+    var t = S.data.settings.texts || {};
+    var d = S.data.settings.textDefaults || {};
+    var html = '<div class="card"><h2>نصوص صفحة الحجز</h2><p class="hint">غيّر ما يقرأه المريض. اترك الحقل فارغاً لاستخدام النص الافتراضي حيث ينطبق.</p>';
+    html += textField('subtitle', 'السطر التعريفي', t.subtitle, d.subtitle, false);
+    html += textField('consentText', 'نص الموافقة', t.consentText, d.consentText, true);
+    html += textField('successText', 'رسالة نجاح الحجز', t.successText, d.successText, true);
+    html += textField('nameHint', 'توضيح حقل الاسم', t.nameHint, d.nameHint, false);
+    html += textField('phoneHint', 'توضيح حقل الجوال', t.phoneHint, d.phoneHint, false);
+    html += textField('extraLabel', 'عنوان حقل الملاحظة', t.extraLabel, d.extraLabel, false);
+    html += textField('noSlots', 'رسالة عدم وجود مواعيد', t.noSlots, d.noSlots, true);
+    html += textField('slotTaken', 'رسالة الموعد المحجوز للتو', t.slotTaken, d.slotTaken, true);
+    html += '<div class="actions"><button class="btn wide" id="btn-save-texts" onclick="saveTexts()">حفظ النصوص</button></div></div>';
+    return html;
+  }
+
+  function textField(key, label, value, def, multiline) {
+    var id = 'txt-' + key;
+    var input = multiline
+      ? '<textarea id="' + id + '" rows="3" maxlength="1200">' + esc(value) + '</textarea>'
+      : '<input id="' + id + '" value="' + esc(value) + '" maxlength="1200">';
+    return '<label class="field">' + esc(label) + input +
+      '<span class="why">الافتراضي: ' + esc(def) + ' <button type="button" class="btn link" style="display:inline;padding:0;min-height:auto" onclick="resetText(\'' + key + '\')">استعادة</button></span></label>';
+  }
+
+  function resetText(key) {
+    var input = el('txt-' + key);
+    if (input) input.value = (S.data.settings.textDefaults || {})[key] || '';
+  }
+
+  function saveTexts() {
+    var keys = ['subtitle', 'consentText', 'successText', 'nameHint', 'phoneHint', 'extraLabel', 'noSlots', 'slotTaken'];
+    var texts = {};
+    keys.forEach(function (k) {
+      var input = el('txt-' + k);
+      if (input) texts[k] = input.value;
+    });
+    busy(el('btn-save-texts'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'texts', { texts: texts }).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save-texts'), false); toast(failText(res, 'تعذّر حفظ النصوص.')); return; }
+      toast('تم حفظ النصوص.');
+      loadData();
+    }).catch(function (err) { busy(el('btn-save-texts'), false); toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * General settings, pause, security, backup
+   * ------------------------------------------------------------------ */
+
+  function renderSettings() {
+    var s = S.data.settings;
+    var html = '<div class="card"><h2>بيانات العيادة</h2><p class="hint">هذه القيم تظهر في صفحة الحجز والرسائل.</p>' +
+      '<label class="field">اسم العيادة *<input id="set-clinic" value="' + esc(s.clinicName) + '" maxlength="120"></label>' +
+      '<label class="field">رقم الاستقبال<input id="set-support" value="' + esc(s.supportPhone) + '" maxlength="40" inputmode="tel" dir="ltr"></label>' +
+      '<label class="field">رقم واتساب العيادة<input id="set-whatsapp" value="' + esc(s.whatsappNumber) + '" maxlength="40" inputmode="tel" dir="ltr"></label>' +
+      '<label class="field">رابط الشعار<input id="set-logo" value="' + esc(s.logoUrl) + '" maxlength="500" dir="ltr" placeholder="https://..."></label>' +
+      '<div class="two"><label class="field">اللون الأساسي<input id="set-primary" type="color" value="' + esc(s.brandPrimary) + '"></label>' +
+      '<label class="field">اللون الثانوي<input id="set-secondary" type="color" value="' + esc(s.brandSecondary) + '"></label></div>' +
+      '<div class="two"><label class="field">كود الدولة<input id="set-country" value="' + esc(s.countryCode) + '" maxlength="8" dir="ltr"></label>' +
+      '<label class="field">المنطقة الزمنية<input id="set-timezone" value="' + esc(s.timezone) + '" maxlength="80" dir="ltr"></label></div>' +
+      '<label class="field">بريد التقارير<input id="set-email" value="' + esc(s.reportEmail) + '" maxlength="160" dir="ltr" inputmode="email"></label>' +
+      '<div class="two"><label class="field">نافذة الحجز (أيام)<input id="set-window" type="number" min="1" max="90" value="' + Number(s.bookingWindowDays) + '"></label>' +
+      '<label class="field">أقل مهلة (ساعات)<input id="set-lead" type="number" min="0" max="168" value="' + Number(s.minLeadHours) + '"></label></div>' +
+      '<div class="actions"><button class="btn wide" id="btn-save-general" onclick="saveGeneral()">حفظ البيانات</button></div></div>';
+
+    html += '<div class="card"><h2>استقبال الحجوزات</h2><p class="hint">أوقف الحجز فوراً في العطلة أو الطوارئ. الجدول يبقى كما هو، والحجوزات القائمة لا تتأثر.</p>' +
+      '<label class="check"><input id="set-paused" type="checkbox" ' + (s.bookingsPaused ? 'checked' : '') + '> إيقاف استقبال الحجوزات الجديدة</label>' +
+      '<label class="field">رسالة الإيقاف للمريض<textarea id="set-pause-msg" rows="2" maxlength="300">' + esc(s.pauseMessage) + '</textarea></label>' +
+      '<div class="actions"><button class="btn wide" id="btn-save-pause" onclick="savePause()">حفظ حالة الحجز</button></div></div>';
+
+    html += '<div class="card"><h2>الأمان</h2><p class="hint">كود الاستقبال يفتح شاشة الاستقبال. كود الإدارة يفتح هذه الصفحة. غيّرهما عن الافتراضي.</p>' +
+      '<label class="field">كود استقبال جديد (اتركه فارغاً لعدم التغيير)<input id="set-staff" type="password" autocomplete="off" maxlength="80"></label>' +
+      '<label class="field">كود إدارة جديد (6 أحرف على الأقل، اتركه فارغاً لعدم التغيير)<input id="set-admin" type="password" autocomplete="off" maxlength="80"></label>' +
+      '<div class="actions"><button class="btn wide" id="btn-save-security" onclick="saveSecurity()">حفظ أكواد الدخول</button></div>' +
+      '<p class="mini">بعد تغيير كود الاستقبال ستحتاج أجهزة الاستقبال إلى إدخاله مرة أخرى. كود الإدارة الحالي سيبقى فعالاً حتى تغيّره.</p></div>';
+
+    html += '<div class="card"><h2>نسخة احتياطية</h2><p class="hint">ينشئ نسخة كاملة من ملف Google Sheets داخل درايف. استخدمه قبل التعديلات الكبيرة.</p>' +
+      '<button class="btn wide" id="btn-backup" onclick="doBackup()">إنشاء نسخة احتياطية الآن</button>' +
+      '<div id="backup-result"></div></div>';
+    return html;
+  }
+
+  function saveGeneral() {
+    var values = {
+      clinicName: el('set-clinic').value,
+      supportPhone: el('set-support').value,
+      whatsappNumber: el('set-whatsapp').value,
+      logoUrl: el('set-logo').value,
+      brandPrimary: el('set-primary').value,
+      brandSecondary: el('set-secondary').value,
+      countryCode: el('set-country').value,
+      timezone: el('set-timezone').value,
+      reportEmail: el('set-email').value,
+      bookingWindowDays: el('set-window').value,
+      minLeadHours: el('set-lead').value
+    };
+    if (!String(values.clinicName).trim()) { toast('اكتب اسم العيادة.'); return; }
+    busy(el('btn-save-general'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'settings', { values: values }).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save-general'), false); toast(failText(res, 'تعذّر حفظ الإعدادات.')); return; }
+      toast('تم حفظ الإعدادات. حدّث صفحة الحجز لرؤية التغيير.');
+      loadData();
+    }).catch(function (err) { busy(el('btn-save-general'), false); toast('خطأ: ' + err); });
+  }
+
+  function savePause() {
+    var paused = el('set-paused').checked;
+    var message = el('set-pause-msg').value;
+    busy(el('btn-save-pause'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'pause', { paused: paused, message: message }).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save-pause'), false); toast(failText(res, 'تعذّر الحفظ.')); return; }
+      toast(paused ? 'تم إيقاف استقبال الحجوزات.' : 'تم استئناف استقبال الحجوزات.');
+      loadData();
+    }).catch(function (err) { busy(el('btn-save-pause'), false); toast('خطأ: ' + err); });
+  }
+
+  function saveSecurity() {
+    var staff = (el('set-staff').value || '').trim();
+    var admin = (el('set-admin').value || '').trim();
+    if (!staff && !admin) { toast('اكتب كوداً جديداً أولاً.'); return; }
+    if (admin && admin.length < 6) { toast('كود الإدارة يجب أن يكون 6 أحرف على الأقل.'); return; }
+    var values = {};
+    if (staff) values.staffCode = staff;
+    if (admin) values.adminCode = admin;
+    busy(el('btn-save-security'), true, 'جاري الحفظ…');
+    api('adminSave', S.code, 'settings', { values: values }).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save-security'), false); toast(failText(res, 'تعذّر حفظ الأكواد.')); return; }
+      var msg = 'تم حفظ أكواد الدخول.';
+      if (res.adminCodeChanged) {
+        rememberCode(admin);
+        S.code = admin;
+        msg = 'تم تغيير كود الإدارة. احفظ الكود الجديد.';
+      }
+      toast(msg);
+      loadData();
+    }).catch(function (err) { busy(el('btn-save-security'), false); toast('خطأ: ' + err); });
+  }
+
+  function doBackup() {
+    var btn = el('btn-backup');
+    if (btn) busy(btn, true, 'جاري إنشاء النسخة…');
+    api('adminBackup', S.code).then(function (res) {
+      if (btn) busy(btn, false);
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر إنشاء النسخة الاحتياطية.')); return; }
+      openModal('<h2>تم إنشاء نسخة احتياطية</h2><p class="hint">' + esc(res.name || '') + '</p>' +
+        '<div class="actions"><a class="btn wide" href="' + esc(res.url) + '" target="_blank" rel="noopener">فتح النسخة في درايف</a>' +
+        '<button class="btn ghost wide" onclick="closeModal()">إغلاق</button></div>');
+    }).catch(function (err) { if (btn) busy(btn, false); toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Audit
+   * ------------------------------------------------------------------ */
+
+  function renderAudit() {
+    return '<div class="card"><h2>سجل التعديلات</h2><p class="hint">آخر التغييرات التي تمت من صفحة الإعدادات.</p>' +
+      auditList(S.data.audit || []) + '</div>';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Doctor security
+   * ------------------------------------------------------------------ */
+
+  function renderDoctorSecurity() {
+    return '<div class="card"><h2>كود الدخول</h2><p class="hint">هذا الكود يفتح صفحة الإعدادات ويسمح لك بتعديل جدولك فقط. لا تشاركه.</p>' +
+      '<label class="field">كود جديد (4–8 أرقام)<input id="my-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" dir="ltr"></label>' +
+      '<label class="field">تأكيد الكود<input id="my-pin2" type="password" inputmode="numeric" maxlength="8" autocomplete="off" dir="ltr"></label>' +
+      '<div class="actions"><button class="btn wide" id="btn-save-pin" onclick="saveMyPin()">حفظ الكود</button></div>' +
+      '<p class="mini">إذا نسيت الكود، اطلب من الإدارة إعادة تعيينه.</p></div>' +
+      '<div class="card"><h2>ملاحظة</h2><p class="hint">يمكنك إضافة أو تعديل أوقاتك وأيامك من تبويب «مواعيدي». لتغيير الفرع أو التخصص أو سبب الزيارة، تواصل مع الإدارة.</p></div>';
+  }
+
+  function saveMyPin() {
+    var pin = (el('my-pin').value || '').trim();
+    var pin2 = (el('my-pin2').value || '').trim();
+    if (!/^\d{4,8}$/.test(pin)) { toast('الكود يجب أن يكون من 4 إلى 8 أرقام.'); return; }
+    if (pin !== pin2) { toast('الكود وتأكيده غير متطابقين.'); return; }
+    busy(el('btn-save-pin'), true, 'جاري الحفظ…');
+    api('adminChangePin', S.code, pin).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save-pin'), false); toast(failText(res, 'تعذّر حفظ الكود.')); return; }
+      rememberCode(pin);
+      S.code = pin;
+      toast('تم تغيير كودك.');
+      loadData();
+    }).catch(function (err) { busy(el('btn-save-pin'), false); toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Shared ordering / modal / finish
+   * ------------------------------------------------------------------ */
+
+  function moveEntity(section, id, direction) {
+    var list = section === 'clinics' ? (S.data.clinics || []) :
+      section === 'doctors' ? (S.data.doctors || []) : (S.data.reasons || []);
+    var ids = list.map(function (x) { return x.id; });
+    var i = ids.indexOf(id);
+    var j = i + direction;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    var tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+    api('adminReorder', S.code, section, ids).then(function (res) {
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر الترتيب.')); return; }
+      loadData();
+    }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  function openModal(html) {
+    var m = el('modal');
+    m.innerHTML = '<div class="sheet">' + html + '</div>';
+    m.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    var m = el('modal');
+    if (!m) return;
+    m.classList.remove('open');
+    m.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function modalBackdrop(event) {
+    if (event && event.target && event.target.id === 'modal') closeModal();
+  }
+
+  function finishSave(message) {
+    closeModal();
+    if (message) toast(message);
+    loadData();
+  }
+
+  start();
+</script>
+</body>
+</html>

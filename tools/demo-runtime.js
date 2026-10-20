@@ -17,8 +17,9 @@
   /*__XLSX_WRITER__*/
 
   var PAGE = /*__PAGE__*/;
-  var STORE_KEY = 'polyclinic_demo_v3';
+  var STORE_KEY = 'polyclinic_demo_v4';
   var STAFF_CODE = '1234';
+  var ADMIN_CODE = 'admin123';
 
   /* ------------------------------------------------------------------ *
    * Storage: localStorage when available, memory when it is not
@@ -311,7 +312,7 @@
         getFilesByName: function () { return { hasNext: function () { return true; } }; }
       };
     },
-    getFileById: function () { return { makeCopy: function () { return { getUrl: function () { return 'about:blank#master'; } }; }, setTrashed: function () {} }; }
+    getFileById: function () { return { makeCopy: function () { return { getUrl: function () { return 'about:blank#master'; }, getName: function () { return 'PolyClinic-MASTER-demo'; } }; }, setTrashed: function () {} }; }
   };
   window.ScriptApp = {
     getOAuthToken: function () { return 'demo'; },
@@ -362,6 +363,17 @@
       reportRows: reportRows,
       filterBookings: filterBookings,
       exportCsv: exportCsv,
+      // The settings page runs exactly the same admin API as live.
+      adminMigrateSchema: adminMigrateSchema,
+      adminLogin: adminLogin,
+      adminBootstrap: adminBootstrap,
+      adminGet: adminGet,
+      adminSave: adminSave,
+      adminDelete: adminDelete,
+      adminReorder: adminReorder,
+      adminSetDoctorPin: adminSetDoctorPin,
+      adminChangePin: adminChangePin,
+      adminBackup: adminBackup,
       // Naming and scope: the same functions the live export uses, so an offline demo
       // file and a live Drive file are named identically.
       REPORT_HEADER_AR: REPORT_HEADER_AR,
@@ -433,6 +445,8 @@
     var mode = 'seeded';
     if (persisted && persisted.sheets && Object.keys(persisted.sheets).length) {
       restore(persisted);
+      // An older demo may predate the Access sheet or the new sort columns.
+      SERVER.createAllSheets();
       mode = 'restored';
     } else {
       SERVER.createAllSheets();
@@ -478,6 +492,12 @@
     }
 
     SERVER.setSetting(SERVER.SETTING.STAFF_CODE, STAFF_CODE);
+    SERVER.setSetting(SERVER.SETTING.ADMIN_CODE, ADMIN_CODE);
+    try {
+      SERVER.adminSetDoctorPin(ADMIN_CODE, 'D1', '123456');
+    } catch (adminErr) {
+      window.console && window.console.warn('demo doctor PIN seed skipped', adminErr);
+    }
     SERVER.setSetting(SERVER.SETTING.REPORT_EMAIL, 'demo@polyclinic.example');
     SERVER.setSetting(SERVER.SETTING.WHATSAPP_NUMBER, '+201000000000');
     SERVER.setSetting(SERVER.SETTING.SUPPORT_PHONE, '0220000000');

@@ -80,6 +80,16 @@ function submitBooking(input) {
   const settings = getSettings();
   const cc = settings[SETTING.COUNTRY_CODE];
 
+  // Public booking can be paused (holiday, emergency, moving premises) without
+  // deleting any schedule. Staff rescheduling uses a different path and stays open.
+  if (isTrue(settings[SETTING.BOOKINGS_PAUSED])) {
+    return {
+      ok: false,
+      error: 'BOOKINGS_PAUSED',
+      messageAr: str(settings[SETTING.PAUSE_MESSAGE_AR]) || errorMessageAr('BOOKINGS_PAUSED')
+    };
+  }
+
   // Honeypot: a field real patients never fill. Bots happily do.
   if (str(input.trap)) {
     logWarn('submitBooking', 'Honeypot triggered from source=' + str(input.source));

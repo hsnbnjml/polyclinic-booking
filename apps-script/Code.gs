@@ -1,9 +1,10 @@
 /**
  * Code.gs — the web endpoints.
  *
- * Two pages and one export route:
+ * Three pages and one export route:
  *   /exec                      → the public booking page (what patients see)
  *   /exec?page=staff           → the reception screen (asks for the staff code)
+ *   /exec?page=admin           → clinic settings (admin code, or a doctor's own PIN)
  *   /exec?page=export&type=... → CSV / XLSX download (needs the staff code)
  *
  * All interactive data goes over google.script.run, so nothing patient-related
@@ -16,6 +17,7 @@ function doGet(e) {
 
   if (page === 'export') return handleExport(params);
   if (page === 'staff') return renderStaffPage(params);
+  if (page === 'admin') return renderAdminPage(params);
   return renderBookingPage(params);
 }
 
@@ -45,6 +47,20 @@ function renderStaffPage() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+function renderAdminPage() {
+  const url = getBookingUrl();
+  const t = HtmlService.createTemplateFromFile('Admin');
+  t.config = getPublicConfig();
+  t.links = {
+    booking: url,
+    staff: url ? url + (url.indexOf('?') === -1 ? '?' : '&') + 'page=staff' : ''
+  };
+  return t.evaluate()
+    .setTitle('إعدادات العيادة — ' + getPublicConfig().clinicName)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
@@ -58,6 +74,14 @@ function apiBootstrap() {
 }
 
 function apiSlots(payload) {
+  const settings = getSettings();
+  if (isTrue(settings[SETTING.BOOKINGS_PAUSED])) {
+    return {
+      ok: false,
+      error: 'BOOKINGS_PAUSED',
+      messageAr: str(settings[SETTING.PAUSE_MESSAGE_AR]) || errorMessageAr('BOOKINGS_PAUSED')
+    };
+  }
   const res = generateSlots({
     clinicId: str((payload || {}).clinicId),
     doctorId: str((payload || {}).doctorId),
@@ -66,7 +90,8 @@ function apiSlots(payload) {
   });
   if (res && !res.ok) res.messageAr = 'تعذّر عرض المواعيد. حاول مرة أخرى.';
   if (res && res.ok && !res.days.length) {
-    res.emptyText = 'لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.';
+    res.emptyText = str(settings[SETTING.NO_SLOTS_TEXT_AR]) ||
+      'لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.';
   }
   return res;
 }
@@ -74,7 +99,7 @@ function apiSlots(payload) {
 /** Translates an error code into the Arabic sentence the patient should read. */
 function apiSubmit(payload) {
   const res = submitBooking(payload || {});
-  if (res && !res.ok) res.messageAr = errorMessageAr(res.error);
+  if (res && !res.ok && !res.messageAr) res.messageAr = errorMessageAr(res.error);
   return res;
 }
 

@@ -49,9 +49,10 @@
 </div>
 
 <script>
-  // Forward the link's parameters (?src=… / ?clinic=… / ?doctor=… / ?reason=… / ?page=staff)
-  // to the app, so campaign QR codes and the reception link keep working from the
-  // installed app exactly as they do in the browser.
+  // Forward the link's parameters (?src=… / ?clinic=… / ?doctor=… / ?reason=… /
+  // ?page=staff / ?page=admin) to the app, so campaign QR codes and the team's
+  // reception and settings links keep working from the installed app exactly as
+  // they do in the browser.
   var APP_URL = '__APP_URL__' + location.search;
   var frame = document.getElementById('app');
   var boot = document.getElementById('boot');

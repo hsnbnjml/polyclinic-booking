@@ -47,18 +47,43 @@ function templateVars(booking) {
   };
 }
 
+/**
+ * Effective WhatsApp templates: the built-in Arabic text unless the clinic saved
+ * an override in Settings. Blank means "use the default", which is what Reset does.
+ */
+function waTemplateSettingKey(key) {
+  return 'wa_template_' + str(key);
+}
+
+function getWaTemplates() {
+  const s = getSettings();
+  const out = {};
+  Object.keys(WA_TEMPLATES).forEach(function (key) {
+    const custom = str(s[waTemplateSettingKey(key)]);
+    out[key] = {
+      labelAr: WA_TEMPLATES[key].labelAr,
+      text: custom || WA_TEMPLATES[key].text,
+      defaultText: WA_TEMPLATES[key].text,
+      isCustom: !!custom
+    };
+  });
+  return out;
+}
+
 /** Every ready-to-tap link for one booking, in the order staff needs them. */
 function waLinksFor(booking) {
   const vars = templateVars(booking);
   const phone = str(booking.phone_norm);
   const order = ['confirm', 'remind24', 'reschedule', 'cancel'];
+  const templates = getWaTemplates();
   return order.map(function (key) {
-    const tpl = WA_TEMPLATES[key];
+    const tpl = templates[key];
+    const text = renderTemplate(tpl.text, vars);
     return {
       key: key,
       labelAr: tpl.labelAr,
-      text: renderTemplate(tpl.text, vars),
-      url: waLink(phone, renderTemplate(tpl.text, vars))
+      text: text,
+      url: waLink(phone, text)
     };
   });
 }

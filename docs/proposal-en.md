@@ -31,7 +31,7 @@
 | 6 | Details | Name (optional) + phone typed twice + consent |
 | 7 | Confirmation | Booking card: doctor, date, time, address, booking reference |
 
-The rule the system runs on, as an example: *first examinations with Dr [name] on Sundays and Wednesdays, 9am–4pm, 45-minute slots, maximum 8 patients a day.* Changing that rule means editing one cell in the spreadsheet — no cost, no developer.
+The rule the system runs on, as an example: *first examinations with Dr [name] on Sundays and Wednesdays, 9am–4pm, 45-minute slots, maximum 8 patients a day.* Changing that rule takes two taps in the Arabic settings page — no cost, no developer. Each doctor can also change their own hours with a personal PIN, scoped to their schedule only.
 
 ## 4. What the clinic gets
 

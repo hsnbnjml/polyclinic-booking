@@ -1,8 +1,8 @@
 # Demo script — 15 minutes, offline, no Google account
 
 This is the walkthrough to run in front of the doctor. It uses `demo/patient.html`,
-`demo/reception.html` and `demo/index.html`, which run the **real** system code with only
-Google's storage faked. Nothing here needs the internet, an account, or a payment.
+`demo/reception.html`, `demo/admin.html` and `demo/index.html`, which run the **real** system code
+with only Google's storage faked. Nothing here needs the internet, an account, or a payment.
 
 Read [Before you open your mouth](#before-you-open-your-mouth) once, then follow the run sheet.
 
@@ -17,14 +17,14 @@ Read [Before you open your mouth](#before-you-open-your-mouth) once, then follow
    Then open <http://localhost:8787/demo/>.
 
    Double-clicking `demo/patient.html` also works in Chrome/Edge. The server is recommended
-   because it guarantees both pages share their data — that is what makes a booking appear on
+   because it guarantees all demo pages share their data — that is what makes a booking appear on
    the reception screen. (I could not verify the double-click path in this environment.)
 
 2. **Reset to a clean world.** On the launcher: **إعادة تعيين بيانات العرض**. Then open
    **صفحة المريض** once — that seeds the demo data.
 
-3. **Open three tabs and leave them open:** the launcher, the patient page, the reception page.
-   Demo staff code: **1234**.
+3. **Open four tabs and leave them open:** the launcher, the patient page, the reception page, and
+   the settings page. Demo credentials: staff **1234**, admin **admin123**, doctor PIN **123456**.
 
 4. **Zoom the browser to 110–125%** so the Arabic is readable when the doctor stands behind you.
 
@@ -59,8 +59,10 @@ Read [Before you open your mouth](#before-you-open-your-mouth) once, then follow
 | 10:30 | Reception → التقارير → الأطباء | click **د. فلان**، then **عرض المؤشرات** again | «أقدر أطلّع تقرير طبيب واحد، أو اثنين أو ثلاثة مع بعض للمقارنة، أو كل الأطباء.» | The report is scoped to any set of doctors. |
 | 11:00 | Reception → التقارير | **تصدير Excel** | «الملف بينزل xlsx حقيقي يفتح في Excel على طول، واسمه فيه أسماء الأطباء المختارين والتاريخ، فمفيش ملفين بيتلخبطوا.» | A real Excel file, named for what is inside it. |
 | 12:00 | Reception → التقارير | **تصدير CSV** | «وفيه CSV كمان لو حد بيحب يفتحه بأي برنامج.» | Both formats exist; neither is a fudge. |
-| 12:30 | Launcher | scroll the calendar | «كل حجز بيدخل تقويم Google بلون الطبيب، والحجب والإجازات كمان بتظهر عليه.» | The doctor's own calendar stays the truth. |
-| 13:30 | — | stop | «النظام ده كامل وعملي ومجاني. اللي محتاج قراركم هو الثلاثين بند في الورقة دي.» | Close on a decision, not on admiration. |
+| 12:30 | Settings tab | **الجدول** → change a time → save; **الأطباء** → show the PIN control | «كل ده الفريق يغيّره من الموبايل: الفرع، الطبيب، مواعيده الأسبوعية، الإجازات، ونصوص الرسائل. مفيش كود ومفيش رجوع للمطوّر.» | The clinic owns the configuration after handover. |
+| 13:15 | Settings → نظرة عامة | pause bookings, reload patient tab, show the pause screen, resume | «لو العيادة قافلة أو الطبيب مسافر، نوقف الحجز بزرار — والاستقبال يظل يعدّل المواعيد القائمة.» | Pause protects patients without freezing reception. |
+| 13:45 | Launcher | scroll the calendar | «كل حجز بيدخل تقويم Google بلون الطبيب، والحجب والإجازات كمان بتظهر عليه.» | The doctor's own calendar stays the truth. |
+| 14:15 | — | stop | «النظام ده كامل وعملي ومجاني. اللي محتاج قراركم هو الثلاثين بند في الورقة دي.» | Close on a decision, not on admiration. |
 
 ---
 
@@ -110,11 +112,15 @@ never overwrite or confuse each other.
 No. Any browser. The reception screen works on a phone; only the initial setup needs a computer.
 
 **What if the doctor changes his hours or adds a branch?**
-Edit one row in the Availability or Clinics sheet — the change is live immediately, no deploy.
+Open **الإعدادات** (`?page=admin`) → **الجدول** or **الفروع**. The change is live immediately; no
+deploy and no code. A doctor can also change their own hours with their PIN, scoped to their
+schedule only.
 
 **Who can see the patient list?**
-Anyone with the reception link plus the staff code. Keep the code private, change it from the
-default, and treat the Sheet like the appointments book it replaces.
+Anyone with the reception link plus the staff code. The settings page does not show patient data;
+doctors see only their own availability, not bookings. Keep all three codes private — staff, admin,
+and each doctor PIN — change them from the defaults, and treat the Sheet like the appointments book
+it replaces.
 
 ---
 
@@ -134,6 +140,9 @@ default, and treat the Sheet like the appointments book it replaces.
   `node tools/check-xlsx.mjs` proves it against a real ZIP reader. The download lands in the
   browser's downloads folder; on the launcher's table this is listed as *simulated* only because
   Drive is simulated.
+- **The admin and doctor codes are demo-only.** Settings demo code `admin123`, doctor PIN `123456`.
+  In the real clinic the first settings visit creates a separate admin code from the staff code, and
+  each doctor PIN is set by the admin. Do not read either code aloud as if it were live.
 - **A comparison export needs two doctors ticked, or the URL.** Ticking every doctor collapses back
   to «كل الأطباء» on purpose — it is the same scope, and the file name says `كل-الأطباء`. With only
   two demo doctors, use the URL form (`&doctor=D1,D2`) if you want to show a `مقارنة-2-أطباء` file.
@@ -154,7 +163,8 @@ default, and treat the Sheet like the appointments book it replaces.
    overrides) and a native review of **26–27** (the WhatsApp wording and the questionnaire text).
 3. One name as the **reception owner** for the daily screen.
 4. The clinic **WhatsApp number** the patients will reply to, and the staff code owner.
-5. Who creates the **clinic Google account** — this is the only step that must happen before
+5. Who holds the **admin code** and which doctors get self-service PINs (checklist 32–33).
+6. Who creates the **clinic Google account** — this is the only step that must happen before
    anything is live; `docs/setup-guide.md` walks through it.
 
 Then go live in this order: create the account → paste the files → run `setupEverything()` →

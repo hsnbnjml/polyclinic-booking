@@ -108,6 +108,13 @@
     .sched-empty { border: 1px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 10px; }
     @keyframes bkflash { from { background: var(--soft); } to { background: var(--card); } }
     .bk.flash { animation: bkflash 1.5s ease-out; }
+    .hdr-actions { margin-inline-start: auto; }
+    .hdr-btn {
+      background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.28);
+      border-radius: 10px; min-height: 40px; padding: 7px 13px; font-family: inherit;
+      font-size: 13px; cursor: pointer;
+    }
+    .hdr-btn:active { background: rgba(255,255,255,.26); }
   </style>
 </head>
 <body>
@@ -118,6 +125,9 @@
       <h1>شاشة الاستقبال</h1>
       <p><?= config.clinicName ?> — اليوم: <span id="hdr-date"></span></p>
     </div>
+    <div class="hdr-actions">
+      <button class="hdr-btn" onclick="openAdmin()">الإعدادات</button>
+    </div>
   </div>
 </header>
 
@@ -127,6 +137,16 @@
 <?!= include('ClientJs') ?>
 <script>
   var WEBAPP_URL = <?!= JSON.stringify(webAppUrl) ?>;
+
+  function openAdmin() {
+    if (WEBAPP_URL && WEBAPP_URL.indexOf('demo://') === 0) {
+      window.location.href = 'admin.html';
+      return;
+    }
+    if (!WEBAPP_URL) { window.location.href = 'admin.html'; return; }
+    var base = WEBAPP_URL;
+    window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') + 'page=admin';
+  }
   var S = { code: '', date: '', board: null, reschedule: null, hidden: [], reportDoctors: [] };
 
   // Which doctors the reception chose to hide — one or several, remembered on this

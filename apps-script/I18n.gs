@@ -57,6 +57,7 @@ const AR = {
     NOT_FOUND: 'لم يتم العثور على البيانات.',
     STAFF_CODE: 'كود الاستقبال غير صحيح.',
     STAFF_ONLY: 'هذه العملية متاحة للاستقبال فقط.',
+    BOOKINGS_PAUSED: 'الحجز متوقف مؤقتاً. تواصل مع الاستقبال.',
     GENERIC: 'حدث خطأ غير متوقع. حاول مرة أخرى أو اتصل بالاستقبال.'
   }
 };
@@ -125,5 +126,9 @@ function waTemplateLabelAr(key) {
 }
 
 function errorMessageAr(code) {
+  if (code === 'SLOT_TAKEN') {
+    const custom = str(getSettings()[SETTING.SLOT_TAKEN_TEXT_AR]);
+    if (custom) return custom;
+  }
   return AR.errors[code] || AR.errors.GENERIC;
 }

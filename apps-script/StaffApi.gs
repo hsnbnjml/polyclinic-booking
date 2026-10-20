@@ -8,13 +8,15 @@
  */
 
 function assertStaff(code) {
-  const expected = str(getSettings()[SETTING.STAFF_CODE]);
+  const settings = getSettings();
+  const expected = str(settings[SETTING.STAFF_CODE]);
+  const admin = str(settings[SETTING.ADMIN_CODE]);
   const given = str(code);
-  if (!expected || given !== expected) {
-    logWarn('assertStaff', 'Rejected staff call with a wrong code');
-    return false;
-  }
-  return true;
+  // The admin code works on reception too, so the doctor or manager needs only
+  // one code once the settings page exists.
+  if (given && (given === expected || (admin && given === admin))) return true;
+  logWarn('assertStaff', 'Rejected staff call with a wrong code');
+  return false;
 }
 
 function staffError(message) {

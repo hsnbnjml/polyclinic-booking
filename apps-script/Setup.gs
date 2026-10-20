@@ -46,14 +46,14 @@ function seedPlaceholders() {
   }
 
   Db.appendMany(SHEET.CLINICS, [
-    { clinic_id: 'C1', name_ar: '[اسم الفرع الأول]', address_ar: '[العنوان الأول]', map_link: 'https://maps.google.com/?q=[رابط الخريطة]', phone: '[هاتف الفرع]', working_hours_ar: 'يومياً 9:00 ص – 9:00 م', active: 'TRUE' },
-    { clinic_id: 'C2', name_ar: '[اسم الفرع الثاني]', address_ar: '[العنوان الثاني]', map_link: 'https://maps.google.com/?q=[رابط الخريطة]', phone: '[هاتف الفرع]', working_hours_ar: 'يومياً 10:00 ص – 6:00 م', active: 'FALSE' }
+    { clinic_id: 'C1', name_ar: '[اسم الفرع الأول]', address_ar: '[العنوان الأول]', map_link: 'https://maps.google.com/?q=[رابط الخريطة]', phone: '[هاتف الفرع]', working_hours_ar: 'يومياً 9:00 ص – 9:00 م', active: 'TRUE', sort_order: 1 },
+    { clinic_id: 'C2', name_ar: '[اسم الفرع الثاني]', address_ar: '[العنوان الثاني]', map_link: 'https://maps.google.com/?q=[رابط الخريطة]', phone: '[هاتف الفرع]', working_hours_ar: 'يومياً 10:00 ص – 6:00 م', active: 'FALSE', sort_order: 2 }
   ]);
 
   Db.appendMany(SHEET.DOCTORS, [
-    { doctor_id: 'D1', name_ar: 'د. [الطبيب الأول]', specialty_ar: '[التخصص]', clinic_ids: 'C1,C2', color: 'teal', active: 'TRUE' },
-    { doctor_id: 'D2', name_ar: 'د. [الطبيب الثاني]', specialty_ar: '[التخصص]', clinic_ids: 'C1', color: 'blue', active: 'TRUE' },
-    { doctor_id: 'D3', name_ar: 'د. [الطبيب الثالث]', specialty_ar: '[التخصص]', clinic_ids: 'C1', color: 'purple', active: 'FALSE' }
+    { doctor_id: 'D1', name_ar: 'د. [الطبيب الأول]', specialty_ar: '[التخصص]', clinic_ids: 'C1,C2', color: 'teal', active: 'TRUE', sort_order: 1, code: '' },
+    { doctor_id: 'D2', name_ar: 'د. [الطبيب الثاني]', specialty_ar: '[التخصص]', clinic_ids: 'C1', color: 'blue', active: 'TRUE', sort_order: 2, code: '' },
+    { doctor_id: 'D3', name_ar: 'د. [الطبيب الثالث]', specialty_ar: '[التخصص]', clinic_ids: 'C1', color: 'purple', active: 'FALSE', sort_order: 3, code: '' }
   ]);
 
   Db.appendMany(SHEET.REASONS, [
@@ -152,9 +152,9 @@ function setupEverything() {
     warnings: check.warnings,
     bookingUrl: getBookingUrl(),
     nextStepsAr: [
-      'املأ أسماء الفروع والأطباء والأسباب في أوراق Clinics / Doctors / Reasons.',
-      'اضبط المواعيد المتاحة في ورقة Availability (0 = الأحد … 6 = السبت).',
-      'غيّر كود الاستقبال في ورقة Settings (staff_code).',
+      'افتح صفحة الإعدادات (?page=admin) وأنشئ كود الإدارة، ثم أضف الفروع والأطباء والأسباب من الواجهة.',
+      'اضبط المواعيد المتاحة لكل طبيب من قسم الجدول (0 = الأحد … 6 = السبت).',
+      'غيّر كود الاستقبال وكود الإدارة من قسم الإعدادات.',
       'انشر التطبيق: Deploy → New deployment → Web app → Execute as me → Anyone.',
       'اختبر الحجز من رابط الحجز ثم افتح شاشة الاستقبال.'
     ]
@@ -185,6 +185,12 @@ function checkConfiguration() {
   });
   if (str(settings[SETTING.STAFF_CODE]) === SETTING_DEFAULTS[SETTING.STAFF_CODE]) {
     warnings.push('كود الاستقبال ما زال الافتراضي — غيّره فوراً.');
+  }
+  if (!str(settings[SETTING.ADMIN_CODE])) {
+    warnings.push('كود الإدارة غير مضبوط بعد — افتح صفحة الإعدادات (?page=admin) وأنشئه.');
+  }
+  if (isTrue(settings[SETTING.BOOKINGS_PAUSED])) {
+    warnings.push('استقبال الحجوزات متوقف مؤقتاً — المرضى لا يستطيعون الحجز الآن.');
   }
   if (!str(settings[SETTING.REPORT_EMAIL]).match(/@/)) {
     warnings.push('بريد التقارير غير مضبوط، لن تصل النسخ الاحتياطية.');

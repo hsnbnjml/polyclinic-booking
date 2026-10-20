@@ -25,7 +25,7 @@ const OUT = path.join(ROOT, 'demo');
 const SERVER_FILES = [
   'Config.gs', 'Util.gs', 'Db.gs', 'I18n.gs', 'Catalog.gs', 'Availability.gs',
   'Calendar.gs', 'WhatsApp.gs', 'BookingApi.gs', 'Reports.gs', 'StaffApi.gs',
-  'Notify.gs', 'Setup.gs', 'Code.gs'
+  'Notify.gs', 'Setup.gs', 'AdminApi.gs', 'Code.gs'
 ];
 
 const read = (p) => fs.readFileSync(p, 'utf8');
@@ -45,6 +45,7 @@ const configApi = vm.runInNewContext(
 
 const DEMO_OVERRIDES = {
   staff_code: '1234',
+  admin_code: 'admin123',
   report_email: 'demo@polyclinic.example',
   whatsapp_number: '+201000000000',
   support_phone: '0220000000'
@@ -66,6 +67,8 @@ const demoConfig = vm.runInNewContext(
     read(path.join(GS, 'Config.gs')) + '\n' +
     read(path.join(GS, 'Catalog.gs')) + '\n' +
     'function getSettings(){ return __demoSettings; }\n' +
+    'function str(v){ return v === null || v === undefined ? "" : String(v); }\n' +
+    'function isTrue(v){ var s = String(v).trim().toLowerCase(); return !(s === "" || s === "false" || s === "no" || s === "0"); }\n' +
     'return getPublicConfig();\n' +
   '})()',
   { __demoSettings: demoSettings }
@@ -75,7 +78,7 @@ const demoConfig = vm.runInNewContext(
 // once made --primary empty, which silently turned every var(--primary) rule into
 // nothing — including the booking header's white-on-white text.
 const viewConfigKeys = new Set();
-['Booking.html', 'Staff.html'].forEach((view) => {
+['Booking.html', 'Staff.html', 'Admin.html'].forEach((view) => {
   const src = read(path.join(GS, view));
   const re = /config\.([A-Za-z_$][\w$]*)/g;
   let m;
@@ -219,7 +222,12 @@ function buildPage({ view, scope, page, title }) {
       '<meta name="theme-color" content="' + demoConfig.brandPrimary + '">\n' +
       '<link rel="icon" href="' + demoFavicon + '">';
   });
-  html = html.replace(/<body>/, '<body>\n<script>\n' + runtime + '\n</script>\n');
+  // Use a function replacement: the runtime now contains server source such as
+  // `new RegExp('...$')`. In a string replacement, `$'` means "the text after the
+  // match", which would splice a second copy of the page into the runtime.
+  html = html.replace(/<body>/, function () {
+    return '<body>\n<script>\n' + runtime + '\n</script>\n';
+  });
 
   // Unreplaced Apps Script scriptlets. `<?xml …?>` is not a scriptlet — the inlined
   // xlsx writer emits that string when it builds the OOXML parts.
@@ -238,6 +246,12 @@ function buildPage({ view, scope, page, title }) {
   // Guard the fix above: a demo page without it renders like a 2010 desktop site on phones.
   if (!/<meta name="viewport"/.test(html)) {
     throw new Error(`${view}: generated page has no viewport meta — phones would render it in desktop mode`);
+  }
+
+  // A `$'` in the injected runtime can expand a string replacement into a second
+  // copy of the page. Keep this assertion close to the injection site.
+  if ((html.match(/<\/html>/gi) || []).length !== 1) {
+    throw new Error(`${view}: generated page has more than one closing html tag — runtime injection was spliced`);
   }
 
   return html;
@@ -259,10 +273,21 @@ const reception = buildPage({
   scope: { config: demoConfig, webAppUrl: 'demo://export' }
 });
 
+const admin = buildPage({
+  view: 'Admin.html',
+  page: 'admin',
+  title: 'عرض تجريبي — إعدادات العيادة',
+  scope: {
+    config: demoConfig,
+    links: { booking: 'patient.html', staff: 'reception.html' }
+  }
+});
+
 fs.writeFileSync(path.join(OUT, 'patient.html'), patient, 'utf8');
 fs.writeFileSync(path.join(OUT, 'reception.html'), reception, 'utf8');
+fs.writeFileSync(path.join(OUT, 'admin.html'), admin, 'utf8');
 
-[['patient', patient], ['reception', reception]].forEach(([name, html]) => {
+[['patient', patient], ['reception', reception], ['admin', admin]].forEach(([name, html]) => {
   if (html.indexOf('POLYCLINIC_XLSX') === -1 || html.indexOf('/*__XLSX_WRITER__*/') !== -1) {
     throw new Error('demo/' + name + '.html did not receive the xlsx writer — Excel export would fall back to CSV');
   }
@@ -270,6 +295,7 @@ fs.writeFileSync(path.join(OUT, 'reception.html'), reception, 'utf8');
 
 console.log('demo/patient.html    ' + Math.round(patient.length / 1024) + ' KB');
 console.log('demo/reception.html  ' + Math.round(reception.length / 1024) + ' KB');
+console.log('demo/admin.html      ' + Math.round(admin.length / 1024) + ' KB');
 console.log('\nServer files inlined: ' + SERVER_FILES.length);
 console.log('Settings baked into the view config:');
 console.log('  clinicName   = ' + demoConfig.clinicName);

@@ -10,7 +10,8 @@ adds everything a phone needs to install it as an app:
 - `icons/` — 192/512/maskable PNGs + the Apple touch icon; `icons/icon.svg` is the source
   (a placeholder "medical plus" in the clinic teal — when the doctor hands over the real
   logo, replace `icon.svg` and re-render the PNGs at the same sizes)
-- `index.html` — the shell itself
+- `index.html` — the shell itself; it forwards query parameters, so `?page=staff` opens the
+  reception screen and `?page=admin` opens the settings page inside the installed app
 
 ## The live URL never lives in git
 

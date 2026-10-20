@@ -25,7 +25,7 @@
     <? } ?>
     <div>
       <h1><?= config.clinicName ?></h1>
-      <p>احجز موعدك في أقل من دقيقة</p>
+      <p><?= config.texts.subtitle ?></p>
     </div>
   </div>
 </header>
@@ -134,6 +134,7 @@
     api('apiBootstrap').then(function (res) {
       if (!res || !res.ok) { view(alertBox('err', 'تعذّر تحميل بيانات العيادة. حاول تحديث الصفحة.')); return; }
       S.boot = res;
+      if (res.config && res.config.bookingsPaused) { showPaused(res.config.pauseMessage); return; }
       if (!res.clinics.length || !res.reasons.length) {
         view(alertBox('err', 'لم يتم إعداد مواعيد العيادة بعد. تواصل مع الاستقبال.'));
         return;
@@ -143,6 +144,18 @@
     }).catch(function (err) {
       view(alertBox('err', 'خطأ في الاتصال: ' + err));
     });
+  }
+
+  function showPaused(message) {
+    var stepper = document.querySelector('.stepper');
+    if (stepper) stepper.style.display = 'none';
+    var html = '<div class="card"><h2>الحجز متوقف مؤقتاً</h2>' +
+      '<p class="hint">' + esc(message || CONFIG.pauseMessage || 'الحجز متوقف مؤقتاً. تواصل مع الاستقبال.') + '</p>';
+    if (CONFIG.supportPhone) {
+      html += '<a class="btn wide" href="tel:' + esc(CONFIG.supportPhone) + '">اتصال بالاستقبال: <span dir="ltr">' + esc(CONFIG.supportPhone) + '</span></a>';
+    }
+    html += '</div>';
+    view(html);
   }
 
   function applyPreset() {
@@ -309,18 +322,18 @@
     html += '<div class="card">';
     html += '<label class="field">الاسم' +
       '<input id="f-name" type="text" autocomplete="name" maxlength="80" placeholder="اكتب اسمك">' +
-      '<span class="why">اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.</span></label>';
+      '<span class="why">' + esc(CONFIG.texts.nameHint) + '</span></label>';
 
     html += '<div class="phone-row">' +
       '<label class="field">رقم الجوال *' +
       '<input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01xxxxxxxxx">' +
-      '<span class="why">مطلوب — سنتواصل معك على واتساب عليه.</span></label>' +
+      '<span class="why">' + esc(CONFIG.texts.phoneHint) + '</span></label>' +
       '<label class="field">تأكيد الرقم *' +
       '<input id="f-phone2" type="tel" inputmode="tel" placeholder="أعد كتابة الرقم">' +
       '<span class="why">للتأكد من صحة الرقم.</span></label>' +
       '</div>';
 
-    html += '<label class="field">ملاحظة للطبيب<span class="why">اختياري</span>' +
+    html += '<label class="field">' + esc(CONFIG.texts.extraLabel) + '<span class="why">اختياري</span>' +
       '<textarea id="f-extra" rows="2" maxlength="600"></textarea></label>';
 
     html += '<label class="consent"><input id="f-consent" type="checkbox">' +
