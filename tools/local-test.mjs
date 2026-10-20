@@ -1152,6 +1152,22 @@ check('the admin code still works on the reception board',
 check('a second bootstrap is refused once an admin code exists',
   api.adminBootstrap('NEW-STAFF', 'ANOTHER').error === 'ALREADY_SET');
 
+// Production loads .gs files in its own order; an alphabetical pass is a useful
+// proxy for "AdminApi.gs may run before Config.gs". Top-level initializers must
+// not read constants from another file (that is how v5 crashed on the live URL).
+const loadOrderFiles = fs.readdirSync(GS_DIR).filter((f) => f.endsWith('.gs')).sort();
+let loadOrderError = null;
+try {
+  const loadOrderContext = vm.createContext({ Logger: { log() {} }, console });
+  loadOrderFiles.forEach((f) => {
+    vm.runInContext(fs.readFileSync(path.join(GS_DIR, f), 'utf8'), loadOrderContext, { filename: f });
+  });
+} catch (err) {
+  loadOrderError = err;
+}
+check('every .gs file is safe to load in alphabetical order',
+  !loadOrderError, loadOrderError && loadOrderError.message);
+
 /* -------------------------------------------------- */
 
 console.log(`\n${'-'.repeat(60)}`);

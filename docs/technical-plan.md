@@ -227,7 +227,7 @@ marker could be one, new booking) — by design, so "she moved twice" stays answ
 ## Test coverage
 
 `tools/local-test.mjs` runs the actual `.gs` source against an in-memory fake of the Google
-services and asserts 200 behaviours, including: phone normalisation (local, international, 00-prefix,
+services and asserts 201 behaviours, including: phone normalisation (local, international, 00-prefix,
 Arabic-Indic digits), Sunday/Wednesday-only availability, 45-minute grid boundaries, inactive
 rows being ignored, one-patient-per-slot, idempotent double-tap, consent/phone/mismatch/honeypot
 rejection, the 3-booking cap, cancel freeing a slot and deleting its event, reschedule keeping all
@@ -236,11 +236,12 @@ daily caps, patient history by phone, KPIs, WhatsApp template contents and numbe
 booking references (one per doctor per day, explicit code wins, duplicate codes warned about), the
 reception roster the scheduler filters by, report scoping (one doctor, a comma list, an array, all,
 and the file names they produce), the admin/doctor access split, PIN hashing and conflicts, settings
-validation, schedule block editing, pause gating, backups, archive/reorder, and that the public
-catalogue leaks nothing patient-related.
+validation, schedule block editing, pause gating, backups, archive/reorder, that every `.gs` file is
+safe to load in alphabetical order (Apps Script may load `AdminApi.gs` before `Config.gs`), and that
+the public catalogue leaks nothing patient-related.
 
 ```
-node tools/local-test.mjs      →   200 passed, 0 failed
+node tools/local-test.mjs      →   201 passed, 0 failed
 node tools/check-html.mjs      →   front-end checks passed
 node tools/check-xlsx.mjs      →   30 passed, 0 failed   (the demo's .xlsx, via .NET's ZIP reader)
 ```

@@ -110,7 +110,7 @@ the brand teal (`pwa/icons/icon.svg`) until the clinic's real logo replaces it. 
 ## Run the checks
 
 ```
-node tools/local-test.mjs     # 200 behavioural assertions
+node tools/local-test.mjs     # 201 behavioural assertions
 node tools/check-html.mjs     # front-end and wiring checks
 node tools/check-xlsx.mjs     # the Excel export is a real .xlsx (needs PowerShell)
 ```
