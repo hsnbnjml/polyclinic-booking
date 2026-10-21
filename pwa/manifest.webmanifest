@@ -4,6 +4,7 @@
   "description": "نظام حجز مواعيد العيادة — للمرضى وشاشة الاستقبال",
   "lang": "ar",
   "dir": "rtl",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

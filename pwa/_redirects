@@ -1,0 +1,3 @@
+# Accept both /staff and /staff/ in Cloudflare Pages.
+/staff /staff/ 301
+/admin /admin/ 301

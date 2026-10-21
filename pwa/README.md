@@ -10,8 +10,22 @@ adds everything a phone needs to install it as an app:
 - `icons/` — 192/512/maskable PNGs + the Apple touch icon; `icons/icon.svg` is the source
   (a placeholder "medical plus" in the clinic teal — when the doctor hands over the real
   logo, replace `icon.svg` and re-render the PNGs at the same sizes)
-- `index.html` — the shell itself; it forwards query parameters, so `?page=staff` opens the
-  reception screen and `?page=admin` opens the settings page inside the installed app
+- `index.html` — the shell itself; it forwards query parameters for patient campaign links
+- `_redirects` — accepts both `/staff` and `/staff/` (and `/admin`) on Cloudflare Pages
+
+The builder creates three entries from the same shell:
+
+| Path | Opens |
+|---|---|
+| `/` | patient booking; campaign parameters are forwarded |
+| `/staff/` | reception screen (`?page=staff`) |
+| `/admin/` | admin settings and doctor PIN login (`?page=admin`) |
+
+The staff and admin entries have their own manifest, `start_url`, scope and icon label, so
+installing from `/staff/` opens the reception screen on launch, and installing from
+`/admin/` opens the settings screen on launch. Patients do not need to install anything.
+Doctors use the `/admin/` entry and log in with their PIN; the server scopes them to their
+own reasons and schedule.
 
 ## The live URL never lives in git
 
@@ -32,13 +46,16 @@ an offline demo).
 
 ## Installing on a phone (what to tell the clinic team)
 
-- **Android (Chrome):** open the shell URL → menu (⋮) → **إضافة إلى الشاشة الرئيسية /
-  تثبيت التطبيق**. The app opens without browser bars and shows in the app drawer.
-- **iPhone (Safari):** open the shell URL → Share button → **إضافة إلى الشاشة الرئيسية**.
-  (Must be Safari; Chrome on iOS cannot add to the home screen.)
+Only staff and doctors install the app; patients open the plain link.
 
-Same steps for patients if they want the icon — but patients do not need it; the plain
-link works fine.
+- **Android (Chrome):** open `/staff/` for reception or `/admin/` for admin/doctor →
+  menu (⋮) → **إضافة إلى الشاشة الرئيسية / تثبيت التطبيق**. The app opens without browser
+  bars and shows in the app drawer.
+- **iPhone (Safari):** open the same short URL → Share button → **إضافة إلى الشاشة
+  الرئيسية**. (Must be Safari; Chrome on iOS cannot add to the home screen.)
+
+Do not install from `/staff?page=...` or with an old query link; use the path shown above.
+The dedicated manifest keeps the correct screen as the launch page.
 
 ## Why the shell also looks cleaner
 

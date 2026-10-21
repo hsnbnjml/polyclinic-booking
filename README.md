@@ -76,19 +76,19 @@ demo. CI fails too if the committed demo no longer matches the sources.
 ## Install it as an app (optional)
 
 Google serves the app from its own page, so the tab icon and the browser bars are Google's, not the
-clinic's. `pwa/` is a small page the clinic owns: it frames the live app full-screen and carries the
-web-app manifest and the icons — which is exactly what a phone installs.
+clinic's. `pwa/` contains the small clinic-owned entries that frame the live app full-screen and carry
+the web-app manifests and icons — which is exactly what a phone installs.
 
 ```
 node tools/build-pwa.mjs      # bakes the live URL in; writes dist/pwa/ (git-ignored)
 ```
 
 Upload `dist/pwa/` to any static host (Cloudflare Pages recommended: free, no card, commercial use
-allowed). The shell forwards `?page=staff` and `?page=admin`, so the installed app opens the
-reception screen and the settings page too. Android: open the link → ⋮ → *Add to Home screen*.
-iPhone: open in **Safari** → Share → *Add to Home Screen*. The icon is a placeholder medical plus in
-the brand teal (`pwa/icons/icon.svg`) until the clinic's real logo replaces it. Full walkthrough:
-`pwa/README.md`.
+allowed). It contains three entries: `/` for patients, `/staff/` for reception and `/admin/` for
+admin/doctor login. Staff and doctors install their own entry; patients install nothing. Android:
+open the link → ⋮ → *Add to Home screen*. iPhone: open in **Safari** → Share → *Add to Home Screen*.
+The icon is a placeholder medical plus in the brand teal (`pwa/icons/icon.svg`) until the clinic's
+real logo replaces it. Full walkthrough: `pwa/README.md`.
 
 ## Repository layout
 
