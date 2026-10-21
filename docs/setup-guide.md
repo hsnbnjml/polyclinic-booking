@@ -120,8 +120,9 @@ which channel produced bookings.
 
 ### Upgrading an existing sheet to per-doctor reasons
 
-Take **نسخة احتياطية الآن** before deploying this version. On the first admin login, the server adds
-the new `Reasons.doctor_id` and `Reasons.clinic_ids` columns and runs `migrateReasonsToDoctors()`.
+Take **نسخة احتياطية الآن** before deploying this version. On the first settings-page load (even
+before the login form), the server adds the new `Reasons.doctor_id` and `Reasons.clinic_ids` columns
+and runs `migrateReasonsToDoctors()`.
 For every active legacy reason (blank `doctor_id`), it creates an independent copy for each doctor who
 had active availability for that reason, repoints those availability rows, and archives the original
 row so old bookings keep their readable reason name. Legacy reasons with no schedule are archived.

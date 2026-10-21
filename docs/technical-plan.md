@@ -98,7 +98,8 @@ values fall back to sheet order, so an upgraded sheet keeps its current order un
 it. `adminMigrateSchema()` adds missing `Access`, `code`, `sort_order`, `doctor_id` and `clinic_ids`
 columns on the first settings visit — additively, without moving existing data.
 
-`migrateReasonsToDoctors()` runs during setup and the first admin login after the upgrade. For each
+`migrateReasonsToDoctors()` runs during setup, when an older settings page is first opened, and on
+admin login after the upgrade. For each
 active legacy reason (blank `doctor_id`), it groups active availability by doctor, creates one
 independent copy per doctor, repoints those availability rows to the copy, and archives the original.
 Legacy reasons with no active schedule are archived rather than guessed onto a doctor. It is
