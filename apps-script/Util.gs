@@ -146,6 +146,31 @@ function str(v) {
   return v === null || v === undefined ? '' : String(v).trim();
 }
 
+/** Accepts an array or a comma-separated cell and returns clean, unique ids. */
+function splitIds(value) {
+  const raw = Object.prototype.toString.call(value) === '[object Array]'
+    ? value
+    : str(value).split(',');
+  const out = [];
+  raw.forEach(function (v) {
+    const id = str(v);
+    if (id && out.indexOf(id) === -1) out.push(id);
+  });
+  return out;
+}
+
+function reasonClinicIds(reason) {
+  return splitIds(reason && reason.clinic_ids);
+}
+
+function reasonOwnedBy(reason, doctorId) {
+  return !!reason && !!str(doctorId) && str(reason.doctor_id) === str(doctorId);
+}
+
+function reasonServesClinic(reason, clinicId) {
+  return reasonClinicIds(reason).indexOf(str(clinicId)) !== -1;
+}
+
 function isTrue(v) {
   const s = String(v).trim().toLowerCase();
   return s === 'true' || s === 'yes' || s === '1' || s === 'نعم' || s === 'y';

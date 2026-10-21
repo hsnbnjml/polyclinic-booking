@@ -17,7 +17,7 @@
   /*__XLSX_WRITER__*/
 
   var PAGE = /*__PAGE__*/;
-  var STORE_KEY = 'polyclinic_demo_v4';
+  var STORE_KEY = 'polyclinic_demo_v5';
   var STAFF_CODE = '1234';
   var ADMIN_CODE = 'admin123';
 
@@ -374,6 +374,8 @@
       adminSetDoctorPin: adminSetDoctorPin,
       adminChangePin: adminChangePin,
       adminBackup: adminBackup,
+      adminCopyReason: adminCopyReason,
+      migrateReasonsToDoctors: migrateReasonsToDoctors,
       // Naming and scope: the same functions the live export uses, so an offline demo
       // file and a live Drive file are named identically.
       REPORT_HEADER_AR: REPORT_HEADER_AR,
@@ -485,7 +487,7 @@
     });
     if (!hasA8) {
       SERVER.Db.append(SERVER.SHEET.AVAILABILITY, {
-        availability_id: 'A8', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2',
+        availability_id: 'A8', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4',
         weekday: 0, from_time: '14:00', to_time: '17:00', slot_min: 30,
         max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE'
       });

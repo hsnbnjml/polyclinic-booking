@@ -31,7 +31,7 @@
 | 6 | Details | Name (optional) + phone typed twice + consent |
 | 7 | Confirmation | Booking card: doctor, date, time, address, booking reference |
 
-The rule the system runs on, as an example: *first examinations with Dr [name] on Sundays and Wednesdays, 9am–4pm, 45-minute slots, maximum 8 patients a day.* Changing that rule takes two taps in the Arabic settings page — no cost, no developer. Each doctor can also change their own hours with a personal PIN, scoped to their schedule only.
+The rule the system runs on, as an example: *first examinations with Dr [name] on Sundays and Wednesdays, 9am–4pm, 45-minute slots, maximum 8 patients a day.* Changing that rule takes two taps in the Arabic settings page — no cost, no developer. Each doctor can also add their own visit reasons and change their own hours with a personal PIN, scoped to their reasons and schedule only.
 
 ## 4. What the clinic gets
 
@@ -41,6 +41,7 @@ The rule the system runs on, as an example: *first examinations with Dr [name] o
 - Reception can block a doctor's time (leave, emergency) and patients stop seeing those slots immediately.
 - The reception screen shows the whole day as a shared schedule, one colour-coded column per doctor, with clickable doctor labels that show or hide one or several of them at once.
 - Each booking carries a reference the patient can read back over the phone: doctor letters + date + the day's running number (`ae-20261018-1`).
+- Visit reasons are owned by one doctor and offered at one or more of that doctor's branches. They are never shared: the admin can copy a reason to another doctor with a separate branch choice, and editing one copy never changes the source.
 
 **Historical record**
 - One row per booking: reference, booking date, branch, doctor, visit reason, appointment date, time, name, phone, status.
@@ -103,8 +104,8 @@ Ten items, itemised in `docs/doctor-checklist.md`:
 
 1. Branch names, addresses and phone numbers.
 2. Doctor names, specialties and which branch each works in.
-3. The agreed visit reasons and the duration of each.
-4. Each doctor's hours per visit reason (e.g. examinations Sunday and Wednesday, 9–4).
+3. The agreed visit reasons per doctor, the branches where each is offered, and its duration.
+4. Each doctor's hours per visit reason and branch (e.g. examinations Sunday and Wednesday, 9–4).
 5. Holidays, and who keeps them updated.
 6. The clinic WhatsApp number and the reception phone number.
 7. The clinic email address for reports.

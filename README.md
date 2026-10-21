@@ -15,7 +15,7 @@ no per-booking fee and no third-party scheduler in the middle — the clinic's r
 - **المريض**: رابط واحد → الفرع → الطبيب → سبب الزيارة → المواعيد المتاحة فعلياً من جدول ذلك الطبيب → الاسم والجوال → تأكيد فوري برقم حجز مقروء مثل `ae-20261018-1`.
 - **الاستقبال**: شاشة اليوم، تقويم مشترك لكل الأطباء بألوان، تصفية بطبيب أو أكثر بضغطة، حضور / لم يحضر / إلغاء / تغيير موعد، إغلاق أوقات أو أيام، بحث عن أي مريض برقم الجوال، وتصدير Excel حقيقي.
 - **الطبيب**: تقرير مصفّى بطبيب واحد أو عدة أطباء للمقارنة، مؤشرات أداء، ونسخة احتياطية أسبوعية تلقائية على Drive.
-- **الإدارة**: صفحة إعدادات عربية داخل نفس التطبيق: الفروع، الأطباء، أسباب الزيارة، الجدول الأسبوعي، الإجازات، نصوص الرسائل وصفحة المريض، إيقاف الحجز مؤقتاً، النسخ الاحتياطي، وسجل التعديلات — بلا مطوّر. لكل طبيب كود دخول يعدّل به جدوله فقط.
+- **الإدارة**: صفحة إعدادات عربية داخل نفس التطبيق: الفروع، الأطباء، أسباب الزيارة لكل طبيب، الجدول الأسبوعي، الإجازات، نصوص الرسائل وصفحة المريض، إيقاف الحجز مؤقتاً، النسخ الاحتياطي، وسجل التعديلات — بلا مطوّر. لكل طبيب كود دخول يعدّل به جدوله وأسبابه فقط؛ والإدارة تنسخ أي سبب لعدة أطباء بفروع مختلفة.
 - **كتطبيق**: يُضاف إلى شاشة الجوال الرئيسية بأيقونة العيادة ويفتح كتطبيق كامل الشاشة بلا شريط متصفح (صفحة `pwa/`) — وبلا شريط Google التعريفي «أنشأ هذا التطبيق أحد مستخدمي Apps Script» الظاهر على الرابط المباشر.
 
 عرض توضيحي ببيانات وهمية (بلا حساب Google): <https://hsnbnjml.github.io/polyclinic-booking/>
@@ -37,12 +37,12 @@ patient link  →  clinic → doctor → reason → the doctor's real free times
 | Area | Details |
 |---|---|
 | Booking | 5 steps, Arabic RTL, phone typed twice, consent, honeypot; **one patient per slot**, enforced under a script lock |
-| Rules | Availability windows per doctor × clinic × reason, per-reason duration, minimum notice, blackouts (one date or `start..end`), daily caps, booking horizon |
+| Rules | Every reason belongs to one doctor and one or more of that doctor's branches; availability windows per doctor × clinic × reason, per-reason duration, minimum notice, blackouts (one date or `start..end`), daily caps, booking horizon |
 | Reference | Doctor initials + date + the day's running number — `ae-20261018-1` — computed inside the lock so two patients never share one |
 | Reception | Day board, shared colour-coded doctor schedule with per-doctor filters (one or several), statuses, reschedule, block time, patient lookup by phone, audit trail of who changed what |
 | WhatsApp | Four ready Arabic templates sent with one tap; the reminder carries the branch address and map link and says اليوم / غداً / بعد غد by itself; the wording is editable from the settings page |
 | Reports | Real `.xlsx` and CSV, KPI summary, in-sheet report tabs; scoped to one doctor, any few of them for comparison, or all |
-| Admin | Arabic settings page for branches, doctors, reasons, weekly hours, holidays, WhatsApp copy, patient-page copy, pause, backup, audit; archive instead of delete; separate staff/admin codes; per-doctor PINs scope a doctor to their own schedule |
+| Admin | Arabic settings page for branches, doctors, per-doctor reasons, weekly hours, holidays, WhatsApp copy, patient-page copy, pause, backup, audit; archive instead of delete; separate staff/admin codes; per-doctor PINs scope a doctor to their own reasons and schedule; copy a reason to several doctors with a branch choice per copy |
 | Design | One colour in the sheet drives the whole palette (derived darks, tints, press states, focus rings); Cairo type, thumb-first targets, 150–220 ms motion that honours reduced-motion |
 | Automation | Shared Google Calendar mirror, `BLOCK` event → blackout sync, daily agenda e-mail, weekly backup (dated master copy + exported file) |
 | Privacy | The spreadsheet stays private; the public web app never returns patient data — the catalogue endpoint is patient-free by construction. Doctor PINs are hashed in a separate `Access` sheet; the admin payload never returns a hash or salt |
@@ -110,7 +110,7 @@ the brand teal (`pwa/icons/icon.svg`) until the clinic's real logo replaces it. 
 ## Run the checks
 
 ```
-node tools/local-test.mjs     # 201 behavioural assertions
+node tools/local-test.mjs     # 222 behavioural assertions
 node tools/check-html.mjs     # front-end and wiring checks
 node tools/check-xlsx.mjs     # the Excel export is a real .xlsx (needs PowerShell)
 ```
@@ -119,8 +119,9 @@ There are no dependencies and nothing to install. The suite loads the actual App
 (nothing is mocked at the logic level) and fakes only the Google services: spreadsheets, calendar,
 mail, drive, locks. It covers what would hurt in production — one patient per slot, double-tap
 idempotency, cancel freeing a slot, reschedule preserving history, blackout scoping, daily caps,
-phone normalisation of Arabic-Indic digits, the admin/doctor access split, settings validation,
-schedule blocks, pause, backups, and that the public catalogue never leaks patient data.
+phone normalisation of Arabic-Indic digits, the admin/doctor access split, per-doctor reason ownership
+and branch scope, independent reason copies, archive/branch schedule cleanup, legacy migration, settings
+validation, schedule blocks, pause, backups, and that the public catalogue never leaks patient data.
 
 Because those rules depend on "now", CI runs the same suite in three time zones spanning the whole
 day (UTC−12, UTC, UTC+14), so an assertion that only holds at one time of day fails the build.
@@ -174,8 +175,9 @@ database adapter, not a rewrite. Details and risks: `docs/technical-plan.md`.
 - [x] Test suite, front-end checks, `.xlsx` validator, offline demo
 - [x] Phone-first layout: thumb-sized controls, Cairo Arabic font, and demo pages that open at phone width
 - [x] Installable app shell with a branded icon (`pwa/`)
-- [x] Arabic admin settings page: branches, doctors, reasons, hours, holidays, texts, pause, backup, audit
-- [x] Doctor self-service schedule with per-doctor PINs
+- [x] Arabic admin settings page: branches, doctors, per-doctor reasons, hours, holidays, texts, pause, backup, audit
+- [x] Doctor self-service schedule and reasons with per-doctor PINs
+- [x] Independent reason copies per doctor, with per-copy branch selection and automatic schedule cleanup
 - [ ] Fill the real clinic data (see `docs/doctor-checklist.md`)
 - [x] One live end-to-end run on a deployed web app: book → reception board → cancel released the slot
 - [ ] A two-week pilot with one doctor

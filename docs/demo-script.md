@@ -59,7 +59,8 @@ Read [Before you open your mouth](#before-you-open-your-mouth) once, then follow
 | 10:30 | Reception → التقارير → الأطباء | click **د. فلان**، then **عرض المؤشرات** again | «أقدر أطلّع تقرير طبيب واحد، أو اثنين أو ثلاثة مع بعض للمقارنة، أو كل الأطباء.» | The report is scoped to any set of doctors. |
 | 11:00 | Reception → التقارير | **تصدير Excel** | «الملف بينزل xlsx حقيقي يفتح في Excel على طول، واسمه فيه أسماء الأطباء المختارين والتاريخ، فمفيش ملفين بيتلخبطوا.» | A real Excel file, named for what is inside it. |
 | 12:00 | Reception → التقارير | **تصدير CSV** | «وفيه CSV كمان لو حد بيحب يفتحه بأي برنامج.» | Both formats exist; neither is a fudge. |
-| 12:30 | Settings tab | **الجدول** → change a time → save; **الأطباء** → show the PIN control | «كل ده الفريق يغيّره من الموبايل: الفرع، الطبيب، مواعيده الأسبوعية، الإجازات، ونصوص الرسائل. مفيش كود ومفيش رجوع للمطوّر.» | The clinic owns the configuration after handover. |
+| 12:30 | Settings → أسباب الزيارة | show the doctor + branches column → **نسخ** → tick a doctor → pick branches | «كل سبب زيارة لطبيب واحد وفروع محددة. لو نفس السبب موجود عند طبيب تاني، بنعمل نسخة مستقلة ونختار فروعها؛ تعديل نسخة مش بيغيّر الأصل، وأوقات الجدول مش بتتنسخ معاها.» | Reasons are owned per doctor, not shared. |
+| 13:00 | Settings → الجدول | change a time → save; **الأطباء** → show the PIN control | «كل ده الفريق يغيّره من الموبايل: الفرع، الطبيب، مواعيده الأسبوعية، الإجازات، ونصوص الرسائل. الطبيب نفسه بيضيف أسبابه من «أسبابي» ومواعيده من «مواعيدي». مفيش كود ومفيش رجوع للمطوّر.» | The clinic and each doctor own the configuration after handover. |
 | 13:15 | Settings → نظرة عامة | pause bookings, reload patient tab, show the pause screen, resume | «لو العيادة قافلة أو الطبيب مسافر، نوقف الحجز بزرار — والاستقبال يظل يعدّل المواعيد القائمة.» | Pause protects patients without freezing reception. |
 | 13:45 | Launcher | scroll the calendar | «كل حجز بيدخل تقويم Google بلون الطبيب، والحجب والإجازات كمان بتظهر عليه.» | The doctor's own calendar stays the truth. |
 | 14:15 | — | stop | «النظام ده كامل وعملي ومجاني. اللي محتاج قراركم هو الثلاثين بند في الورقة دي.» | Close on a decision, not on admiration. |
@@ -111,16 +112,18 @@ never overwrite or confuse each other.
 **Do we need new devices?**
 No. Any browser. The reception screen works on a phone; only the initial setup needs a computer.
 
-**What if the doctor changes his hours or adds a branch?**
-Open **الإعدادات** (`?page=admin`) → **الجدول** or **الفروع**. The change is live immediately; no
-deploy and no code. A doctor can also change their own hours with their PIN, scoped to their
-schedule only.
+**What if the doctor changes his hours, reasons or adds a branch?**
+Open **الإعدادات** (`?page=admin`) → **الجدول**, **أسباب الزيارة** or **الفروع**. The change is live
+immediately; no deploy and no code. A doctor can also create and edit their own reasons and hours with
+their PIN, scoped to their own schedule and reasons only. If another doctor should offer the same
+reason, use **نسخ** and choose that doctor's branches; the copy is independent and does not copy the
+schedule.
 
 **Who can see the patient list?**
 Anyone with the reception link plus the staff code. The settings page does not show patient data;
-doctors see only their own availability, not bookings. Keep all three codes private — staff, admin,
-and each doctor PIN — change them from the defaults, and treat the Sheet like the appointments book
-it replaces.
+doctors see only their own reasons and availability, not bookings or other doctors' reasons. Keep all
+three codes private — staff, admin, and each doctor PIN — change them from the defaults, and treat the
+Sheet like the appointments book it replaces.
 
 ---
 
@@ -143,6 +146,10 @@ it replaces.
 - **The admin and doctor codes are demo-only.** Settings demo code `admin123`, doctor PIN `123456`.
   In the real clinic the first settings visit creates a separate admin code from the staff code, and
   each doctor PIN is set by the admin. Do not read either code aloud as if it were live.
+- **A reason belongs to one doctor.** Do not promise a shared reason definition. The copy action makes
+  a separate row per doctor, and the admin chooses that copy's branches. Archiving a reason deletes its
+  schedule blocks; the old bookings remain readable. Removing a branch from a reason deletes only that
+  branch's blocks.
 - **A comparison export needs two doctors ticked, or the URL.** Ticking every doctor collapses back
   to «كل الأطباء» on purpose — it is the same scope, and the file name says `كل-الأطباء`. With only
   two demo doctors, use the URL form (`&doctor=D1,D2`) if you want to show a `مقارنة-2-أطباء` file.
@@ -159,8 +166,9 @@ it replaces.
 ## The close (what you ask for)
 
 1. Approval of a **two-week pilot** on real hours, with one branch and the clinics' real reasons.
-2. The doctor-only values: checklist items **11–17** (reasons, durations, hours per reason, caps,
-   overrides) and a native review of **26–27** (the WhatsApp wording and the questionnaire text).
+2. The doctor-only values: checklist items **11–17b** (per-doctor reasons and branches, durations,
+   hours per reason, caps, overrides, copy rules) and a native review of **26–27** (the WhatsApp wording
+   and the questionnaire text).
 3. One name as the **reception owner** for the daily screen.
 4. The clinic **WhatsApp number** the patients will reply to, and the staff code owner.
 5. Who holds the **admin code** and which doctors get self-service PINs (checklist 32–33).

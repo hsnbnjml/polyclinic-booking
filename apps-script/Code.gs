@@ -48,6 +48,15 @@ function renderStaffPage() {
 }
 
 function renderAdminPage() {
+  // Opening the settings URL is enough to upgrade an older sheet: add the new
+  // reason columns and migrate legacy global reasons before the login form.
+  // This keeps the patient catalogue working immediately after a deploy, even
+  // before the clinic has chosen a permanent admin code.
+  try {
+    adminMigrateSchema();
+  } catch (err) {
+    logWarn('renderAdminPage', 'Schema upgrade skipped: ' + err);
+  }
   const url = getBookingUrl();
   const t = HtmlService.createTemplateFromFile('Admin');
   t.config = getPublicConfig();

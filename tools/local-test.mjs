@@ -244,7 +244,8 @@ function createFakeEnv() {
     'doctorIdList', 'filterBookings', 'scopeLabelAr', 'exportScopeSlug', 'exportBaseName', 'exportCsv',
     'getPublicConfig', 'getWaTemplates', 'waTemplateSettingKey', 'errorMessageAr', 'sortRowsByOrder',
     'adminMigrateSchema', 'adminLogin', 'adminBootstrap', 'adminGet', 'adminSave', 'adminDelete',
-    'adminReorder', 'adminSetDoctorPin', 'adminChangePin', 'adminBackup', 'adminRoleFor', 'adminPinHash'
+    'adminReorder', 'adminSetDoctorPin', 'adminChangePin', 'adminBackup', 'adminRoleFor', 'adminPinHash',
+    'adminCopyReason', 'migrateReasonsToDoctors', 'splitIds', 'reasonClinicIds', 'isActive'
   ];
   const wrapped = '(function(){\n' + source + '\nreturn {' + exported.join(',') + '};\n})()';
   const api = vm.runInContext(wrapped, context, { filename: 'polyclinic.gs' });
@@ -288,17 +289,18 @@ function buildFixtures(api) {
   ];
 
   const reasons = [
-    { reason_id: 'R1', name_ar: 'فحص أولي', duration_min: 45, lead_hours: 12, book_days_ahead: 21, max_per_day: 20, active: 'TRUE', sort_order: 1 },
-    { reason_id: 'R2', name_ar: 'استشارة', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 20, active: 'TRUE', sort_order: 2 },
-    { reason_id: 'R3', name_ar: 'متابعة', duration_min: 15, lead_hours: 0, book_days_ahead: 14, max_per_day: 20, active: 'TRUE', sort_order: 3 }
+    { reason_id: 'R1', doctor_id: 'D1', clinic_ids: 'C1', name_ar: 'فحص أولي', duration_min: 45, lead_hours: 12, book_days_ahead: 21, max_per_day: 20, active: 'TRUE', sort_order: 1 },
+    { reason_id: 'R2', doctor_id: 'D1', clinic_ids: 'C1', name_ar: 'استشارة', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 20, active: 'TRUE', sort_order: 2 },
+    { reason_id: 'R3', doctor_id: 'D1', clinic_ids: 'C1', name_ar: 'متابعة', duration_min: 15, lead_hours: 0, book_days_ahead: 14, max_per_day: 20, active: 'TRUE', sort_order: 3 },
+    { reason_id: 'R4', doctor_id: 'D2', clinic_ids: 'C1', name_ar: 'استشارة أطفال', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 20, active: 'TRUE', sort_order: 4 }
   ];
 
   const availability = [
     { availability_id: 'A1', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R1', weekday: 0, from_time: '09:00', to_time: '16:00', slot_min: '', max_per_day_override: '', active: 'TRUE' },
     { availability_id: 'A2', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R1', weekday: 3, from_time: '09:00', to_time: '16:00', slot_min: '', max_per_day_override: '', active: 'TRUE' },
     { availability_id: 'A3', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R3', weekday: 0, from_time: '16:00', to_time: '19:00', slot_min: '', max_per_day_override: '', active: 'TRUE' },
-    { availability_id: 'A4', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2', weekday: 1, from_time: '10:00', to_time: '14:00', slot_min: '', max_per_day_override: '', active: 'TRUE' },
-    { availability_id: 'A5', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2', weekday: 2, from_time: '10:00', to_time: '14:00', slot_min: '', max_per_day_override: '', active: 'FALSE' }
+    { availability_id: 'A4', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4', weekday: 1, from_time: '10:00', to_time: '14:00', slot_min: '', max_per_day_override: '', active: 'TRUE' },
+    { availability_id: 'A5', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4', weekday: 2, from_time: '10:00', to_time: '14:00', slot_min: '', max_per_day_override: '', active: 'FALSE' }
   ];
 
   const settings = Object.keys(api.SETTING_DEFAULTS).map((key) => ({
@@ -452,10 +454,11 @@ const wrongClinic = api.generateSlots({ clinicId: 'C2', doctorId: 'D1', reasonId
 check('inactive clinic is refused', wrongClinic.ok === false && wrongClinic.error === 'CLINIC_NOT_FOUND');
 
 const noAvailability = api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R1' });
-check('doctor/reason pair with no availability gives an empty list, not an error',
-  noAvailability.ok === true && noAvailability.days.length === 0);
+check('a reason that belongs to another doctor is refused even if a block exists',
+  noAvailability.ok === false && noAvailability.error === 'REASON_NOT_FOUND',
+  JSON.stringify(noAvailability));
 
-const inactiveAvailability = api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' });
+const inactiveAvailability = api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R4' });
 check('the Tuesday row is inactive, Monday still works',
   inactiveAvailability.days.every((d) => api.weekdayIndex(d.date) === 1),
   JSON.stringify(inactiveAvailability.days.map((d) => d.weekdayAr)));
@@ -740,6 +743,9 @@ section('8. Public catalogue exposes no patient data');
 const boot = api.getBootstrap();
 check('bootstrap lists clinics and doctors', boot.clinics.length === 1 && boot.doctors.length === 2);
 check('bootstrap exposes reasons with links', boot.reasons.length === 3);
+check('each public reason carries one doctor and its branch list',
+  boot.reasons.every((r) => !!r.doctorId && Array.isArray(r.clinicIds) && r.clinicIds.length > 0 &&
+    r.links.every((l) => l.doctorId === r.doctorId && r.clinicIds.indexOf(l.clinicId) !== -1)));
 check('bootstrap leaks nothing patient-related',
   JSON.stringify(boot).indexOf('01010000001') === -1 && JSON.stringify(boot).indexOf('سارة') === -1);
 
@@ -763,9 +769,9 @@ const ref2 = api.submitBooking({
 check('the second booking of the same doctor and day ends in -2',
   ref2.bookingId === 'ah-' + refStamp + '-2', ref2.bookingId);
 
-const refD2 = api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' }).days[0];
+const refD2 = api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R4' }).days[0];
 const refOther = api.submitBooking({
-  clinicId: 'C1', doctorId: 'D2', reasonId: 'R2', date: refD2.date, start: refD2.slots[0].start,
+  clinicId: 'C1', doctorId: 'D2', reasonId: 'R4', date: refD2.date, start: refD2.slots[0].start,
   name: 'مريض ثالث', phone: '01020000003', phoneConfirm: '01020000003', consent: 'true'
 });
 check('each doctor has his own running number',
@@ -819,7 +825,7 @@ section('11. Reports: one doctor, several, or all');
 reset();
 
 const d1Day = dayWithSlots(api.generateSlots({ clinicId: 'C1', doctorId: 'D1', reasonId: 'R1' }), 2);
-const d2Day = dayWithSlots(api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' }), 2);
+const d2Day = dayWithSlots(api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R4' }), 2);
 
 let seq = 0;
 function bookFor(doctorId, reasonId, day, slotIndex, name) {
@@ -833,8 +839,8 @@ function bookFor(doctorId, reasonId, day, slotIndex, name) {
 
 const scoped1 = bookFor('D1', 'R1', d1Day, 0, 'أول');
 bookFor('D1', 'R1', d1Day, 1, 'ثاني');
-bookFor('D2', 'R2', d2Day, 0, 'ثالث');
-bookFor('D2', 'R2', d2Day, 1, 'رابع');
+bookFor('D2', 'R4', d2Day, 0, 'ثالث');
+bookFor('D2', 'R4', d2Day, 1, 'رابع');
 api.setBookingStatus(scoped1.bookingId, 'attended', CODE, '');
 
 check('an untouched filter means every doctor', api.reportRows({}).length === 4);
@@ -923,6 +929,10 @@ check('bootstrap creates the Access sheet',
 check('the Clinics header gained sort_order without shifting existing columns',
   state.sheets.get(api.SHEET.CLINICS).get(1, 8) === 'sort_order',
   state.sheets.get(api.SHEET.CLINICS).get(1, 1) + '…' + state.sheets.get(api.SHEET.CLINICS).get(1, 8));
+check('the Reasons header gained doctor_id and clinic_ids at the end',
+  state.sheets.get(api.SHEET.REASONS).get(1, 10) === 'doctor_id' &&
+  state.sheets.get(api.SHEET.REASONS).get(1, 11) === 'clinic_ids',
+  state.sheets.get(api.SHEET.REASONS).get(1, 1) + '…' + state.sheets.get(api.SHEET.REASONS).get(1, 11));
 check('the admin code logs in as admin', api.adminLogin(ADMIN).role === 'admin');
 check('the staff code no longer opens the settings page',
   api.adminLogin(CODE).ok === false && api.adminLogin(CODE).error === 'USE_ADMIN',
@@ -966,8 +976,22 @@ check('a doctor must have at least one branch',
 check('a doctor cannot be given a nonexistent branch',
   api.adminSave(ADMIN, 'doctor', { nameAr: 'د. خطأ', specialtyAr: 'عام', clinicIds: ['C99'] }).error === 'BRANCH_NOT_FOUND');
 
-check('a new visit reason is accepted',
-  api.adminSave(ADMIN, 'reason', { nameAr: 'تطعيم', durationMin: 20, leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: true }).ok === true);
+const newReason = api.adminSave(ADMIN, 'reason', {
+  doctorId: 'D1', clinicIds: ['C1'], nameAr: 'تطعيم', durationMin: 20,
+  leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: true
+});
+check('a new visit reason is accepted with a doctor and branch',
+  newReason.ok === true && /^R\d+$/.test(newReason.id || ''), JSON.stringify(newReason));
+check('a visit reason must have a doctor',
+  api.adminSave(ADMIN, 'reason', { clinicIds: ['C1'], nameAr: 'بلا طبيب' }).error === 'DOCTOR_REQUIRED');
+check('a reason branch must belong to the doctor',
+  api.adminSave(ADMIN, 'reason', {
+    doctorId: 'D1', clinicIds: ['C2'], nameAr: 'فرع غير مرتبط', active: true
+  }).error === 'BRANCH_NOT_ASSIGNED');
+check('a doctor-visible reason cannot be left with no branches',
+  api.adminSave(ADMIN, 'reason', {
+    doctorId: 'D1', clinicIds: [], nameAr: 'بلا فروع', active: true
+  }).error === 'BRANCH_REQUIRED');
 
 const avSaved = api.adminSave(ADMIN, 'availability', {
   doctorId: 'D1', clinicId: 'C1', reasonId: 'R2', weekdays: [1, 2],
@@ -1058,6 +1082,107 @@ check('a doctor can add a block, and the server forces it to their own id',
   api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => Number(a.weekday) === 5 && a.reason_id === 'R2')
     .every((a) => a.doctor_id === 'D1'),
   JSON.stringify(doctorBlock));
+
+/* ---- per-doctor reason ownership, copying and cleanup ---- */
+const ownReason = api.adminSave('123456', 'reason', {
+  doctorId: 'D2', clinicIds: ['C1'], nameAr: 'سبب خاص بالطبيب',
+  durationMin: 20, leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: true
+});
+const ownReasonRow = api.Db.findById(api.SHEET.REASONS, 'reason_id', ownReason.id);
+check('a doctor can create a reason, and the server forces their own doctor id',
+  ownReason.ok === true && ownReasonRow.doctor_id === 'D1' && ownReasonRow.clinic_ids === 'C1',
+  JSON.stringify({ result: ownReason, row: ownReasonRow }));
+check('a doctor cannot edit another doctor\'s reason',
+  api.adminSave('123456', 'reason', {
+    id: 'R4', doctorId: 'D2', clinicIds: ['C1'], nameAr: 'محاولة', active: true
+  }).error === 'FORBIDDEN');
+check('a doctor cannot put their reason in a branch they do not serve',
+  api.adminSave('123456', 'reason', {
+    clinicIds: ['C2'], nameAr: 'فرع ممنوع', active: true
+  }).error === 'BRANCH_NOT_ASSIGNED');
+check('a doctor cannot schedule another doctor\'s reason',
+  api.adminSave('123456', 'availability', {
+    doctorId: 'D1', clinicId: 'C1', reasonId: 'R4', weekdays: [1],
+    fromTime: '09:00', toTime: '10:00', slotMin: 30, active: true
+  }).error === 'REASON_NOT_OWNED');
+check('the admin also cannot schedule a reason for the wrong doctor',
+  api.adminSave(ADMIN, 'availability', {
+    doctorId: 'D2', clinicId: 'C1', reasonId: 'R2', weekdays: [1],
+    fromTime: '09:00', toTime: '10:00', slotMin: 30, active: true
+  }).error === 'REASON_NOT_OWNED');
+
+const ownBlock = api.adminSave(ADMIN, 'availability', {
+  doctorId: 'D1', clinicId: 'C1', reasonId: ownReason.id, weekdays: [6],
+  fromTime: '10:00', toTime: '11:00', slotMin: 20, active: true
+});
+check('a new reason becomes bookable only after a matching schedule block',
+  ownBlock.ok === true &&
+  api.getBootstrap().reasons.some((r) => r.id === ownReason.id),
+  JSON.stringify(ownBlock));
+check('archiving a reason deletes all of its schedule blocks',
+  api.adminSave(ADMIN, 'reason', {
+    id: ownReason.id, doctorId: 'D1', clinicIds: ['C1'], nameAr: 'سبب خاص بالطبيب',
+    durationMin: 20, leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: false
+  }).ok === true &&
+  api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => a.reason_id === ownReason.id).length === 0 &&
+  !api.getBootstrap().reasons.some((r) => r.id === ownReason.id));
+
+const copied = api.adminCopyReason(ADMIN, 'R1', [{ doctorId: 'D2', clinicIds: ['C1'] }]);
+const copiedRow = copied.ok && copied.copies.length
+  ? api.Db.findById(api.SHEET.REASONS, 'reason_id', copied.copies[0].id) : null;
+check('copying a reason creates an independent row for the target doctor',
+  copied.ok === true && copiedRow && copiedRow.doctor_id === 'D2' &&
+  copiedRow.clinic_ids === 'C1' && copiedRow.reason_id !== 'R1',
+  JSON.stringify({ result: copied, row: copiedRow }));
+check('a copy target branch must belong to the target doctor',
+  api.adminCopyReason(ADMIN, 'R1', [{ doctorId: 'D2', clinicIds: ['C2'] }]).error === 'BRANCH_NOT_ASSIGNED');
+if (copiedRow) {
+  api.adminSave(ADMIN, 'reason', {
+    id: copiedRow.reason_id, doctorId: 'D2', clinicIds: ['C1'], nameAr: 'اسم معدل',
+    durationMin: 30, leadHours: 4, bookDaysAhead: 14, maxPerDay: 20, active: true
+  });
+  check('editing one copy never changes the source reason',
+    api.Db.findById(api.SHEET.REASONS, 'reason_id', 'R1').name_ar !== 'اسم معدل');
+  api.adminSave(ADMIN, 'reason', {
+    id: copiedRow.reason_id, doctorId: 'D2', clinicIds: ['C1'], nameAr: 'اسم معدل',
+    durationMin: 30, leadHours: 4, bookDaysAhead: 14, maxPerDay: 20, active: false
+  });
+}
+
+const addC3 = api.adminSave(ADMIN, 'doctor', {
+  id: 'D1', nameAr: 'د. أحمد', specialtyAr: 'باطنة', code: 'ah', clinicIds: ['C1', 'C3'], active: true
+});
+const branchReason = api.adminSave(ADMIN, 'reason', {
+  doctorId: 'D1', clinicIds: ['C1', 'C3'], nameAr: 'سبب فرعين',
+  durationMin: 20, leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: true
+});
+const c3Block = api.adminSave(ADMIN, 'availability', {
+  doctorId: 'D1', clinicId: 'C3', reasonId: branchReason.id, weekdays: [6],
+  fromTime: '12:00', toTime: '13:00', slotMin: 20, active: true
+});
+const c1Block = api.adminSave(ADMIN, 'availability', {
+  doctorId: 'D1', clinicId: 'C1', reasonId: branchReason.id, weekdays: [6],
+  fromTime: '12:00', toTime: '13:00', slotMin: 20, active: true
+});
+check('a reason can start in two branches with separate schedule blocks',
+  addC3.ok === true && branchReason.ok === true && c3Block.ok === true && c1Block.ok === true,
+  JSON.stringify({ addC3, branchReason, c3Block, c1Block }));
+const dropC3 = api.adminSave(ADMIN, 'reason', {
+  id: branchReason.id, doctorId: 'D1', clinicIds: ['C1'], nameAr: 'سبب فرعين',
+  durationMin: 20, leadHours: 0, bookDaysAhead: 14, maxPerDay: 5, active: true
+});
+const branchRows = api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => a.reason_id === branchReason.id);
+check('removing a branch from a reason deletes only that branch\'s blocks',
+  dropC3.ok === true &&
+  branchRows.length === 1 && branchRows[0].clinic_id === 'C1',
+  JSON.stringify({ result: dropC3, rows: branchRows.map((a) => a.clinic_id) }));
+check('removing a branch from a doctor strips it from their reasons and blocks',
+  api.adminSave(ADMIN, 'doctor', {
+    id: 'D1', nameAr: 'د. أحمد', specialtyAr: 'باطنة', code: 'ah', clinicIds: ['C1'], active: true
+  }).ok === true &&
+  api.reasonClinicIds(api.Db.findById(api.SHEET.REASONS, 'reason_id', branchReason.id)).indexOf('C3') === -1 &&
+  api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => a.clinic_id === 'C3').length === 0);
+
 check('two doctors cannot share a PIN',
   api.adminSetDoctorPin(ADMIN, 'D2', '123456').error === 'PIN_CONFLICT');
 check('a doctor can change their own PIN',
@@ -1085,9 +1210,9 @@ check('the public config carries the pause and its message',
   pausedConfig.bookingsPaused === true && pausedConfig.pauseMessage === 'مغلق للعطلة',
   JSON.stringify({ paused: pausedConfig.bookingsPaused, message: pausedConfig.pauseMessage }));
 
-const pausedSlot = firstFreeSlot(api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R2' }));
+const pausedSlot = firstFreeSlot(api.generateSlots({ clinicId: 'C1', doctorId: 'D2', reasonId: 'R4' }));
 const pausedBooking = api.submitBooking({
-  clinicId: 'C1', doctorId: 'D2', reasonId: 'R2',
+  clinicId: 'C1', doctorId: 'D2', reasonId: 'R4',
   date: pausedSlot.date, start: pausedSlot.start,
   name: 'مريض الإيقاف', phone: '01055550000', phoneConfirm: '01055550000', consent: 'true'
 });
@@ -1117,7 +1242,7 @@ check('a WhatsApp template override is saved', templateSave.ok === true);
 check('the override is used by the effective templates',
   api.getWaTemplates().confirm.text === 'أهلاً {name} — موعدك مع {doctor}');
 const templateBooking = api.submitBooking({
-  clinicId: 'C1', doctorId: 'D2', reasonId: 'R2',
+  clinicId: 'C1', doctorId: 'D2', reasonId: 'R4',
   date: pausedSlot.date, start: pausedSlot.start,
   name: 'مريض القالب', phone: '01055550001', phoneConfirm: '01055550001', consent: 'true'
 });
@@ -1151,6 +1276,31 @@ check('the admin code still works on the reception board',
   api.getStaffBoard(api.todayStr(), 'NEW-ADMIN').ok !== false);
 check('a second bootstrap is refused once an admin code exists',
   api.adminBootstrap('NEW-STAFF', 'ANOTHER').error === 'ALREADY_SET');
+
+/* ---- legacy global reasons become per-doctor copies ---- */
+reset();
+api.Db.rows(api.SHEET.REASONS).filter((r) => ['R1', 'R2', 'R3'].indexOf(r.reason_id) !== -1).forEach((r) => {
+  api.Db.update(api.SHEET.REASONS, 'reason_id', r.reason_id, { doctor_id: '', clinic_ids: '' });
+});
+api.Db.update(api.SHEET.AVAILABILITY, 'availability_id', 'A4', { reason_id: 'R2' });
+api.Db.update(api.SHEET.AVAILABILITY, 'availability_id', 'A5', { reason_id: 'R2' });
+const legacyMigration = api.migrateReasonsToDoctors();
+const migratedReasons = api.Db.rows(api.SHEET.REASONS);
+const legacyOriginals = migratedReasons.filter((r) => ['R1', 'R2', 'R3'].indexOf(r.reason_id) !== -1);
+const d1LegacyCopy = migratedReasons.filter((r) => r.doctor_id === 'D1' && r.name_ar === 'فحص أولي')[0];
+const d2LegacyCopy = migratedReasons.filter((r) => r.doctor_id === 'D2' && r.name_ar === 'استشارة')[0];
+check('legacy global reasons are archived after migration',
+  legacyMigration.ok === true && legacyOriginals.every((r) => !api.isActive(r)),
+  JSON.stringify(legacyMigration));
+check('migration creates independent copies per doctor and repoints schedule rows',
+  !!d1LegacyCopy && !!d2LegacyCopy && d1LegacyCopy.reason_id !== d2LegacyCopy.reason_id &&
+  api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => ['A1', 'A2'].indexOf(a.availability_id) !== -1)
+    .every((a) => a.reason_id === d1LegacyCopy.reason_id) &&
+  api.Db.rows(api.SHEET.AVAILABILITY).filter((a) => a.availability_id === 'A4')[0].reason_id === d2LegacyCopy.reason_id,
+  JSON.stringify({ d1: d1LegacyCopy, d2: d2LegacyCopy, av: api.Db.rows(api.SHEET.AVAILABILITY) }));
+check('migration is idempotent',
+  api.migrateReasonsToDoctors().copies === 0);
+
 
 // Production loads .gs files in its own order; an alphabetical pass is a useful
 // proxy for "AdminApi.gs may run before Config.gs". Top-level initializers must

@@ -35,8 +35,10 @@ function generateSlots(req) {
   if (!clinic || !isActive(clinic)) return { ok: false, error: 'CLINIC_NOT_FOUND' };
   if (!doctor || !isActive(doctor)) return { ok: false, error: 'DOCTOR_NOT_FOUND' };
   if (!reason || !isActive(reason)) return { ok: false, error: 'REASON_NOT_FOUND' };
+  if (str(reason.doctor_id) !== doctorId) return { ok: false, error: 'REASON_NOT_FOUND' };
+  if (!reasonServesClinic(reason, clinicId)) return { ok: false, error: 'REASON_NOT_IN_CLINIC' };
 
-  const clinicIds = str(doctor.clinic_ids).split(',').map(function (s) { return s.trim(); });
+  const clinicIds = splitIds(doctor.clinic_ids);
   if (clinicIds.indexOf(clinicId) === -1) return { ok: false, error: 'DOCTOR_NOT_IN_CLINIC' };
 
   const slotLen = Number(reason.duration_min) || 30;

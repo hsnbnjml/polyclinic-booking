@@ -63,9 +63,14 @@ order (IDs must match across sheets — keep `C1`, `D1`, `R1` style):
    `code` is optional: two Latin letters used in the patient's booking reference
    (`AE` → `ae-20261018-1`). Leave it empty to guess the letters from the doctor's name; the
    configuration check warns if two doctors end up with the same letters.
-3. **Reasons** — the visit types. `duration_min` is the slot length, `lead_hours` the minimum notice,
-   `book_days_ahead` how far ahead patients may book, `max_per_day` the daily cap.
+3. **Reasons** — the visit types. Every reason belongs to **one doctor** (`doctor_id`) and lists the
+   branches where that doctor offers it (`clinic_ids`, a subset of the doctor's `clinic_ids`).
+   `duration_min` is the slot length, `lead_hours` the minimum notice, `book_days_ahead` how far ahead
+   patients may book, `max_per_day` the daily cap. Do not share one reason row between doctors: use
+   **أسباب الزيارة → نسخ** in the settings page to create independent copies.
 4. **Availability** — the actual rule. One row per doctor × clinic × reason × weekday:
+   - `doctor_id`, `clinic_id` and `reason_id` must all agree: the reason must be owned by that doctor
+     and must include that branch in `clinic_ids`. The server rejects mismatches.
    - `weekday`: `0`=Sunday, `1`=Monday, `2`=Tuesday, `3`=Wednesday, `4`=Thursday, `5`=Friday, `6`=Saturday
    - `from_time` / `to_time`: `HH:mm` (24-hour), e.g. `09:00` and `16:00`
    - leave `slot_min` empty to use the reason's duration; use `max_per_day_override` only when a
@@ -97,8 +102,8 @@ Staff screen: append `?page=staff` to that URL, e.g.
 Settings page: append `?page=admin` (or press **الإعدادات** on the staff screen). The first visit
 asks for the current staff code, then creates a **separate admin code** (6+ characters). After that,
 the staff code no longer opens settings. Each doctor can be given a 4–8 digit PIN from **الأطباء →
-كود الدخول**; it opens only that doctor's own schedule. The full Arabic walkthrough is
-`docs/admin-guide-ar.md`.
+كود الدخول**; it opens only that doctor's own **مواعيدي** (schedule), **أسبابي** (reasons) and
+**كود الدخول** (PIN). The full Arabic walkthrough is `docs/admin-guide-ar.md`.
 
 Campaign links: `…/exec?src=instagram&clinic=C1&doctor=D1&reason=R1` pre-selects and jumps ahead —
 useful for a doctor-specific or reason-specific post. `src` is stored per booking so you can see
@@ -113,6 +118,18 @@ which channel produced bookings.
 > After a command-line deploy, open **Manage deployments**, edit that deployment and set **Anyone**
 > once. Version bumps through the same edit dialog keep both the URL and the access setting.
 
+### Upgrading an existing sheet to per-doctor reasons
+
+Take **نسخة احتياطية الآن** before deploying this version. On the first admin login, the server adds
+the new `Reasons.doctor_id` and `Reasons.clinic_ids` columns and runs `migrateReasonsToDoctors()`.
+For every active legacy reason (blank `doctor_id`), it creates an independent copy for each doctor who
+had active availability for that reason, repoints those availability rows, and archives the original
+row so old bookings keep their readable reason name. Legacy reasons with no schedule are archived.
+The migration is idempotent; running the settings page again does not duplicate anything.
+
+After the upgrade, check **نظرة عامة** for warnings, open a couple of doctors' schedules, and confirm
+each reason now appears under the correct doctor and branches before patients use the link.
+
 ## 7. Test the whole loop
 
 1. Book a real appointment through the patient page with your own phone number.
@@ -123,7 +140,9 @@ which channel produced bookings.
 6. Export Excel from the staff screen and open the file.
 7. Cancel the test booking from the staff screen and confirm the slot reappears on the booking page.
 8. Open **الإعدادات** → **الأطباء** → set a test doctor PIN. Log out, enter the PIN, and confirm the
-   doctor sees only **مواعيدي** and **كود الدخول** — no branches, no patient data.
+   doctor sees only **مواعيدي** و**أسبابي** و**كود الدخول** — no branches, no other doctors' reasons,
+   no patient data. Add a reason from **أسبابي**, give it a time from **مواعيدي**, and check it appears
+   on the patient page.
 9. From **نظرة عامة**, pause bookings and confirm the patient page shows the pause message; resume.
    Then make a small text change under **النصوص** and confirm it appears on a fresh patient load.
 10. Press **نسخة احتياطية الآن** and confirm a Drive copy is created.
@@ -142,7 +161,8 @@ which channel produced bookings.
 |------|------|-----|
 | Holiday / leave | as needed | **الإعدادات → الإجازات**, or a calendar event titled `BLOCK [doctor:D1]` |
 | Add a doctor / reason / hours | as needed | **الإعدادات → الأطباء / أسباب الزيارة / الجدول** (or a new row in the relevant sheet) |
-| Doctor changes their hours | as needed | the doctor opens **الإعدادات** with their PIN → **مواعيدي**; or the admin edits **الجدول** |
+| Copy a reason to another doctor | as needed | **الإعدادات → أسباب الزيارة → نسخ**, then choose the target doctor and their branches for that copy. Schedules are not copied. |
+| Doctor changes their hours or reasons | as needed | the doctor opens **الإعدادات** with their PIN → **مواعيدي** or **أسبابي**; or the admin edits **الجدول / أسباب الزيارة** |
 | Reset a forgotten doctor PIN | as needed | **الإعدادات → الأطباء → كود الدخول** |
 | Stop new bookings temporarily | as needed | **الإعدادات → نظرة عامة → إيقاف الحجز مؤقتاً** |
 | Reports | monthly | staff screen → تصدير Excel (a Drive file — the clinic's Google account must be signed in on that device; CSV downloads directly), or `Report_KPIs` |
@@ -156,6 +176,8 @@ which channel produced bookings.
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Patient page shows no slots | no `Availability` row matches, or a blackout, or the window is too short | run **فحص الإعدادات** |
+| A reason is missing from a doctor's schedule dropdown | the reason does not belong to that doctor, or it is not enabled in the selected branch, or it is archived | open **أسباب الزيارة**, check the owner and branch list, then add a time in **الجدول** |
+| A reason is missing from the patient page | it has no active schedule block in an active branch, or the doctor/branch is archived | add a matching time; run **فحص الإعدادات** |
 | Staff screen rejects the code | code in `Settings` differs from what was typed | re-check `staff_code`; clear the browser's saved code by opening the URL in a private window |
 | Settings page asks for a code, but the admin code was forgotten | only the staff code is known | open the `Settings` sheet and read/reset `admin_code` from the clinic's Google account |
 | Settings page says the staff code cannot open it | the separate admin code already exists | use the admin code, or read/reset `admin_code` in the `Settings` sheet |

@@ -19,13 +19,16 @@ actually lives.
 | 8 | Doctor specialty | Doctors → `specialty_ar` | باطنة وأمراض القلب | Management |
 | 9 | Which branch each doctor serves | Doctors → `clinic_ids` | `C1,C2` | Management |
 | 10 | Colour per doctor on the calendar | Doctors → `color` | teal / blue / purple | Us |
-| 11 | Approved visit reasons | Reasons → `name_ar` | فحص أولي / استشارة / متابعة | **Doctor** |
+| 11 | Approved visit reasons, **per doctor** | Reasons → `name_ar` + `doctor_id` | فحص أولي / استشارة / متابعة | **Doctor** |
+| 11a | Branches where each reason is offered | Reasons → `clinic_ids` (subset of the doctor's `clinic_ids`) | `C1` or `C1,C2` | **Doctor** + Management |
 | 12 | Duration of each visit type | Reasons → `duration_min` | 45 / 30 / 15 | **Doctor** |
 | 13 | Minimum notice before booking | Reasons → `lead_hours` | 12 ساعة للفحص | **Doctor** |
 | 14 | How far ahead patients may book | Reasons → `book_days_ahead` | 21 يوماً | **Doctor** |
 | 15 | Daily cap per visit type | Reasons → `max_per_day` | 8 مرضى | **Doctor** |
-| 16 | Each doctor's hours per visit reason | Availability rows | الأحد والأربعاء 09:00–16:00 | **Doctor** |
+| 16 | Each doctor's hours per doctor × branch × reason | Availability rows | الأحد والأربعاء 09:00–16:00 | **Doctor** |
 | 17 | Any weekday overrides | Availability → `max_per_day_override` | الأحد 6 فقط | **Doctor** |
+| 17a | Which reasons may be copied to other doctors, and to which branches | process only; الإعدادات → أسباب الزيارة → نسخ | copy «استشارة» to د. سارة at `C1` only | Management + doctors |
+| 17b | What happens when a doctor leaves a branch or a reason is retired | process only; archive/remove branch | keep old bookings, hide new ones | Management |
 | 18 | Holidays and closures | Blackouts → `date` | `2026-10-30..2026-11-01` | Management |
 | 19 | Who maintains holidays/blocks | process, not data | الاستقبال | Management |
 | 20 | Clinic WhatsApp number (patients reply to it) | **الإعدادات → الإعدادات → رقم واتساب** | +20…| Management |
@@ -46,6 +49,17 @@ actually lives.
 | 35 | Who verifies the weekly backup and the on-demand copy | process, not data | one named person | Management |
 | 36 | Review of the Arabic admin guide | `docs/admin-guide-ar.md` | mark unclear steps | Us + Management |
 
+**Visit reasons are per doctor, not shared.** One reason belongs to exactly one doctor and lists one or
+more of that doctor's branches. A doctor can create their own reasons immediately (they become bookable
+after a schedule block is added). The admin can edit any reason and use **نسخ** to create independent
+copies for other doctors, choosing the branches for each copy. Changing the doctor on an existing reason
+is not allowed: copy it, then archive the old one.
+
+Archiving a reason hides it from patients and deletes all of its schedule blocks; the row stays in the
+sheet for history. Removing a branch from a reason deletes only that reason's blocks in that branch.
+Removing a branch from a doctor also strips it from that doctor's reasons, deletes the affected blocks,
+and archives any reason left with no branch.
+
 The four WhatsApp templates currently seeded, to be reviewed and reworded:
 
 1. **تأكيد الحجز** — patient, doctor, date, time, reason, booking reference.
@@ -62,7 +76,8 @@ if a branch has neither, the location lines disappear from the message entirely.
 
 After the first setup, **الإعدادات** (`/exec?page=admin`) covers:
 
-- branches, doctors, visit reasons and their order;
+- branches, doctors and visit reasons, including each reason's owning doctor, branches and global order;
+- copying a reason to one or more doctors with a separate branch choice per copy;
 - weekly availability per doctor × branch × reason, including multiple weekdays at once;
 - holidays / closures, whole-day or partial, for the clinic, a branch or one doctor;
 - WhatsApp message wording, patient-page text, brand name/colours/logo, contact numbers and
@@ -71,8 +86,13 @@ After the first setup, **الإعدادات** (`/exec?page=admin`) covers:
 - staff/admin codes, and resetting a doctor's PIN;
 - on-demand backup and the audit log.
 
-Archiving hides a branch, doctor or reason from new bookings without deleting history. The settings
-page never shows patient data. See `docs/admin-guide-ar.md` for the click-by-click guide.
+Doctors also get a small self-service area: **مواعيدي** (their own schedule), **أسبابي** (their own
+reasons) and **كود الدخول** (their PIN). They never see another doctor's reasons, patient names or
+bookings.
+
+Archiving hides a branch, doctor or reason from new bookings without deleting history. Archiving a
+reason also deletes its schedule blocks; archiving a branch or doctor does not delete old bookings.
+The settings page never shows patient data. See `docs/admin-guide-ar.md` for the click-by-click guide.
 
 ## Questions that decide behaviour (not just data)
 
@@ -101,9 +121,10 @@ page never shows patient data. See `docs/admin-guide-ar.md` for the click-by-cli
 ## Ready to launch, with placeholders still in place?
 
 Yes — the system is walkable end-to-end with placeholder data, which is exactly how the internal
-trial (technical plan, phase 3) should run. Items **11–17** (the doctor's own rules) and **26–27**
-(native Arabic copy review) are the content blockers for the public link. Item **32** (the separate
-admin code) is not a patient blocker, but set it before handing the settings page to the clinic.
+trial (technical plan, phase 3) should run. Items **11–17b** (each doctor's reasons, branches and
+schedule rules) and **26–27** (native Arabic copy review) are the content blockers for the public link.
+Item **32** (the separate admin code) is not a patient blocker, but set it before handing the settings
+page to the clinic.
 
 Item **31** is optional: without it the booking reference is guessed from the doctor's name
 (`د. أشرف الزماني` → `aa-20261018-1`, because Arabic 'ا' can be a, e or i). Write the two letters

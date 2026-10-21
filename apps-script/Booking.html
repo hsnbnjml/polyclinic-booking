@@ -168,6 +168,15 @@
     if (PRESET.reasonId) {
       S.reason = find(S.boot.reasons, 'id', PRESET.reasonId);
     }
+    // A reason now belongs to one doctor and specific branches, so a stale
+    // campaign link must not jump to slots for a doctor who does not offer it.
+    if (S.reason) {
+      var linked = (S.reason.links || []).some(function (l) {
+        return (!S.clinic || l.clinicId === S.clinic.id) &&
+          (!S.doctor || l.doctorId === S.doctor.id);
+      });
+      if (!linked) S.reason = null;
+    }
     if (S.clinic && S.doctor && S.reason) return;
     if (S.clinic && S.doctor) { S.reason = null; }
     if (S.clinic && !S.doctor) { S.doctor = null; }

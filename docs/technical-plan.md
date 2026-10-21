@@ -66,7 +66,7 @@ minutes-since-midnight, which also makes the engine deterministic in tests.
 |-------|---------|
 | `Clinics` | clinic_id, name_ar, address_ar, map_link, phone, working_hours_ar, active, sort_order |
 | `Doctors` | doctor_id, name_ar, specialty_ar, clinic_ids, color, active, code, sort_order |
-| `Reasons` | reason_id, name_ar, description_ar, duration_min, lead_hours, book_days_ahead, max_per_day, active, sort_order |
+| `Reasons` | reason_id, name_ar, description_ar, duration_min, lead_hours, book_days_ahead, max_per_day, active, sort_order, doctor_id, clinic_ids |
 | `Availability` | availability_id, doctor_id, clinic_id, reason_id, weekday, from_time, to_time, slot_min, max_per_day_override, valid_from, valid_to, active |
 | `Blackouts` | blackout_id, date, scope_type, scope_id, from_time, to_time, note |
 | `Bookings` | booking_id, created_at, clinic_id, doctor_id, reason_id, date, start_time, end_time, name, phone_raw, phone_norm, email, extra_json, status, status_at, status_by, rescheduled_from, staff_note, wa_sent_at, wa_template, event_id, source |
@@ -83,11 +83,26 @@ data in an existing sheet. It holds the two Latin letters used in the patient's 
 (`AE` → `ae-20261018-1`). Left empty, the letters are guessed from the name (first and last word);
 `checkConfiguration()` warns when two active doctors end up with the same code.
 
+Each `Reasons` row belongs to exactly one doctor (`doctor_id`) and lists one or more of that doctor's
+branches in `clinic_ids` (comma-separated IDs, like `Doctors.clinic_ids`). A reason is never shared:
+copying creates independent rows, each with its own doctor and branch list. The doctor on an existing
+reason is immutable; move a reason by copying it and archiving the old row. `sort_order` is global
+across all reasons, not per doctor.
+
 The settings page archives branches/doctors/reasons (`active = FALSE`) instead of deleting rows.
-Schedules can be deleted, but archiving keeps history and old bookings readable. `sort_order` is
-also appended last; blank values fall back to sheet order, so an upgraded sheet keeps its current
-order until the clinic reorders it. `adminMigrateSchema()` adds missing `Access`, `code` and
-`sort_order` columns on the first settings visit — additively, without moving existing data.
+Archiving a reason also deletes all of its `Availability` rows. Removing a branch from a reason deletes
+that reason's blocks in that branch. Removing a branch from a doctor strips it from the doctor's reasons,
+deletes the affected blocks, and archives any reason left with no branch. Schedule rows can be deleted;
+old bookings remain readable through the archived reason row. `sort_order` is appended last; blank
+values fall back to sheet order, so an upgraded sheet keeps its current order until the clinic reorders
+it. `adminMigrateSchema()` adds missing `Access`, `code`, `sort_order`, `doctor_id` and `clinic_ids`
+columns on the first settings visit — additively, without moving existing data.
+
+`migrateReasonsToDoctors()` runs during setup and the first admin login after the upgrade. For each
+active legacy reason (blank `doctor_id`), it groups active availability by doctor, creates one
+independent copy per doctor, repoints those availability rows to the copy, and archives the original.
+Legacy reasons with no active schedule are archived rather than guessed onto a doctor. It is
+idempotent: only active rows with a blank `doctor_id` are migrated.
 
 Settings keys added for the admin page include `admin_code`, `bookings_paused`, `pause_message_ar`,
 the patient-page text overrides (`booking_subtitle_ar`, `name_hint_ar`, `phone_hint_ar`,
@@ -96,13 +111,14 @@ and the `wa_template_*` overrides. A blank text override means the built-in defa
 
 ## Slot engine rules (in order)
 
-1. Doctor must serve the chosen clinic, and have an `Availability` row for this reason (otherwise: empty list, not an error).
-2. Date must be inside the window: `min(reason.book_days_ahead, settings.booking_window_days)`, capped at 90 days.
-3. Slot must clear the lead time: `reason.lead_hours` else `settings.min_lead_hours`.
-4. Slot must not touch a `Blackouts` row (overlap, or whole-day).
-5. Slot must not already be held by a booking with status `confirmed` or `attended` — one patient per slot.
-6. The day must respect the cap: `availability.max_per_day_override` else `reason.max_per_day`, counted against bookings for that doctor+date with an occupying status, plus slots already found in this pass.
-7. Slot length = `availability.slot_min` else `reason.duration_min`.
+1. Doctor must be active and serve the chosen clinic. The reason must be active, owned by that doctor, and list that clinic in `clinic_ids`; a reason owned by another doctor or offered elsewhere is rejected, not treated as an empty day.
+2. The doctor must have a matching `Availability` row for this reason and branch. No matching block means an empty list, not an error.
+3. Date must be inside the window: `min(reason.book_days_ahead, settings.booking_window_days)`, capped at 90 days.
+4. Slot must clear the lead time: `reason.lead_hours` else `settings.min_lead_hours`.
+5. Slot must not touch a `Blackouts` row (overlap, or whole-day).
+6. Slot must not already be held by a booking with status `confirmed` or `attended` — one patient per slot.
+7. The day must respect the cap: `availability.max_per_day_override` else `reason.max_per_day`, counted against bookings for that doctor+date with an occupying status, plus slots already found in this pass.
+8. Slot length = `availability.slot_min` else `reason.duration_min`.
 
 ## Booking
 
@@ -200,7 +216,7 @@ marker could be one, new booking) — by design, so "she moved twice" stays answ
 - Patient data is never returned by any unauthenticated function. `getBootstrap` and `generateSlots` return names, hours and slot times only.
 - Every staff action takes a `code` argument compared against `settings.staff_code`, and fails closed when the code is missing.
 - The settings page uses a separate `settings.admin_code`; the first one is bootstrapped from the staff code, then the staff code is refused there. Both codes are refused if they equal a doctor PIN, so one credential can never silently grant a higher role.
-- Doctor PINs are 4–8 digits, hashed with a per-doctor salt in the separate `Access` sheet. The admin payload exposes only `hasPin`; hashes and salts never leave the server. A doctor session is scoped to that doctor's availability, and the server forces `doctor_id` on writes.
+- Doctor PINs are 4–8 digits, hashed with a per-doctor salt in the separate `Access` sheet. The admin payload exposes only `hasPin`; hashes and salts never leave the server. A doctor session is scoped to that doctor's own reasons and availability; the server forces `doctor_id` on writes and refuses another doctor's reason, branch or schedule. Only the admin can copy a reason to another doctor.
 - Pausing bookings is checked in both `apiSlots` and `submitBooking`; it never blocks the staff reschedule/cancel paths.
 - Every admin write is validated server-side under a script lock and recorded in the `Log` sheet; the browser is never trusted.
 - Anti-abuse: slot locking, per-phone booking cap, honeypot field, server-side validation of every field.

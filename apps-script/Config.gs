@@ -38,7 +38,11 @@ const HEADERS = {
   ],
   [SHEET.REASONS]: [
     'reason_id', 'name_ar', 'description_ar', 'duration_min', 'lead_hours',
-    'book_days_ahead', 'max_per_day', 'active', 'sort_order'
+    'book_days_ahead', 'max_per_day', 'active', 'sort_order',
+    // Appended last on purpose: existing rows keep their column positions.
+    // Every reason belongs to exactly one doctor; a copied reason is an independent
+    // row. clinic_ids limits the reason to the branches where that doctor offers it.
+    'doctor_id', 'clinic_ids'
   ],
   [SHEET.AVAILABILITY]: [
     'availability_id', 'doctor_id', 'clinic_id', 'reason_id', 'weekday',

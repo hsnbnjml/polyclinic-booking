@@ -617,7 +617,7 @@
 
 
   var PAGE = "reception";
-  var STORE_KEY = 'polyclinic_demo_v4';
+  var STORE_KEY = 'polyclinic_demo_v5';
   var STAFF_CODE = '1234';
   var ADMIN_CODE = 'admin123';
 
@@ -976,7 +976,11 @@ const HEADERS = {
   ],
   [SHEET.REASONS]: [
     'reason_id', 'name_ar', 'description_ar', 'duration_min', 'lead_hours',
-    'book_days_ahead', 'max_per_day', 'active', 'sort_order'
+    'book_days_ahead', 'max_per_day', 'active', 'sort_order',
+    // Appended last on purpose: existing rows keep their column positions.
+    // Every reason belongs to exactly one doctor; a copied reason is an independent
+    // row. clinic_ids limits the reason to the branches where that doctor offers it.
+    'doctor_id', 'clinic_ids'
   ],
   [SHEET.AVAILABILITY]: [
     'availability_id', 'doctor_id', 'clinic_id', 'reason_id', 'weekday',
@@ -1323,6 +1327,31 @@ function str(v) {
   return v === null || v === undefined ? '' : String(v).trim();
 }
 
+/** Accepts an array or a comma-separated cell and returns clean, unique ids. */
+function splitIds(value) {
+  const raw = Object.prototype.toString.call(value) === '[object Array]'
+    ? value
+    : str(value).split(',');
+  const out = [];
+  raw.forEach(function (v) {
+    const id = str(v);
+    if (id && out.indexOf(id) === -1) out.push(id);
+  });
+  return out;
+}
+
+function reasonClinicIds(reason) {
+  return splitIds(reason && reason.clinic_ids);
+}
+
+function reasonOwnedBy(reason, doctorId) {
+  return !!reason && !!str(doctorId) && str(reason.doctor_id) === str(doctorId);
+}
+
+function reasonServesClinic(reason, clinicId) {
+  return reasonClinicIds(reason).indexOf(str(clinicId)) !== -1;
+}
+
 function isTrue(v) {
   const s = String(v).trim().toLowerCase();
   return s === 'true' || s === 'yes' || s === '1' || s === 'نعم' || s === 'y';
@@ -1619,6 +1648,8 @@ const AR = {
     BUSY: 'النظام مشغول، حاول مرة أخرى بعد لحظات.',
     REJECTED: 'تعذّر إتمام الحجز. تواصل مع الاستقبال.',
     DOCTOR_NOT_IN_CLINIC: 'هذا الطبيب لا يعمل في الفرع المختار.',
+    REASON_NOT_FOUND: 'سبب الزيارة لم يعد متاحاً. اختر سبباً آخر.',
+    REASON_NOT_IN_CLINIC: 'سبب الزيارة غير متاح في هذا الفرع. اختر فرعاً آخر.',
     NOT_FOUND: 'لم يتم العثور على البيانات.',
     STAFF_CODE: 'كود الاستقبال غير صحيح.',
     STAFF_ONLY: 'هذه العملية متاحة للاستقبال فقط.',
@@ -1746,17 +1777,31 @@ function getBootstrap() {
     };
   });
 
+  const activeDoctors = Db.rows(SHEET.DOCTORS).filter(isActive);
+  const activeDoctorIds = {};
+  activeDoctors.forEach(function (d) { activeDoctorIds[str(d.doctor_id)] = true; });
+
   const availability = Db.rows(SHEET.AVAILABILITY).filter(isActive);
   const reasons = sortRowsByOrder(Db.rows(SHEET.REASONS).filter(isActive))
+    .filter(function (r) { return !!str(r.doctor_id) && !!activeDoctorIds[str(r.doctor_id)]; })
     .map(function (r) {
+      const clinics = reasonClinicIds(r);
       return {
         id: str(r.reason_id),
+        doctorId: str(r.doctor_id),
+        clinicIds: clinics,
         nameAr: str(r.name_ar),
         descriptionAr: str(r.description_ar),
         durationMin: Number(r.duration_min) || 30,
-        // which doctors can serve this reason, and where
+        // which doctors can serve this reason, and where. A reason belongs to one
+        // doctor, but it can be offered at more than one branch; only a matching
+        // active schedule row makes it bookable.
         links: availability
-          .filter(function (a) { return str(a.reason_id) === str(r.reason_id); })
+          .filter(function (a) {
+            return str(a.reason_id) === str(r.reason_id) &&
+              str(a.doctor_id) === str(r.doctor_id) &&
+              clinics.indexOf(str(a.clinic_id)) !== -1;
+          })
           .map(function (a) { return { doctorId: str(a.doctor_id), clinicId: str(a.clinic_id) }; })
           .filter(function (v, i, arr) {
             return arr.findIndex(function (x) {
@@ -1764,7 +1809,8 @@ function getBootstrap() {
             }) === i;
           })
       };
-    });
+    })
+    .filter(function (r) { return r.links.length > 0; });
 
   return { ok: true, config: config, clinics: clinics, doctors: doctors, reasons: reasons };
 }
@@ -1806,8 +1852,10 @@ function generateSlots(req) {
   if (!clinic || !isActive(clinic)) return { ok: false, error: 'CLINIC_NOT_FOUND' };
   if (!doctor || !isActive(doctor)) return { ok: false, error: 'DOCTOR_NOT_FOUND' };
   if (!reason || !isActive(reason)) return { ok: false, error: 'REASON_NOT_FOUND' };
+  if (str(reason.doctor_id) !== doctorId) return { ok: false, error: 'REASON_NOT_FOUND' };
+  if (!reasonServesClinic(reason, clinicId)) return { ok: false, error: 'REASON_NOT_IN_CLINIC' };
 
-  const clinicIds = str(doctor.clinic_ids).split(',').map(function (s) { return s.trim(); });
+  const clinicIds = splitIds(doctor.clinic_ids);
   if (clinicIds.indexOf(clinicId) === -1) return { ok: false, error: 'DOCTOR_NOT_IN_CLINIC' };
 
   const slotLen = Number(reason.duration_min) || 30;
@@ -3498,10 +3546,12 @@ function seedPlaceholders() {
   ]);
 
   Db.appendMany(SHEET.REASONS, [
-    { reason_id: 'R1', name_ar: 'فحص أولي', description_ar: 'زيارة أولى للفحص والتشخيص', duration_min: 45, lead_hours: 12, book_days_ahead: 21, max_per_day: 10, active: 'TRUE', sort_order: 1 },
-    { reason_id: 'R2', name_ar: 'استشارة', description_ar: 'استشارة طبية عامة', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 12, active: 'TRUE', sort_order: 2 },
-    { reason_id: 'R3', name_ar: 'متابعة', description_ar: 'متابعة بعد زيارة سابقة', duration_min: 15, lead_hours: 4, book_days_ahead: 14, max_per_day: 16, active: 'TRUE', sort_order: 3 },
-    { reason_id: 'R4', name_ar: 'إجراء / جلسة', description_ar: 'إجراء بسيط أو جلسة علاجية', duration_min: 30, lead_hours: 24, book_days_ahead: 30, max_per_day: 6, active: 'FALSE', sort_order: 4 }
+    { reason_id: 'R1', doctor_id: 'D1', clinic_ids: 'C1', name_ar: 'فحص أولي', description_ar: 'زيارة أولى للفحص والتشخيص', duration_min: 45, lead_hours: 12, book_days_ahead: 21, max_per_day: 10, active: 'TRUE', sort_order: 1 },
+    { reason_id: 'R2', doctor_id: 'D1', clinic_ids: 'C1', name_ar: 'استشارة', description_ar: 'استشارة طبية عامة', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 12, active: 'TRUE', sort_order: 2 },
+    { reason_id: 'R3', doctor_id: 'D1', clinic_ids: 'C1', name_ar: 'متابعة', description_ar: 'متابعة بعد زيارة سابقة', duration_min: 15, lead_hours: 4, book_days_ahead: 14, max_per_day: 16, active: 'TRUE', sort_order: 3 },
+    { reason_id: 'R4', doctor_id: 'D2', clinic_ids: 'C1', name_ar: 'استشارة', description_ar: 'استشارة طبية عامة', duration_min: 30, lead_hours: 4, book_days_ahead: 14, max_per_day: 12, active: 'TRUE', sort_order: 2 },
+    { reason_id: 'R5', doctor_id: 'D2', clinic_ids: 'C1', name_ar: 'متابعة', description_ar: 'متابعة بعد زيارة سابقة', duration_min: 15, lead_hours: 4, book_days_ahead: 14, max_per_day: 16, active: 'TRUE', sort_order: 3 },
+    { reason_id: 'R6', doctor_id: 'D2', clinic_ids: 'C1', name_ar: 'إجراء / جلسة', description_ar: 'إجراء بسيط أو جلسة علاجية', duration_min: 30, lead_hours: 24, book_days_ahead: 30, max_per_day: 6, active: 'FALSE', sort_order: 4 }
   ]);
 
   // weekday: 0 = الأحد … 6 = السبت. The doctor's rule from the brief:
@@ -3511,9 +3561,10 @@ function seedPlaceholders() {
     { availability_id: 'A2', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R1', weekday: 3, from_time: '09:00', to_time: '16:00', slot_min: 45, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
     { availability_id: 'A3', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R3', weekday: 0, from_time: '16:00', to_time: '19:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' },
     { availability_id: 'A4', doctor_id: 'D1', clinic_id: 'C1', reason_id: 'R3', weekday: 3, from_time: '16:00', to_time: '19:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' },
-    { availability_id: 'A5', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2', weekday: 1, from_time: '10:00', to_time: '14:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
-    { availability_id: 'A6', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2', weekday: 2, from_time: '10:00', to_time: '14:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
-    { availability_id: 'A7', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R3', weekday: 1, from_time: '14:00', to_time: '17:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' }
+    { availability_id: 'A5', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4', weekday: 1, from_time: '10:00', to_time: '14:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A6', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4', weekday: 2, from_time: '10:00', to_time: '14:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A7', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R5', weekday: 1, from_time: '14:00', to_time: '17:00', slot_min: 15, max_per_day_override: 12, valid_from: '', valid_to: '', active: 'TRUE' },
+    { availability_id: 'A8', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4', weekday: 0, from_time: '14:00', to_time: '17:00', slot_min: 30, max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE' }
   ]);
 
   Db.appendMany(SHEET.BLACKOUTS, [
@@ -3528,6 +3579,100 @@ function seedPlaceholders() {
   invalidateSettingsCache();
   logInfo('seedPlaceholders', 'Seeded placeholder config');
   return { ok: true, seeded: true };
+}
+
+/**
+ * Upgrade old global reasons into independent per-doctor rows.
+ *
+ * A reason used to belong to no doctor; the doctor+branch link lived only in the
+ * Availability sheet. The new model requires every active reason to have exactly
+ * one doctor and an explicit branch list. For each legacy reason we keep one copy
+ * for every doctor who actually had a schedule for it, repoint those schedule rows,
+ * and archive the original row so old bookings keep their readable reason name.
+ * Legacy reasons with no schedule are archived instead of guessed into a doctor.
+ *
+ * Safe to run repeatedly: only active rows with a blank doctor_id are migrated.
+ */
+function migrateReasonsToDoctors() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss.getSheetByName(SHEET.REASONS)) return { ok: true, copies: 0, archived: 0 };
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return { ok: false, error: 'BUSY' };
+  try {
+    const doctors = Db.rows(SHEET.DOCTORS);
+    const doctorById = {};
+    doctors.forEach(function (d) { doctorById[str(d.doctor_id)] = d; });
+    const availability = Db.rows(SHEET.AVAILABILITY);
+    const allReasons = Db.rows(SHEET.REASONS);
+    let nextReason = 0;
+    allReasons.forEach(function (r) {
+      const m = str(r.reason_id).match(/^R(\d+)$/i);
+      if (m) nextReason = Math.max(nextReason, Number(m[1]));
+    });
+
+    const legacy = allReasons.filter(function (r) {
+      return isActive(r) && !str(r.doctor_id);
+    });
+    let copies = 0;
+    let archived = 0;
+
+    legacy.forEach(function (old) {
+      const oldId = str(old.reason_id);
+      const groups = {};
+      availability.filter(function (a) {
+        return isActive(a) && str(a.reason_id) === oldId && str(a.doctor_id);
+      }).forEach(function (a) {
+        const doctorId = str(a.doctor_id);
+        if (!groups[doctorId]) groups[doctorId] = [];
+        groups[doctorId].push(a);
+      });
+
+      Object.keys(groups).forEach(function (doctorId) {
+        const doctor = doctorById[doctorId];
+        if (!doctor) return;
+        const doctorBranches = splitIds(doctor.clinic_ids);
+        const usedBranches = [];
+        groups[doctorId].forEach(function (a) {
+          const c = str(a.clinic_id);
+          if (c && usedBranches.indexOf(c) === -1) usedBranches.push(c);
+        });
+        let branchIds = usedBranches.filter(function (c) { return doctorBranches.indexOf(c) !== -1; });
+        if (!branchIds.length) branchIds = doctorBranches.slice();
+        if (!branchIds.length) return;
+
+        nextReason += 1;
+        const newId = 'R' + nextReason;
+        Db.append(SHEET.REASONS, {
+          reason_id: newId,
+          name_ar: str(old.name_ar),
+          description_ar: str(old.description_ar),
+          duration_min: Number(old.duration_min) || 30,
+          lead_hours: str(old.lead_hours) === '' ? 4 : Number(old.lead_hours),
+          book_days_ahead: Number(old.book_days_ahead) || 14,
+          max_per_day: Number(old.max_per_day) || 0,
+          active: 'TRUE',
+          sort_order: Number(old.sort_order) || nextReason,
+          doctor_id: doctorId,
+          clinic_ids: branchIds.join(',')
+        });
+        groups[doctorId].forEach(function (a) {
+          Db.update(SHEET.AVAILABILITY, 'availability_id', str(a.availability_id), { reason_id: newId });
+        });
+        copies += 1;
+      });
+
+      // Keep the old row as an archived history entry. Bookings still point at it.
+      Db.update(SHEET.REASONS, 'reason_id', oldId, { active: 'FALSE' });
+      archived += 1;
+    });
+
+    if (copies || archived) {
+      logInfo('migrateReasonsToDoctors', 'Legacy reasons: ' + archived + ' archived, ' + copies + ' doctor copies created');
+    }
+    return { ok: true, copies: copies, archived: archived };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** Creates the shared calendar and the backup folder if they do not exist yet. */
@@ -3581,6 +3726,7 @@ function removeTriggers() {
 function setupEverything() {
   const sheetResult = createAllSheets();
   const seedResult = seedPlaceholders();
+  const reasonMigration = migrateReasonsToDoctors();
   const infra = ensureCalendarAndFolder();
   const triggers = installTriggers();
   const check = checkConfiguration();
@@ -3588,6 +3734,7 @@ function setupEverything() {
     ok: true,
     sheetsCreated: sheetResult.created,
     seeded: seedResult.seeded,
+    reasonCopiesCreated: reasonMigration.copies || 0,
     calendar: infra.calendarName,
     triggers: triggers.triggers,
     warnings: check.warnings,
@@ -3645,13 +3792,50 @@ function checkConfiguration() {
   const clinicIds = {};
   Db.rows(SHEET.CLINICS).forEach(function (c) { clinicIds[str(c.clinic_id)] = true; });
   const reasonIds = {};
-  Db.rows(SHEET.REASONS).forEach(function (r) { reasonIds[str(r.reason_id)] = true; });
+  const reasonRows = Db.rows(SHEET.REASONS);
+  reasonRows.forEach(function (r) { reasonIds[str(r.reason_id)] = true; });
+
+  reasonRows.filter(isActive).forEach(function (r) {
+    const doctorId = str(r.doctor_id);
+    if (!doctorId) {
+      warnings.push('سبب الزيارة «' + str(r.name_ar) + '» نشط لكنه غير مرتبط بطبيب.');
+      return;
+    }
+    const d = Db.rows(SHEET.DOCTORS).filter(function (x) { return str(x.doctor_id) === doctorId; })[0];
+    if (!d) {
+      warnings.push('سبب الزيارة «' + str(r.name_ar) + '» مرتبط بطبيب غير موجود (' + doctorId + ').');
+      return;
+    }
+    const allowed = splitIds(d.clinic_ids);
+    const used = reasonClinicIds(r);
+    if (!used.length) {
+      warnings.push('سبب الزيارة «' + str(r.name_ar) + '» نشط لكنه غير مرتبط بأي فرع.');
+    } else {
+      used.forEach(function (c) {
+        if (allowed.indexOf(c) === -1) {
+          warnings.push('سبب الزيارة «' + str(r.name_ar) + '» مرتبط بفرع غير مرتبط بالطبيب (' + c + ').');
+        }
+      });
+    }
+  });
+
   Db.rows(SHEET.AVAILABILITY).forEach(function (a) {
     if (!doctorIds[str(a.doctor_id)]) warnings.push('Availability ' + str(a.availability_id) + ': طبيب غير موجود (' + str(a.doctor_id) + ')');
     if (!clinicIds[str(a.clinic_id)]) warnings.push('Availability ' + str(a.availability_id) + ': فرع غير موجود (' + str(a.clinic_id) + ')');
     if (!reasonIds[str(a.reason_id)]) warnings.push('Availability ' + str(a.availability_id) + ': سبب زيارة غير موجود (' + str(a.reason_id) + ')');
     if (parseTimeToMin(a.from_time) === null || parseTimeToMin(a.to_time) === null) {
       warnings.push('Availability ' + str(a.availability_id) + ': وقت غير صالح، يجب أن يكون HH:mm');
+    }
+    const doctor = Db.rows(SHEET.DOCTORS).filter(function (d) { return str(d.doctor_id) === str(a.doctor_id); })[0];
+    const reason = reasonRows.filter(function (r) { return str(r.reason_id) === str(a.reason_id); })[0];
+    if (doctor && splitIds(doctor.clinic_ids).indexOf(str(a.clinic_id)) === -1) {
+      warnings.push('Availability ' + str(a.availability_id) + ': الطبيب غير مرتبط بهذا الفرع.');
+    }
+    if (reason && str(reason.doctor_id) !== str(a.doctor_id)) {
+      warnings.push('Availability ' + str(a.availability_id) + ': سبب الزيارة يخص طبيباً آخر.');
+    }
+    if (reason && !reasonServesClinic(reason, a.clinic_id)) {
+      warnings.push('Availability ' + str(a.availability_id) + ': سبب الزيارة غير متاح في هذا الفرع.');
     }
   });
 
@@ -3700,12 +3884,13 @@ function showAlert(title, text) {
  * AdminApi.gs — the settings page and doctor self-service.
  *
  * Access model:
- *   - admin_code  → full settings (separate from the reception staff_code)
- *   - doctor PIN  → only that doctor's own availability
+ *   - admin_code  → full settings
+ *   - doctor PIN  → only that doctor's own reasons, schedule and branch links
  *
- * The first admin code is created from the staff code, so the clinic can set it
- * without touching the script editor. Every write is validated here and logged
- * to the Log sheet under context "admin"; the browser is never trusted.
+ * Every reason row belongs to exactly one doctor. Sharing means copying the reason
+ * into an independent row for another doctor; a doctor's edits never change another
+ * doctor's copy. Every write is validated here and logged to the Log sheet under
+ * context "admin"; the browser is never trusted.
  */
 
 const ADMIN_WA_PLACEHOLDERS = [
@@ -3764,14 +3949,11 @@ function adminNextId(prefix, sheetName, field) {
 }
 
 function adminParseIds(value) {
-  if (Object.prototype.toString.call(value) === '[object Array]') {
-    return value.map(function (v) { return str(v); }).filter(Boolean);
-  }
-  return str(value).split(',').map(function (v) { return str(v); }).filter(Boolean);
+  return splitIds(value);
 }
 
 function adminParseClinicIds(value) {
-  return adminParseIds(value);
+  return splitIds(value);
 }
 
 function adminActorName(actor) {
@@ -3911,6 +4093,13 @@ function adminMigrateSchema() {
     });
   }
   if (needed) createAllSheets();
+  // Existing installations may still have the old global reasons. Upgrade them
+  // lazily on the first settings visit, after the new columns exist.
+  try {
+    migrateReasonsToDoctors();
+  } catch (err) {
+    logWarn('adminMigrateSchema', 'Reason ownership migration skipped: ' + err);
+  }
 }
 
 function adminAudit(actor, action, detail) {
@@ -4062,7 +4251,7 @@ function adminAdminPayload() {
       }).length,
       activeClinics: clinics.filter(isActive).length,
       activeDoctors: doctors.filter(isActive).length,
-      activeReasons: reasons.filter(isActive).length,
+      activeReasons: reasons.filter(function (r) { return isActive(r) && !!str(r.doctor_id); }).length,
       activeBlocks: availability.filter(isActive).length
     }
   };
@@ -4075,7 +4264,9 @@ function adminDoctorPayload(actor) {
   const branches = sortRowsByOrder(Db.rows(SHEET.CLINICS).filter(function (c) {
     return isActive(c) && clinicIds.indexOf(str(c.clinic_id)) !== -1;
   })).map(adminClinicOut);
-  const reasons = sortRowsByOrder(Db.rows(SHEET.REASONS).filter(isActive)).map(adminReasonOut);
+  const reasons = sortRowsByOrder(Db.rows(SHEET.REASONS).filter(function (r) {
+    return str(r.doctor_id) === str(doctor.doctor_id);
+  })).map(adminReasonOut);
   const availability = Db.rows(SHEET.AVAILABILITY).filter(function (a) {
     return str(a.doctor_id) === str(doctor.doctor_id);
   }).map(adminAvailabilityOut);
@@ -4084,6 +4275,9 @@ function adminDoctorPayload(actor) {
   const warnings = [];
   if (!availability.filter(isActive).length) {
     warnings.push({ level: 'warn', text: 'لا توجد لديك مواعيد نشطة. أضف وقتاً ليظهر حجزك للمرضى.' });
+  }
+  if (!reasons.filter(isActive).length) {
+    warnings.push({ level: 'warn', text: 'لا توجد لديك أسباب زيارة نشطة. أضف سبباً من قسم «أسبابي» ثم أضف له وقتاً.' });
   }
   if (!branches.length) {
     warnings.push({ level: 'warn', text: 'لم يتم ربطك بأي فرع. راجع الإدارة.' });
@@ -4145,6 +4339,8 @@ function adminDoctorOut(d, access) {
 function adminReasonOut(r) {
   return {
     id: str(r.reason_id),
+    doctorId: str(r.doctor_id),
+    clinicIds: adminParseClinicIds(r.clinic_ids),
     nameAr: str(r.name_ar),
     descriptionAr: str(r.description_ar),
     durationMin: Number(r.duration_min) || 30,
@@ -4253,8 +4449,34 @@ function adminHealthWarnings() {
   });
 
   activeReasons.forEach(function (r) {
-    if (!activeAvailability.some(function (a) { return str(a.reason_id) === str(r.reason_id); })) {
-      base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» نشط لكن لا يوجد طبيب يقدمه.' });
+    const doctorId = str(r.doctor_id);
+    const owner = doctors.filter(function (d) { return str(d.doctor_id) === doctorId; })[0];
+    if (!doctorId) {
+      base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» نشط لكنه غير مرتبط بطبيب.' });
+      return;
+    }
+    if (!owner) {
+      base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» مرتبط بطبيب غير موجود (' + doctorId + ').' });
+      return;
+    }
+    if (!isActive(owner)) {
+      base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» نشط لكن طبيبه مؤرشف.' });
+    }
+    const allowedBranches = adminParseClinicIds(owner.clinic_ids);
+    const reasonBranches = reasonClinicIds(r);
+    if (!reasonBranches.length) {
+      base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» نشط لكنه غير مرتبط بأي فرع.' });
+    } else {
+      reasonBranches.forEach(function (c) {
+        if (allowedBranches.indexOf(c) === -1) {
+          base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» مرتبط بفرع غير مرتبط بالطبيب (' + c + ').' });
+        }
+      });
+    }
+    if (!activeAvailability.some(function (a) {
+      return str(a.reason_id) === str(r.reason_id) && str(a.doctor_id) === doctorId;
+    })) {
+      base.push({ level: 'warn', text: 'سبب الزيارة «' + str(r.name_ar) + '» نشط لكن لا يوجد وقت في جدول طبيبه.' });
     }
   });
 
@@ -4395,15 +4617,35 @@ function adminSaveDoctor(actor, payload) {
     Db.append(SHEET.DOCTORS, Object.assign({ doctor_id: savedId, sort_order: max + 1 }, fields));
   }
 
-  // Removing a branch should also stop its orphan schedule blocks from hanging
-  // around invisibly. Turning them off is reversible from the schedule section.
+  // Removing a branch from a doctor must not leave their reasons pointing at a
+  // branch they no longer serve. Drop the branch from those reasons, delete the
+  // matching schedule blocks, and archive a reason that is left with no branch.
   if (existing) {
     const removed = oldClinicIds.filter(function (c) { return clinicIds.indexOf(c) === -1; });
     if (removed.length) {
-      Db.rows(SHEET.AVAILABILITY).forEach(function (a) {
-        if (str(a.doctor_id) === id && removed.indexOf(str(a.clinic_id)) !== -1 && isActive(a)) {
-          Db.update(SHEET.AVAILABILITY, 'availability_id', str(a.availability_id), { active: 'FALSE' });
-        }
+      const removedIds = Db.rows(SHEET.AVAILABILITY).filter(function (a) {
+        return str(a.doctor_id) === id && removed.indexOf(str(a.clinic_id)) !== -1;
+      }).map(function (a) { return str(a.availability_id); });
+      if (removedIds.length) Db.remove(SHEET.AVAILABILITY, 'availability_id', removedIds);
+
+      Db.rows(SHEET.REASONS).filter(function (r) {
+        return str(r.doctor_id) === id;
+      }).forEach(function (r) {
+        const oldReasonBranches = adminParseClinicIds(r.clinic_ids);
+        const kept = oldReasonBranches.filter(function (c) { return clinicIds.indexOf(c) !== -1; });
+        const dropped = oldReasonBranches.filter(function (c) { return clinicIds.indexOf(c) === -1; });
+        if (!dropped.length) return;
+        const patch = { clinic_ids: kept.join(',') };
+        if (!kept.length) patch.active = 'FALSE';
+        Db.update(SHEET.REASONS, 'reason_id', str(r.reason_id), patch);
+
+        const staleIds = Db.rows(SHEET.AVAILABILITY).filter(function (a) {
+          if (str(a.reason_id) !== str(r.reason_id)) return false;
+          // If the reason has no branch left, archive it and clear every block.
+          // Otherwise only the blocks in the dropped branches are invalid.
+          return !kept.length || dropped.indexOf(str(a.clinic_id)) !== -1;
+        }).map(function (a) { return str(a.availability_id); });
+        if (staleIds.length) Db.remove(SHEET.AVAILABILITY, 'availability_id', staleIds);
       });
     }
   }
@@ -4433,31 +4675,175 @@ function adminSuggestDoctorCode(nameAr, others) {
 }
 
 function adminSaveReason(actor, payload) {
-  if (actor.role !== 'admin') return adminError('ADMIN_ONLY', 'تعديل أسباب الزيارة متاح للإدارة فقط.');
+  const isDoctor = actor.role === 'doctor';
+  if (actor.role !== 'admin' && !isDoctor) {
+    return adminError('ADMIN_ONLY', 'تعديل أسباب الزيارة متاح للإدارة أو لصاحب السبب فقط.');
+  }
   const name = str(payload.nameAr).slice(0, 120);
   if (!name) return adminError('NAME_REQUIRED', 'اكتب اسم سبب الزيارة.');
   const id = str(payload.id);
   const existing = id ? Db.findById(SHEET.REASONS, 'reason_id', id) : null;
   if (id && !existing) return adminError('NOT_FOUND', 'سبب الزيارة غير موجود.');
+  if (existing && isDoctor && !reasonOwnedBy(existing, actor.doctorId)) {
+    return adminError('FORBIDDEN', 'يمكنك تعديل أسبابك فقط.');
+  }
+
+  const existingDoctorId = existing ? str(existing.doctor_id) : '';
+  if (existingDoctorId && isDoctor && existingDoctorId !== str(actor.doctorId)) {
+    return adminError('FORBIDDEN', 'يمكنك تعديل أسبابك فقط.');
+  }
+  if (existingDoctorId && str(payload.doctorId) && str(payload.doctorId) !== existingDoctorId) {
+    return adminError('DOCTOR_IMMUTABLE', 'لا يمكن نقل السبب إلى طبيب آخر. انسخه إلى الطبيب الجديد وأرشف القديم.');
+  }
+  let doctorId = existingDoctorId;
+  if (isDoctor) doctorId = str(actor.doctorId);
+  else if (!doctorId) doctorId = str(payload.doctorId);
+  if (!doctorId) return adminError('DOCTOR_REQUIRED', 'اختر الطبيب الذي يخصه السبب.');
+
+  const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', doctorId);
+  if (!doctor) return adminError('DOCTOR_NOT_FOUND', 'الطبيب غير موجود.');
+  if (isDoctor && str(doctor.doctor_id) !== str(actor.doctorId)) {
+    return adminError('FORBIDDEN', 'يمكنك تعديل أسبابك فقط.');
+  }
+  if (!isActive(doctor)) return adminError('DOCTOR_INACTIVE', 'الطبيب غير نشط. فعّله أولاً.');
+
+  const clinicIds = adminParseClinicIds(payload.clinicIds);
+  const doctorClinics = adminParseClinicIds(doctor.clinic_ids);
+  const active = adminBool(payload.active, true);
+  if (active && !clinicIds.length) {
+    return adminError('BRANCH_REQUIRED', 'اختر فرعاً واحداً على الأقل ليظهر السبب للمرضى.');
+  }
+  for (let i = 0; i < clinicIds.length; i++) {
+    if (!Db.findById(SHEET.CLINICS, 'clinic_id', clinicIds[i])) {
+      return adminError('BRANCH_NOT_FOUND', 'أحد الفروع غير موجود.');
+    }
+    if (doctorClinics.indexOf(clinicIds[i]) === -1) {
+      return adminError('BRANCH_NOT_ASSIGNED', 'فرع غير مرتبط بهذا الطبيب. اختر من فروعه فقط.');
+    }
+  }
+
   const fields = {
+    doctor_id: doctorId,
+    clinic_ids: clinicIds.join(','),
     name_ar: name,
     description_ar: str(payload.descriptionAr).slice(0, 220),
     duration_min: adminInt(payload.durationMin, 5, 240, 30),
     lead_hours: adminInt(payload.leadHours, 0, 168, 4),
     book_days_ahead: adminInt(payload.bookDaysAhead, 1, 90, 14),
     max_per_day: adminInt(payload.maxPerDay, 0, 100, 0),
-    active: adminBool(payload.active, true) ? 'TRUE' : 'FALSE'
+    active: active ? 'TRUE' : 'FALSE'
   };
+
+  let savedId = id;
   if (existing) {
+    const oldClinics = adminParseClinicIds(existing.clinic_ids);
     Db.update(SHEET.REASONS, 'reason_id', id, fields);
+
+    // An archived reason must never keep bookable blocks. Removing a branch from
+    // an active reason deletes only that branch's blocks; the other branches remain.
+    const blockedClinics = !active
+      ? null
+      : oldClinics.filter(function (c) { return clinicIds.indexOf(c) === -1; });
+    if (blockedClinics === null || (blockedClinics && blockedClinics.length)) {
+      const staleIds = Db.rows(SHEET.AVAILABILITY).filter(function (a) {
+        if (str(a.reason_id) !== id) return false;
+        return blockedClinics === null || blockedClinics.indexOf(str(a.clinic_id)) !== -1;
+      }).map(function (a) { return str(a.availability_id); });
+      if (staleIds.length) Db.remove(SHEET.AVAILABILITY, 'availability_id', staleIds);
+    }
   } else {
-    const newId = adminNextId('R', SHEET.REASONS, 'reason_id');
+    savedId = adminNextId('R', SHEET.REASONS, 'reason_id');
     const rRows = Db.rows(SHEET.REASONS);
     const max = Math.max(rRows.length, rRows.reduce(function (m, r) { return Math.max(m, Number(r.sort_order) || 0); }, 0));
-    Db.append(SHEET.REASONS, Object.assign({ reason_id: newId, sort_order: max + 1 }, fields));
+    Db.append(SHEET.REASONS, Object.assign({ reason_id: savedId, sort_order: max + 1 }, fields));
   }
-  adminAudit(actor, existing ? 'تعديل سبب زيارة' : 'إضافة سبب زيارة', name);
-  return { ok: true };
+
+  adminAudit(actor, existing ? 'تعديل سبب زيارة' : 'إضافة سبب زيارة',
+    name + ' — ' + str(doctor.name_ar));
+  return { ok: true, id: savedId };
+}
+
+/**
+ * Copy a reason into independent rows for other doctors. A copy gets its own
+ * reason_id, doctor and branch list; later edits, schedules and archiving never
+ * affect the source or the other copies. Schedule blocks are intentionally not
+ * copied — each doctor builds their own week.
+ */
+function adminCopyReason(code, reasonId, targets) {
+  const actor = adminRoleFor(code);
+  if (!actor || actor.role !== 'admin') {
+    return adminError('ADMIN_CODE', 'نسخ أسباب الزيارة متاح للإدارة فقط.');
+  }
+  const source = Db.findById(SHEET.REASONS, 'reason_id', str(reasonId));
+  if (!source) return adminError('NOT_FOUND', 'سبب الزيارة غير موجود.');
+  if (!str(source.doctor_id)) {
+    return adminError('LEGACY_REASON', 'هذا سبب قديم غير مرتبط بطبيب. افتح الإعدادات مرة أخرى لتحديث البيانات.');
+  }
+  if (Object.prototype.toString.call(targets) !== '[object Array]' || !targets.length) {
+    return adminError('TARGET_REQUIRED', 'اختر طبيباً واحداً على الأقل للنسخ إليه.');
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return adminError('BUSY', 'النظام مشغول، حاول بعد لحظات.');
+  try {
+    const plan = [];
+    const seen = {};
+    for (let ti = 0; ti < targets.length; ti++) {
+      const t = targets[ti] || {};
+      const doctorId = str(t.doctorId || t.id);
+      if (!doctorId) continue;
+      if (seen[doctorId]) return adminError('DUPLICATE_TARGET', 'اختر كل طبيب مرة واحدة فقط.');
+      seen[doctorId] = true;
+      if (doctorId === str(source.doctor_id)) {
+        return adminError('SAME_DOCTOR', 'لا يمكن نسخ السبب إلى نفس الطبيب. عدّل نسخته الحالية.');
+      }
+      const doctor = Db.findById(SHEET.DOCTORS, 'doctor_id', doctorId);
+      if (!doctor) return adminError('DOCTOR_NOT_FOUND', 'أحد الأطباء المختارين غير موجود.');
+      if (!isActive(doctor)) return adminError('DOCTOR_INACTIVE', 'أحد الأطباء المختارين غير نشط.');
+      const clinicIds = adminParseClinicIds(t.clinicIds || t.clinic_ids);
+      if (!clinicIds.length) {
+        return adminError('BRANCH_REQUIRED', 'اختر فرعاً واحداً على الأقل لكل طبيب تنسخ إليه.');
+      }
+      const allowed = adminParseClinicIds(doctor.clinic_ids);
+      for (let ci = 0; ci < clinicIds.length; ci++) {
+        const c = clinicIds[ci];
+        if (!Db.findById(SHEET.CLINICS, 'clinic_id', c)) {
+          return adminError('BRANCH_NOT_FOUND', 'أحد الفروع المختارة غير موجود.');
+        }
+        if (allowed.indexOf(c) === -1) {
+          return adminError('BRANCH_NOT_ASSIGNED', 'أحد الفروع المختارة غير مرتبط بالطبيب ' + str(doctor.name_ar) + '.');
+        }
+      }
+      plan.push({ doctor: doctor, doctorId: doctorId, clinicIds: clinicIds });
+    }
+    if (!plan.length) return adminError('TARGET_REQUIRED', 'اختر طبيباً واحداً على الأقل للنسخ إليه.');
+
+    // All targets are valid; now write. If a later copy fails, earlier copies are
+    // still meaningful and the audit records exactly what was created.
+    const created = [];
+    plan.forEach(function (item) {
+      const newId = adminNextId('R', SHEET.REASONS, 'reason_id');
+      Db.append(SHEET.REASONS, {
+        reason_id: newId,
+        name_ar: str(source.name_ar),
+        description_ar: str(source.description_ar),
+        duration_min: Number(source.duration_min) || 30,
+        lead_hours: str(source.lead_hours) === '' ? 4 : Number(source.lead_hours),
+        book_days_ahead: Number(source.book_days_ahead) || 14,
+        max_per_day: Number(source.max_per_day) || 0,
+        active: isActive(source) ? 'TRUE' : 'FALSE',
+        sort_order: Number(source.sort_order) || 0,
+        doctor_id: item.doctorId,
+        clinic_ids: item.clinicIds.join(',')
+      });
+      created.push({ id: newId, doctorId: item.doctorId, doctorName: str(item.doctor.name_ar) });
+    });
+    adminAudit(actor, 'نسخ سبب زيارة',
+      str(source.name_ar) + ' → ' + created.map(function (c) { return c.doctorName; }).join('، '));
+    return { ok: true, copies: created };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function adminSaveAvailability(actor, payload) {
@@ -4474,6 +4860,12 @@ function adminSaveAvailability(actor, payload) {
   if (!clinic || !isActive(clinic)) return adminError('CLINIC_NOT_FOUND', 'الفرع غير موجود أو غير نشط.');
   const reason = Db.findById(SHEET.REASONS, 'reason_id', reasonId);
   if (!reason || !isActive(reason)) return adminError('REASON_NOT_FOUND', 'سبب الزيارة غير موجود أو غير نشط.');
+  if (!reasonOwnedBy(reason, doctorId)) {
+    return adminError('REASON_NOT_OWNED', 'سبب الزيارة يخص طبيباً آخر. اختر سبباً من أسباب هذا الطبيب.');
+  }
+  if (!reasonServesClinic(reason, clinicId)) {
+    return adminError('REASON_NOT_IN_CLINIC', 'سبب الزيارة غير متاح في هذا الفرع. عدّل فروع السبب أولاً.');
+  }
   if (adminParseClinicIds(doctor.clinic_ids).indexOf(clinicId) === -1) {
     return adminError('DOCTOR_NOT_IN_CLINIC', 'هذا الطبيب غير مرتبط بهذا الفرع.');
   }
@@ -4938,6 +5330,15 @@ function renderStaffPage() {
 }
 
 function renderAdminPage() {
+  // Opening the settings URL is enough to upgrade an older sheet: add the new
+  // reason columns and migrate legacy global reasons before the login form.
+  // This keeps the patient catalogue working immediately after a deploy, even
+  // before the clinic has chosen a permanent admin code.
+  try {
+    adminMigrateSchema();
+  } catch (err) {
+    logWarn('renderAdminPage', 'Schema upgrade skipped: ' + err);
+  }
   const url = getBookingUrl();
   const t = HtmlService.createTemplateFromFile('Admin');
   t.config = getPublicConfig();
@@ -5135,6 +5536,8 @@ function previewSlots() {
       adminSetDoctorPin: adminSetDoctorPin,
       adminChangePin: adminChangePin,
       adminBackup: adminBackup,
+      adminCopyReason: adminCopyReason,
+      migrateReasonsToDoctors: migrateReasonsToDoctors,
       // Naming and scope: the same functions the live export uses, so an offline demo
       // file and a live Drive file are named identically.
       REPORT_HEADER_AR: REPORT_HEADER_AR,
@@ -5246,7 +5649,7 @@ function previewSlots() {
     });
     if (!hasA8) {
       SERVER.Db.append(SERVER.SHEET.AVAILABILITY, {
-        availability_id: 'A8', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R2',
+        availability_id: 'A8', doctor_id: 'D2', clinic_id: 'C1', reason_id: 'R4',
         weekday: 0, from_time: '14:00', to_time: '17:00', slot_min: 30,
         max_per_day_override: 8, valid_from: '', valid_to: '', active: 'TRUE'
       });

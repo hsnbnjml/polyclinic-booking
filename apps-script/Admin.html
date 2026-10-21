@@ -160,6 +160,7 @@
     tab: 'overview',
     doctorId: '',
     clinicId: '',
+    reasonDoctorFilter: '',
     editor: null
   };
 
@@ -235,7 +236,7 @@
     closeModal();
     view(
       '<div class="card"><h2>دخول الإعدادات</h2>' +
-      '<p class="hint">أدخل كود الإدارة لتعديل كل الإعدادات، أو كود الطبيب لتعديل جدولك فقط.</p>' +
+      '<p class="hint">أدخل كود الإدارة لتعديل كل الإعدادات، أو كود الطبيب لتعديل جدولك وأسبابك فقط.</p>' +
       '<label class="field">كود الدخول<input id="login-code" type="password" autocomplete="off"></label>' +
       '<div id="login-msg">' + (message ? '<div class="msg err">' + esc(message) + '</div>' : '') + '</div>' +
       '<button class="btn wide" id="login-btn" onclick="tryLogin()">دخول</button></div>'
@@ -327,9 +328,12 @@
       S.data = res;
       S.role = res.role;
       if (S.role === 'doctor') {
-        S.tab = 'schedule';
+        if (['schedule', 'reasons', 'security'].indexOf(S.tab) === -1) S.tab = 'schedule';
       } else if (['overview', 'clinics', 'doctors', 'reasons', 'schedule', 'blackouts', 'messages', 'texts', 'settings', 'audit'].indexOf(S.tab) === -1) {
         S.tab = 'overview';
+      }
+      if (S.role === 'admin' && S.reasonDoctorFilter && !doctorObj(S.reasonDoctorFilter)) {
+        S.reasonDoctorFilter = '';
       }
       ensureScheduleSelection();
       render();
@@ -346,7 +350,8 @@
     if (!S.data) return;
     el('hdr-logout').style.display = 'inline-flex';
     if (S.role === 'doctor') {
-      el('hdr-sub').textContent = (S.data.doctor.nameAr || '') + ' — جدول مواعيدك';
+      el('hdr-sub').textContent = (S.data.doctor.nameAr || '') +
+        (S.tab === 'reasons' ? ' — أسبابي' : S.tab === 'security' ? ' — كود الدخول' : ' — جدول مواعيدك');
       view(navDoctor() + contentDoctor());
     } else {
       el('hdr-sub').textContent = (S.data.settings.clinicName || CONFIG.clinicName) + ' — الإدارة';
@@ -369,6 +374,7 @@
   function navDoctor() {
     return '<div class="tabs">' +
       '<button class="' + (S.tab === 'schedule' ? 'on' : '') + '" onclick="setTab(\'schedule\')">مواعيدي</button>' +
+      '<button class="' + (S.tab === 'reasons' ? 'on' : '') + '" onclick="setTab(\'reasons\')">أسبابي</button>' +
       '<button class="' + (S.tab === 'security' ? 'on' : '') + '" onclick="setTab(\'security\')">كود الدخول</button>' +
       '</div>';
   }
@@ -396,6 +402,7 @@
 
   function contentDoctor() {
     if (S.tab === 'security') return renderDoctorSecurity();
+    if (S.tab === 'reasons') return renderReasons();
     return renderSchedule();
   }
 
@@ -575,14 +582,14 @@
   function openDoctor(id) {
     var d = id ? byId(S.data.doctors, 'id', id) : { id: '', nameAr: '', specialtyAr: '', code: '', clinicIds: [], color: 'teal', active: true };
     if (!d) return;
-    S.editor = { clinicIds: (d.clinicIds || []).slice() };
+    S.editor = { clinicIds: (d.clinicIds || []).slice(), originalClinicIds: (d.clinicIds || []).slice() };
     var colorNames = { red: 'أحمر', orange: 'برتقالي', yellow: 'أصفر', green: 'أخضر', teal: 'تركوازي', blue: 'أزرق', purple: 'بنفسجي', gray: 'رمادي' };
     var colors = (S.data.meta.colors || []).map(function (c) {
       return '<option value="' + c + '" ' + (c === d.color ? 'selected' : '') + '>' + (colorNames[c] || c) + '</option>';
     }).join('');
     openModal(
       '<h2>' + (id ? 'تعديل طبيب' : 'إضافة طبيب') + '</h2>' +
-      '<p class="hint">اختر الفروع التي يعمل بها. كود الحجز يُستخدم في رقم الحجز الذي يقرأه المريض.</p>' +
+      '<p class="hint">اختر الفروع التي يعمل بها. كود الحجز يُستخدم في رقم الحجز الذي يقرأه المريض. إزالة فرع تحذف أوقات الطبيب فيه وتزيله من أسباب الطبيب.</p>' +
       '<label class="field">اسم الطبيب *<input id="doc-name" value="' + esc(d.nameAr) + '" maxlength="120"></label>' +
       '<label class="field">التخصص *<input id="doc-specialty" value="' + esc(d.specialtyAr) + '" maxlength="160"></label>' +
       '<label class="field">كود الحجز (حرفان لاتينيان)<input id="doc-code" value="' + esc(d.code) + '" maxlength="2" dir="ltr" placeholder="اتركه فارغاً للتوليد"></label>' +
@@ -615,6 +622,10 @@
     if (!String(payload.nameAr).trim()) { toast('اكتب اسم الطبيب.'); return; }
     if (!String(payload.specialtyAr).trim()) { toast('اكتب التخصص.'); return; }
     if (!payload.clinicIds.length) { toast('اختر فرعاً واحداً على الأقل.'); return; }
+    var removed = ((S.editor && S.editor.originalClinicIds) || []).filter(function (c) {
+      return payload.clinicIds.indexOf(c) === -1;
+    });
+    if (removed.length && !window.confirm('إزالة فرع من الطبيب ستحذف أوقاته في هذا الفرع وتزيله من أسباب الطبيب. هل تريد المتابعة؟')) return;
     busy(el('btn-save'), true, 'جاري الحفظ…');
     api('adminSave', S.code, 'doctor', payload).then(function (res) {
       if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ الطبيب.')); return; }
@@ -678,23 +689,80 @@
    * Visit reasons
    * ------------------------------------------------------------------ */
 
+  function reasonDoctorBranches(doctorId) {
+    if (S.role === 'doctor') return S.data.branches || [];
+    var d = doctorObj(doctorId);
+    if (!d) return [];
+    return (S.data.clinics || []).filter(function (c) {
+      return (d.clinicIds || []).indexOf(c.id) !== -1;
+    });
+  }
+
+  function reasonBranchesText(r) {
+    var names = (r.clinicIds || []).map(function (id) { return clinicName(id); });
+    return names.length ? names.join('، ') : 'بدون فروع';
+  }
+
+  function reasonBranchChecksHtml(doctorId, selected) {
+    var branches = reasonDoctorBranches(doctorId);
+    if (!branches.length) {
+      return '<div class="msg info">لا توجد فروع مرتبطة بهذا الطبيب. أضف فرعاً للطبيب من قسم الأطباء أولاً.</div>';
+    }
+    return '<div class="weekdays">' + branches.map(function (c) {
+      var on = (selected || []).indexOf(c.id) !== -1;
+      return '<button type="button" class="' + (on ? 'on' : '') + '" onclick="toggleReasonBranch(\'' + esc(c.id) + '\',this)">' +
+        esc(c.nameAr) + (c.active ? '' : ' (مؤرشف)') + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function setReasonFilter(value) {
+    S.reasonDoctorFilter = value || '';
+    render();
+  }
+
   function renderReasons() {
-    var rows = S.data.reasons || [];
-    var html = '<div class="card"><h2>أسباب الزيارة</h2><p class="hint">مدة الزيارة والمهلة وحد الحجز اليومي تُستخدم في حساب المواعيد. ترتيبها هنا هو ترتيب ظهورها للمريض.</p>' +
-      '<div class="addbar"><button class="btn" onclick="openReason()">+ إضافة سبب زيارة</button></div>';
+    var isDoctor = S.role === 'doctor';
+    var all = S.data.reasons || [];
+    var rows = all;
+    if (!isDoctor && S.reasonDoctorFilter) {
+      rows = all.filter(function (r) { return r.doctorId === S.reasonDoctorFilter; });
+    }
+    var html = '<div class="card"><h2>' + (isDoctor ? 'أسبابي' : 'أسباب الزيارة') + '</h2>' +
+      '<p class="hint">' + (isDoctor
+        ? 'هذه أسبابك وحدك. عند إضافتها تصبح جاهزة، وتظهر للمرضى بعد إضافة وقت لها في «مواعيدي». أرشفة السبب تحذف أوقاته من جدولك.'
+        : 'كل سبب يخص طبيباً واحداً ويمكن تقديمه في فرع أو أكثر من فروعه. «نسخ» ينشئ نسخة مستقلة لطبيب آخر؛ تعديل نسخة لا يغيّر الأصل.') + '</p>';
+
+    if (!isDoctor) {
+      var docOptions = '<option value="">كل الأطباء</option>' + (S.data.doctors || []).map(function (d) {
+        return '<option value="' + d.id + '" ' + (d.id === S.reasonDoctorFilter ? 'selected' : '') + '>' +
+          esc(d.nameAr) + (d.active ? '' : ' (مؤرشف)') + '</option>';
+      }).join('');
+      html += '<label class="field">عرض أسباب طبيب<select id="rs-filter" onchange="setReasonFilter(this.value)">' + docOptions + '</select></label>';
+    }
+
+    html += '<div class="addbar"><button class="btn" onclick="openReason()">+ إضافة سبب زيارة</button></div>';
     if (!rows.length) {
-      html += '<div class="empty">لا توجد أسباب زيارة بعد.</div></div>';
+      html += '<div class="empty">' + (S.reasonDoctorFilter ? 'لا توجد أسباب لهذا الطبيب بعد.' : 'لا توجد أسباب زيارة بعد.') + '</div></div>';
       return html;
     }
-    rows.forEach(function (r, i) {
+
+    rows.forEach(function (r) {
+      var i = all.indexOf(r);
+      var meta = [];
+      if (!isDoctor) meta.push('الطبيب: ' + doctorName(r.doctorId));
+      meta.push('الفروع: ' + reasonBranchesText(r));
       html += '<div class="entity"><div class="ent-head"><div><h3>' + esc(r.nameAr) + '</h3>' +
+        '<p class="mini">' + esc(meta.join(' · ')) + '</p>' +
         '<p class="mini">' + Number(r.durationMin) + ' دقيقة · مهلة ' + Number(r.leadHours) + ' ساعة · حتى ' + Number(r.bookDaysAhead) + ' يوماً مقدماً' +
         (r.maxPerDay ? ' · ' + Number(r.maxPerDay) + ' يومياً' : ' · بلا حد يومي') + '</p>' +
         (r.descriptionAr ? '<p class="mini">' + esc(r.descriptionAr) + '</p>' : '') + '</div>' + activeBadge(r.active) + '</div>' +
         '<div class="row-actions">' +
         '<button class="btn ghost mini-btn" onclick="openReason(\'' + r.id + '\')">تعديل</button>' +
-        '<button class="btn ghost mini-btn icon-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="moveEntity(\'reasons\',\'' + r.id + '\',-1)">↑</button>' +
-        '<button class="btn ghost mini-btn icon-btn" ' + (i === rows.length - 1 ? 'disabled' : '') + ' onclick="moveEntity(\'reasons\',\'' + r.id + '\',1)">↓</button>' +
+        (!isDoctor ? '<button class="btn ghost mini-btn" onclick="openCopyReason(\'' + r.id + '\')">نسخ</button>' : '') +
+        (!isDoctor && !S.reasonDoctorFilter
+          ? '<button class="btn ghost mini-btn icon-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="moveEntity(\'reasons\',\'' + r.id + '\',-1)">↑</button>' +
+            '<button class="btn ghost mini-btn icon-btn" ' + (i === all.length - 1 ? 'disabled' : '') + ' onclick="moveEntity(\'reasons\',\'' + r.id + '\',1)">↓</button>'
+          : '') +
         '<button class="btn ghost mini-btn" onclick="toggleReason(\'' + r.id + '\')">' + (r.active ? 'أرشفة' : 'تفعيل') + '</button>' +
         '</div></div>';
     });
@@ -703,11 +771,45 @@
   }
 
   function openReason(id) {
-    var r = id ? byId(S.data.reasons, 'id', id) : { id: '', nameAr: '', descriptionAr: '', durationMin: 30, leadHours: 4, bookDaysAhead: 14, maxPerDay: 0, active: true };
+    var isDoctor = S.role === 'doctor';
+    var r = id ? byId(S.data.reasons, 'id', id) : {
+      id: '', nameAr: '', descriptionAr: '', durationMin: 30, leadHours: 4,
+      bookDaysAhead: 14, maxPerDay: 0, active: true, doctorId: '', clinicIds: []
+    };
     if (!r) return;
+
+    var defaultDoctor = isDoctor ? S.data.doctor.id :
+      (S.reasonDoctorFilter || ((S.data.doctors || []).filter(function (d) { return d.active; })[0] || {}).id || '');
+    var doctorId = id ? (r.doctorId || defaultDoctor) : defaultDoctor;
+    if (!doctorId) { toast('أضف طبيباً أولاً.'); return; }
+    S.editor = {
+      reasonId: id || '',
+      doctorId: doctorId,
+      clinicIds: (r.clinicIds || []).slice(),
+      originalClinicIds: (r.clinicIds || []).slice(),
+      originalActive: !!r.active
+    };
+
+    var doctorField = '';
+    if (isDoctor) {
+      doctorField = '<div class="msg info">الطبيب: <b>' + esc(S.data.doctor.nameAr) + '</b></div>';
+    } else {
+      var doctorOptions = (S.data.doctors || []).map(function (d) {
+        return '<option value="' + d.id + '" ' + (d.id === doctorId ? 'selected' : '') + '>' +
+          esc(d.nameAr) + (d.active ? '' : ' (مؤرشف)') + '</option>';
+      }).join('');
+      doctorField = '<label class="field">الطبيب *' +
+        '<select id="rs-doctor" ' + (id ? 'disabled' : '') + ' onchange="changeReasonDoctor(this.value)">' + doctorOptions + '</select>' +
+        (id ? '<span class="mini">لا يمكن نقل السبب لطبيب آخر. استخدم «نسخ».</span>' : '') + '</label>';
+    }
+
     openModal(
       '<h2>' + (id ? 'تعديل سبب زيارة' : 'إضافة سبب زيارة') + '</h2>' +
-      '<p class="hint">المدة الفعلية للموعد تأتي من هنا، إلا إذا وضعت مدة مختلفة داخل جدول الطبيب.</p>' +
+      '<p class="hint">' + (isDoctor
+        ? 'السبب يخصك وحدك. اختر الفروع التي تقدمه فيها، ثم أضف له وقتاً من تبويب «مواعيدي». إزالة فرع تحذف أوقاته في ذلك الفرع، والأرشفة تحذف كل أوقاته.'
+        : 'اختر الطبيب والفروع. كل نسخة سبب مستقلة؛ عند نسخها لطبيب آخر لا تتأثر هذه النسخة. إزالة فرع تحذف أوقات السبب في ذلك الفرع، والأرشفة تحذف كل أوقاته.') + '</p>' +
+      doctorField +
+      '<div class="field">الفروع *<div id="rs-branches">' + reasonBranchChecksHtml(doctorId, S.editor.clinicIds) + '</div></div>' +
       '<label class="field">الاسم *<input id="rs-name" value="' + esc(r.nameAr) + '" maxlength="120"></label>' +
       '<label class="field">وصف مختصر<input id="rs-desc" value="' + esc(r.descriptionAr) + '" maxlength="220"></label>' +
       '<div class="two"><label class="field">مدة الموعد (دقيقة)<input id="rs-duration" type="number" min="5" max="240" value="' + Number(r.durationMin) + '"></label>' +
@@ -720,14 +822,53 @@
     );
   }
 
+  function changeReasonDoctor(doctorId) {
+    if (!S.editor || S.editor.reasonId) return;
+    S.editor.doctorId = doctorId;
+    var allowed = reasonDoctorBranches(doctorId).map(function (c) { return c.id; });
+    S.editor.clinicIds = (S.editor.clinicIds || []).filter(function (c) { return allowed.indexOf(c) !== -1; });
+    var box = el('rs-branches');
+    if (box) box.innerHTML = reasonBranchChecksHtml(doctorId, S.editor.clinicIds);
+  }
+
+  function toggleReasonBranch(id, btn) {
+    if (!S.editor) return;
+    var list = S.editor.clinicIds || [];
+    var i = list.indexOf(id);
+    if (i === -1) { list.push(id); btn.classList.add('on'); }
+    else { list.splice(i, 1); btn.classList.remove('on'); }
+    S.editor.clinicIds = list;
+  }
+
   function saveReason(id) {
+    if (!S.editor) return;
     var payload = {
-      id: id || '', nameAr: el('rs-name').value, descriptionAr: el('rs-desc').value,
-      durationMin: el('rs-duration').value, leadHours: el('rs-lead').value,
-      bookDaysAhead: el('rs-days').value, maxPerDay: el('rs-max').value,
+      id: id || '',
+      doctorId: S.editor.doctorId,
+      clinicIds: S.editor.clinicIds || [],
+      nameAr: el('rs-name').value,
+      descriptionAr: el('rs-desc').value,
+      durationMin: el('rs-duration').value,
+      leadHours: el('rs-lead').value,
+      bookDaysAhead: el('rs-days').value,
+      maxPerDay: el('rs-max').value,
       active: el('rs-active').checked
     };
     if (!String(payload.nameAr).trim()) { toast('اكتب اسم سبب الزيارة.'); return; }
+    if (payload.active && !payload.clinicIds.length) { toast('اختر فرعاً واحداً على الأقل ليظهر السبب للمرضى.'); return; }
+    if (id) {
+      var removed = ((S.editor.originalClinicIds) || []).filter(function (c) {
+        return payload.clinicIds.indexOf(c) === -1;
+      });
+      var warnings = [];
+      if (removed.length) {
+        warnings.push('ستُحذف أوقات هذا السبب في: ' + removed.map(function (c) { return clinicName(c); }).join('، ') + '.');
+      }
+      if (S.editor.originalActive && !payload.active) {
+        warnings.push('الأرشفة ستخفي السبب وتُحذف كل أوقاته من الجدول.');
+      }
+      if (warnings.length && !window.confirm(warnings.join('\n') + '\nهل تريد المتابعة؟')) return;
+    }
     busy(el('btn-save'), true, 'جاري الحفظ…');
     api('adminSave', S.code, 'reason', payload).then(function (res) {
       if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر حفظ سبب الزيارة.')); return; }
@@ -738,15 +879,111 @@
   function toggleReason(id) {
     var r = byId(S.data.reasons, 'id', id);
     if (!r) return;
+    if (r.active && !window.confirm('أرشفة سبب «' + r.nameAr + '»؟ سيختفي من الحجز، وستُحذف كل أوقاته من الجدول. الحجوزات القديمة تبقى في السجل.')) return;
+    if (!r.active && !(r.clinicIds || []).length) {
+      toast('هذا السبب بلا فروع. عدّله واختر فرعاً واحداً على الأقل ثم فعّله.');
+      return;
+    }
     api('adminSave', S.code, 'reason', {
-      id: r.id, nameAr: r.nameAr, descriptionAr: r.descriptionAr,
+      id: r.id, doctorId: r.doctorId, clinicIds: r.clinicIds,
+      nameAr: r.nameAr, descriptionAr: r.descriptionAr,
       durationMin: r.durationMin, leadHours: r.leadHours,
       bookDaysAhead: r.bookDaysAhead, maxPerDay: r.maxPerDay, active: !r.active
     }).then(function (res) {
       if (!res || !res.ok) { toast(failText(res, 'تعذّر التحديث.')); return; }
-      toast(r.active ? 'تمت أرشفة سبب الزيارة.' : 'تم تفعيل سبب الزيارة.');
+      toast(r.active ? 'تمت أرشفة سبب الزيارة وحذف أوقاته.' : 'تم تفعيل سبب الزيارة. أضف وقتاً له ليظهر للمرضى.');
       loadData();
     }).catch(function (err) { toast('خطأ: ' + err); });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Copy a reason to other doctors (admin only)
+   * ------------------------------------------------------------------ */
+
+  function copyDefaultBranches(source, target) {
+    return (source.clinicIds || []).filter(function (c) {
+      return (target.clinicIds || []).indexOf(c) !== -1;
+    });
+  }
+
+  function openCopyReason(id) {
+    if (S.role !== 'admin') return;
+    var source = reasonObj(id);
+    if (!source) return;
+    var targets = (S.data.doctors || []).filter(function (d) {
+      return d.active && d.id !== source.doctorId;
+    });
+    if (!targets.length) { toast('لا يوجد طبيب آخر نشط تنسخ إليه.'); return; }
+    S.editor = { copySourceId: source.id, copyTargets: {}, copyBranches: {} };
+
+    var html = '<h2>نسخ «' + esc(source.nameAr) + '»</h2>' +
+      '<p class="hint">كل طبيب مختار يحصل على نسخة مستقلة. اختر لكل طبيب الفروع التي سيقدم السبب فيها؛ لا تُنسخ أوقات الجدول.</p>';
+    targets.forEach(function (d) {
+      html += '<div class="group" style="padding:10px;margin-bottom:10px">' +
+        '<label class="check"><input id="cp-doc-' + d.id + '" type="checkbox" onchange="toggleCopyTarget(\'' + d.id + '\',this.checked)"> ' +
+        esc(d.nameAr) + ' <span class="mini">(' + esc((d.clinicIds || []).map(function (c) { return clinicName(c); }).join('، ') || 'بدون فروع') + ')</span></label>' +
+        '<div id="cp-wrap-' + d.id + '" style="display:none;margin-top:8px">' +
+        '<div id="cp-branches-' + d.id + '"></div></div></div>';
+    });
+    html += '<div class="actions"><button class="btn" id="btn-save" onclick="saveCopyReason()">نسخ إلى المحددين</button>' +
+      '<button class="btn ghost" onclick="closeModal()">إلغاء</button></div>';
+    openModal(html);
+  }
+
+  function copyBranchChecksHtml(doctorId, selected) {
+    return '<div class="weekdays">' + reasonDoctorBranches(doctorId).map(function (c) {
+      var on = (selected || []).indexOf(c.id) !== -1;
+      return '<button type="button" class="' + (on ? 'on' : '') + '" onclick="toggleCopyBranch(\'' + doctorId + '\',\'' + c.id + '\',this)">' +
+        esc(c.nameAr) + (c.active ? '' : ' (مؤرشف)') + '</button>';
+    }).join('') + '</div>' +
+      (reasonDoctorBranches(doctorId).length ? '<span class="mini">اختر فرعاً واحداً على الأقل.</span>' : '<div class="msg info">هذا الطبيب بلا فروع.</div>');
+  }
+
+  function toggleCopyTarget(doctorId, checked) {
+    if (!S.editor) return;
+    var wrap = el('cp-wrap-' + doctorId);
+    if (!checked) {
+      delete S.editor.copyTargets[doctorId];
+      delete S.editor.copyBranches[doctorId];
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
+    var source = reasonObj(S.editor.copySourceId);
+    var target = doctorObj(doctorId);
+    var shared = source && target ? copyDefaultBranches(source, target) : [];
+    S.editor.copyTargets[doctorId] = true;
+    S.editor.copyBranches[doctorId] = shared.slice();
+    if (wrap) {
+      wrap.style.display = '';
+      var box = el('cp-branches-' + doctorId);
+      if (box) box.innerHTML = copyBranchChecksHtml(doctorId, shared);
+    }
+  }
+
+  function toggleCopyBranch(doctorId, clinicId, btn) {
+    if (!S.editor) return;
+    var list = S.editor.copyBranches[doctorId] || [];
+    var i = list.indexOf(clinicId);
+    if (i === -1) { list.push(clinicId); btn.classList.add('on'); }
+    else { list.splice(i, 1); btn.classList.remove('on'); }
+    S.editor.copyBranches[doctorId] = list;
+    S.editor.copyTargets[doctorId] = true;
+  }
+
+  function saveCopyReason() {
+    if (!S.editor) return;
+    var targets = Object.keys(S.editor.copyTargets || {}).map(function (doctorId) {
+      return { doctorId: doctorId, clinicIds: (S.editor.copyBranches[doctorId] || []).slice() };
+    });
+    if (!targets.length) { toast('اختر طبيباً واحداً على الأقل.'); return; }
+    for (var i = 0; i < targets.length; i++) {
+      if (!targets[i].clinicIds.length) { toast('اختر فرعاً واحداً على الأقل لكل طبيب محدد.'); return; }
+    }
+    busy(el('btn-save'), true, 'جاري النسخ…');
+    api('adminCopyReason', S.code, S.editor.copySourceId, targets).then(function (res) {
+      if (!res || !res.ok) { busy(el('btn-save'), false); toast(failText(res, 'تعذّر نسخ سبب الزيارة.')); return; }
+      finishSave('تم إنشاء ' + ((res.copies || []).length) + ' نسخة مستقلة. أضف أوقاتاً لها من الجدول.');
+    }).catch(function (err) { busy(el('btn-save'), false); toast('خطأ: ' + err); });
   }
 
   /* ------------------------------------------------------------------ *
@@ -781,6 +1018,12 @@
       return rows.filter(function (a) { return a.clinicId === S.clinicId; });
     }
     return rows.filter(function (a) { return a.doctorId === S.doctorId && a.clinicId === S.clinicId; });
+  }
+
+  function reasonsForSchedule(doctorId, clinicId) {
+    return (S.data.reasons || []).filter(function (r) {
+      return r.active && r.doctorId === doctorId && (r.clinicIds || []).indexOf(clinicId) !== -1;
+    });
   }
 
   function groupBlocks(rows) {
@@ -832,6 +1075,12 @@
         return '<option value="' + c.id + '" ' + (c.id === S.clinicId ? 'selected' : '') + '>' + esc(c.nameAr) + '</option>';
       }).join('') + '</select></label>';
 
+    var schedDoctorId = S.role === 'doctor' ? S.data.doctor.id : S.doctorId;
+    if (!reasonsForSchedule(schedDoctorId, S.clinicId).length) {
+      html += '<div class="msg info">لا توجد أسباب زيارة نشطة لهذا الطبيب في هذا الفرع. أضف سبباً من قسم «أسباب الزيارة»' +
+        (S.role === 'doctor' ? ' (تبويب «أسبابي»)' : '') + ' واختر هذا الفرع، ثم أضف له وقتاً.</div>';
+    }
+
     var groups = groupBlocks(scheduleRows());
     html += '<div class="addbar"><button class="btn" onclick="openBlock()">+ إضافة وقت</button></div>';
     if (!groups.length) {
@@ -877,17 +1126,27 @@
       reasonId: '', fromTime: '09:00', toTime: '17:00', slotMin: 0,
       maxPerDay: 0, validFrom: '', validTo: '', active: true
     };
-    var activeReasons = (S.data.reasons || []).filter(function (r) { return r.active; });
-    if (!activeReasons.length) { toast('أضف سبب زيارة نشطاً أولاً.'); return; }
-    if (base.reasonId && reasonObj(base.reasonId) && !reasonObj(base.reasonId).active) {
-      toast('سبب الزيارة المرتبط بهذا الوقت مؤرشف. فعّله من قسم أسباب الزيارة أولاً، أو احذف الوقت.');
+    var schedDoctorId = S.role === 'doctor' ? S.data.doctor.id : S.doctorId;
+    var activeReasons = reasonsForSchedule(schedDoctorId, S.clinicId);
+    if (!activeReasons.length) {
+      toast('لا توجد أسباب زيارة نشطة لهذا الطبيب في هذا الفرع. أضف سبباً أولاً من قسم أسباب الزيارة.');
       return;
     }
-    if (!base.reasonId || !reasonObj(base.reasonId)) base.reasonId = activeReasons[0].id;
+    if (base.reasonId) {
+      var baseReason = reasonObj(base.reasonId);
+      if (!baseReason || !baseReason.active || baseReason.doctorId !== schedDoctorId ||
+          (baseReason.clinicIds || []).indexOf(S.clinicId) === -1) {
+        toast('سبب الزيارة المرتبط بهذا الوقت لم يعد متاحاً لهذا الطبيب أو الفرع. احذف الوقت وأضف وقتاً جديداً.');
+        return;
+      }
+    }
+    if (!base.reasonId || !activeReasons.some(function (r) { return r.id === base.reasonId; })) {
+      base.reasonId = activeReasons[0].id;
+    }
     S.editor = {
       ids: ids,
       weekdays: rows.map(function (a) { return Number(a.weekday); }),
-      doctorId: S.role === 'doctor' ? S.data.doctor.id : S.doctorId,
+      doctorId: schedDoctorId,
       clinicId: S.clinicId
     };
     var reasonOpts = activeReasons.map(function (r) {
@@ -1313,7 +1572,7 @@
       '<label class="field">تأكيد الكود<input id="my-pin2" type="password" inputmode="numeric" maxlength="8" autocomplete="off" dir="ltr"></label>' +
       '<div class="actions"><button class="btn wide" id="btn-save-pin" onclick="saveMyPin()">حفظ الكود</button></div>' +
       '<p class="mini">إذا نسيت الكود، اطلب من الإدارة إعادة تعيينه.</p></div>' +
-      '<div class="card"><h2>ملاحظة</h2><p class="hint">يمكنك إضافة أو تعديل أوقاتك وأيامك من تبويب «مواعيدي». لتغيير الفرع أو التخصص أو سبب الزيارة، تواصل مع الإدارة.</p></div>';
+      '<div class="card"><h2>ملاحظة</h2><p class="hint">يمكنك إضافة أسباب زيارتك من تبويب «أسبابي»، ثم إضافة أوقاتها من تبويب «مواعيدي». كل سبب يخصك وحدك، وأرشفته تحذف أوقاته من جدولك. لتغيير الفرع أو التخصص، تواصل مع الإدارة.</p></div>';
   }
 
   function saveMyPin() {

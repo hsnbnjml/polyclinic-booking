@@ -46,17 +46,31 @@ function getBootstrap() {
     };
   });
 
+  const activeDoctors = Db.rows(SHEET.DOCTORS).filter(isActive);
+  const activeDoctorIds = {};
+  activeDoctors.forEach(function (d) { activeDoctorIds[str(d.doctor_id)] = true; });
+
   const availability = Db.rows(SHEET.AVAILABILITY).filter(isActive);
   const reasons = sortRowsByOrder(Db.rows(SHEET.REASONS).filter(isActive))
+    .filter(function (r) { return !!str(r.doctor_id) && !!activeDoctorIds[str(r.doctor_id)]; })
     .map(function (r) {
+      const clinics = reasonClinicIds(r);
       return {
         id: str(r.reason_id),
+        doctorId: str(r.doctor_id),
+        clinicIds: clinics,
         nameAr: str(r.name_ar),
         descriptionAr: str(r.description_ar),
         durationMin: Number(r.duration_min) || 30,
-        // which doctors can serve this reason, and where
+        // which doctors can serve this reason, and where. A reason belongs to one
+        // doctor, but it can be offered at more than one branch; only a matching
+        // active schedule row makes it bookable.
         links: availability
-          .filter(function (a) { return str(a.reason_id) === str(r.reason_id); })
+          .filter(function (a) {
+            return str(a.reason_id) === str(r.reason_id) &&
+              str(a.doctor_id) === str(r.doctor_id) &&
+              clinics.indexOf(str(a.clinic_id)) !== -1;
+          })
           .map(function (a) { return { doctorId: str(a.doctor_id), clinicId: str(a.clinic_id) }; })
           .filter(function (v, i, arr) {
             return arr.findIndex(function (x) {
@@ -64,7 +78,8 @@ function getBootstrap() {
             }) === i;
           })
       };
-    });
+    })
+    .filter(function (r) { return r.links.length > 0; });
 
   return { ok: true, config: config, clinics: clinics, doctors: doctors, reasons: reasons };
 }
