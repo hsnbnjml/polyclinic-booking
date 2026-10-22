@@ -1068,7 +1068,8 @@ const SETTING = {
   WA_TEMPLATE_RESCHEDULE: 'wa_template_reschedule',
   WA_TEMPLATE_CANCEL: 'wa_template_cancel',
   BOOKING_WINDOW_DAYS: 'booking_window_days',
-  MIN_LEAD_HOURS: 'min_lead_hours'
+  MIN_LEAD_HOURS: 'min_lead_hours',
+  ANNUAL_EXPORT_YEAR: 'annual_export_year'
 };
 
 /** Defaults used when a Settings row is missing. Bracket text = placeholder to replace. */
@@ -1103,7 +1104,8 @@ const SETTING_DEFAULTS = {
   [SETTING.WA_TEMPLATE_RESCHEDULE]: '',
   [SETTING.WA_TEMPLATE_CANCEL]: '',
   [SETTING.BOOKING_WINDOW_DAYS]: '14',
-  [SETTING.MIN_LEAD_HOURS]: '4'
+  [SETTING.MIN_LEAD_HOURS]: '4',
+  [SETTING.ANNUAL_EXPORT_YEAR]: ''
 };
 
 /** Human-readable notes shown next to each Settings row. */
@@ -1137,7 +1139,8 @@ const SETTING_NOTES = {
   [SETTING.WA_TEMPLATE_RESCHEDULE]: 'قالب واتساب: تغيير الموعد (اتركه فارغاً للافتراضي)',
   [SETTING.WA_TEMPLATE_CANCEL]: 'قالب واتساب: إلغاء الموعد (اتركه فارغاً للافتراضي)',
   [SETTING.BOOKING_WINDOW_DAYS]: 'أقصى عدد أيام يمكن الحجز فيها مسبقاً',
-  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها'
+  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها',
+  [SETTING.ANNUAL_EXPORT_YEAR]: 'آخر سنة تم فيها تصدير نسخة Excel بكل البيانات'
 };
 
 let _settingsCache = null;
@@ -1200,6 +1203,21 @@ function pad2(n) {
 
 function todayStr() {
   return formatDateStr(new Date());
+}
+
+/**
+ * The clinic is due a full annual Excel export when the current year has not
+ * been recorded yet. This is a reminder only; no booking data is ever deleted.
+ */
+function annualExportDue() {
+  const last = Number(str(getSettings()[SETTING.ANNUAL_EXPORT_YEAR]));
+  return !last || last < Number(todayStr().slice(0, 4));
+}
+
+function markAnnualExportDone() {
+  const year = todayStr().slice(0, 4);
+  setSetting(SETTING.ANNUAL_EXPORT_YEAR, year);
+  return year;
 }
 
 function formatDateStr(d) {
@@ -3027,8 +3045,35 @@ function getStaffBoard(dateStr, code) {
     bookings: bookings,
     doctors: dayDoctors(date),
     counts: counts,
-    upcoming: upcoming
+    upcoming: upcoming,
+    annualExportDue: annualExportDue()
   };
+}
+
+/**
+ * Full annual Excel export. Staff already have access to every patient record in
+ * the reports; this records the year and never deletes any booking rows.
+ */
+function apiStaffAnnualExport(code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  try {
+    const result = exportXlsx({}, 'نسخة-سنوية-كل-البيانات');
+    if (!result || !result.ok) {
+      return { ok: false, error: 'BACKUP_FAILED', messageAr: 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.' };
+    }
+    const year = markAnnualExportDone();
+    logInfo('annualExport', 'Staff exported ' + result.rows + ' rows for ' + year + ': ' + result.url);
+    return {
+      ok: true,
+      url: result.url,
+      fileName: result.fileName,
+      rows: result.rows,
+      year: year
+    };
+  } catch (err) {
+    logError('apiStaffAnnualExport', err);
+    return { ok: false, error: 'BACKUP_FAILED', messageAr: 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.' };
+  }
 }
 
 /**
@@ -4210,6 +4255,7 @@ function adminAdminPayload() {
     ok: true,
     role: 'admin',
     actorName: 'الإدارة',
+    annualExportDue: annualExportDue(),
     clinics: sortRowsByOrder(clinics).map(adminClinicOut),
     doctors: sortRowsByOrder(doctors).map(function (d) { return adminDoctorOut(d, access); }),
     reasons: sortRowsByOrder(reasons).map(adminReasonOut),
@@ -5269,6 +5315,29 @@ function adminChangePin(code, newPin) {
   return { ok: true };
 }
 
+function adminAnnualExport(code) {
+  const actor = adminRoleFor(code);
+  if (!actor || actor.role !== 'admin') return adminError('ADMIN_ONLY', 'النسخة السنوية متاحة للإدارة فقط.');
+  try {
+    const result = exportXlsx({}, 'نسخة-سنوية-كل-البيانات');
+    if (!result || !result.ok) {
+      return adminError('BACKUP_FAILED', 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.');
+    }
+    const year = markAnnualExportDone();
+    adminAudit(actor, 'نسخة سنوية Excel', result.fileName + ' — ' + result.rows + ' صف');
+    return {
+      ok: true,
+      url: result.url,
+      fileName: result.fileName,
+      rows: result.rows,
+      year: year
+    };
+  } catch (err) {
+    logError('adminAnnualExport', err);
+    return adminError('BACKUP_FAILED', 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.');
+  }
+}
+
 function adminBackup(code) {
   const actor = adminRoleFor(code);
   if (!actor || actor.role !== 'admin') return adminError('ADMIN_ONLY', 'النسخ الاحتياطي متاح للإدارة فقط.');
@@ -5547,6 +5616,7 @@ function previewSlots() {
       adminSetDoctorPin: adminSetDoctorPin,
       adminChangePin: adminChangePin,
       adminBackup: adminBackup,
+      adminAnnualExport: adminAnnualExport,
       adminCopyReason: adminCopyReason,
       migrateReasonsToDoctors: migrateReasonsToDoctors,
       // Naming and scope: the same functions the live export uses, so an offline demo
@@ -5568,7 +5638,8 @@ function previewSlots() {
       apiStaffSlots: apiStaffSlots,
       apiStaffCatalog: apiStaffCatalog,
       apiStaffWaMark: apiStaffWaMark,
-      apiStaffKpis: apiStaffKpis
+      apiStaffKpis: apiStaffKpis,
+      apiStaffAnnualExport: apiStaffAnnualExport
     };
   })();
 
@@ -5676,6 +5747,8 @@ function previewSlots() {
     SERVER.setSetting(SERVER.SETTING.REPORT_EMAIL, 'demo@polyclinic.example');
     SERVER.setSetting(SERVER.SETTING.WHATSAPP_NUMBER, '+201000000000');
     SERVER.setSetting(SERVER.SETTING.SUPPORT_PHONE, '0220000000');
+    // Keep the demo focused on daily operations, not the annual reminder.
+    SERVER.setSetting(SERVER.SETTING.ANNUAL_EXPORT_YEAR, String(new Date().getFullYear()));
     SERVER.invalidateSettingsCache();
   }
 
@@ -5935,7 +6008,10 @@ function previewSlots() {
     var base = WEBAPP_URL;
     window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') + 'page=admin';
   }
-  var S = { code: '', date: '', board: null, reschedule: null, hidden: [], reportDoctors: [] };
+  var S = {
+    code: '', date: '', board: null, reschedule: null, hidden: [], reportDoctors: [],
+    newBookings: [], polling: false, pollTimer: null
+  };
 
   // Which doctors the reception chose to hide — one or several, remembered on this
   // device so the same view survives a reload. Ids are pruned per day below.
@@ -5952,6 +6028,8 @@ function previewSlots() {
   } catch (e) { S.reportDoctors = []; }
 
   function gate() {
+    stopPolling();
+    S.board = null;
     view(
       '<div class="card"><h2>دخول الاستقبال</h2>' +
       '<p class="hint">اكتب كود الاستقبال. الكود موجود في ورقة Settings بند staff_code.</p>' +
@@ -5978,6 +6056,7 @@ function previewSlots() {
       try { localStorage.setItem('polyclinic_staff_code', code); } catch (e) {}
       S.date = todayISO();
       renderBoard(res);
+      startPolling();
     }).catch(function (err) { gate(); el('gate-err').innerHTML = alertBox('err', 'خطأ: ' + err); });
   }
 
@@ -5991,10 +6070,12 @@ function previewSlots() {
 
   function load(date) {
     S.date = date || S.date || todayISO();
+    S.newBookings = [];
     view('<div class="spinner">جاري التحميل…</div>');
     api('apiStaffBoard', S.date, S.code).then(function (res) {
       if (!res || !res.ok) { gate(); return; }
       renderBoard(res);
+      startPolling();
     }).catch(function (err) { view(alertBox('err', 'خطأ: ' + err)); });
     if (!S.catalog) {
       api('apiStaffCatalog', S.code).then(function (cat) {
@@ -6005,6 +6086,69 @@ function previewSlots() {
         refreshReportDoctors();
       });
     }
+  }
+
+  function startPolling() {
+    if (S.pollTimer) return;
+    S.pollTimer = setInterval(pollBoard, 60000);
+  }
+
+  function stopPolling() {
+    if (S.pollTimer) {
+      clearInterval(S.pollTimer);
+      S.pollTimer = null;
+    }
+  }
+
+  /**
+   * Silent refresh, once a minute, while the board is visible and no form is open.
+   * It keeps the same day and filters, and marks appointments that appeared since
+   * the last render without disrupting an open reschedule/report panel.
+   */
+  function pollBoard() {
+    if (!S.code || !S.board || !S.date || S.polling || document.hidden) return;
+    var active = document.activeElement;
+    if (active && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName)) return;
+    if (document.querySelector('details[open]') || document.querySelector('.mini-slots')) return;
+
+    S.polling = true;
+    var before = {};
+    (S.board.bookings || []).forEach(function (b) { before[b.bookingId] = true; });
+    api('apiStaffBoard', S.date, S.code).then(function (res) {
+      S.polling = false;
+      if (!res || !res.ok) return;
+      var added = (res.bookings || []).filter(function (b) { return !before[b.bookingId]; });
+      if (added.length) {
+        S.newBookings = added.map(function (b) { return b.bookingId; });
+        var first = added[0];
+        toast('حجز جديد: ' + (first.name || first.phoneNorm) + ' — ' + first.timeAr + ' — ' + first.doctorAr);
+      }
+      var y = window.scrollY;
+      renderBoard(res);
+      window.scrollTo(0, y);
+    }).catch(function () {
+      S.polling = false;
+    });
+  }
+
+  function staffAnnualExport() {
+    var btn = el('btn-annual-export');
+    if (btn) busy(btn, true, 'جاري تصدير كل البيانات…');
+    api('apiStaffAnnualExport', S.code).then(function (res) {
+      if (btn) busy(btn, false);
+      if (!res || !res.ok) { toast((res && res.messageAr) || 'تعذّر إنشاء النسخة السنوية.'); return; }
+      if (btn) {
+        btn.textContent = 'تم التصدير';
+        btn.disabled = true;
+      }
+      var box = el('annual-export-result');
+      if (box) {
+        box.innerHTML = '<div class="msg ok">تم إنشاء الملف (' + Number(res.rows || 0) + ' صف). ' +
+          '<a href="' + esc(res.url) + '" target="_blank" rel="noopener">فتح ملف Excel</a></div>';
+      } else {
+        toast('تم إنشاء النسخة السنوية.');
+      }
+    }).catch(function (err) { if (btn) busy(btn, false); toast('خطأ: ' + err); });
   }
 
   function renderBoard(board) {
@@ -6018,11 +6162,29 @@ function previewSlots() {
 
     var html = '';
 
+    if (S.newBookings && S.newBookings.length) {
+      var firstNew = board.bookings.filter(function (b) { return b.bookingId === S.newBookings[0]; })[0];
+      if (firstNew) {
+        html += '<div class="msg ok" id="new-booking-note"><b>حجز جديد' +
+          (S.newBookings.length > 1 ? ' (' + S.newBookings.length + ')' : '') + ':</b> ' +
+          esc(firstNew.name || firstNew.phoneNorm) + ' — ' + esc(firstNew.timeAr) + ' — ' + esc(firstNew.doctorAr) +
+          ' <button class="btn ghost mini-btn" onclick="scrollToBooking(\'' + esc(firstNew.bookingId) + '\')">عرض</button></div>';
+      }
+      S.newBookings = [];
+    }
+
     html += '<div class="bar bar-days">' +
       '<input type="date" id="d-pick" value="' + board.date + '" onchange="load(this.value)">' +
       '<button class="btn ghost" onclick="load(\'' + todayISO() + '\')">اليوم</button>' +
       '<button class="btn ghost" onclick="load(\'' + addDays(board.date, 1) + '\')">الغد ›</button>' +
       '</div>';
+
+    if (board.annualExportDue) {
+      html += '<div class="msg info" id="annual-export-note"><b>النسخة السنوية مستحقة.</b><br>' +
+        'نزّل ملف Excel بكل البيانات واحفظه خارج Google Drive. لا تُحذف أي حجوزات تلقائياً.' +
+        '<div class="actions" style="margin-top:10px"><button class="btn" id="btn-annual-export" onclick="staffAnnualExport()">تصدير كل البيانات Excel</button></div>' +
+        '<div id="annual-export-result"></div></div>';
+    }
 
     html += '<div class="chips">' +
       '<span class="chip">الإجمالي <b>' + board.counts.total + '</b></span>' +

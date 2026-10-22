@@ -109,6 +109,9 @@ Settings keys added for the admin page include `admin_code`, `bookings_paused`, 
 the patient-page text overrides (`booking_subtitle_ar`, `name_hint_ar`, `phone_hint_ar`,
 `extra_label_ar`, `consent_text_ar`, `success_text_ar`, `no_slots_text_ar`, `slot_taken_text_ar`),
 and the `wa_template_*` overrides. A blank text override means the built-in default.
+`annual_export_year` records the last year for which a full all-bookings Excel export was made;
+when it is older than the current year, the admin overview and staff board show a reminder. The
+export never deletes booking rows.
 
 ## Slot engine rules (in order)
 

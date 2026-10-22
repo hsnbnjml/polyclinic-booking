@@ -130,7 +130,8 @@ const SETTING = {
   WA_TEMPLATE_RESCHEDULE: 'wa_template_reschedule',
   WA_TEMPLATE_CANCEL: 'wa_template_cancel',
   BOOKING_WINDOW_DAYS: 'booking_window_days',
-  MIN_LEAD_HOURS: 'min_lead_hours'
+  MIN_LEAD_HOURS: 'min_lead_hours',
+  ANNUAL_EXPORT_YEAR: 'annual_export_year'
 };
 
 /** Defaults used when a Settings row is missing. Bracket text = placeholder to replace. */
@@ -165,7 +166,8 @@ const SETTING_DEFAULTS = {
   [SETTING.WA_TEMPLATE_RESCHEDULE]: '',
   [SETTING.WA_TEMPLATE_CANCEL]: '',
   [SETTING.BOOKING_WINDOW_DAYS]: '14',
-  [SETTING.MIN_LEAD_HOURS]: '4'
+  [SETTING.MIN_LEAD_HOURS]: '4',
+  [SETTING.ANNUAL_EXPORT_YEAR]: ''
 };
 
 /** Human-readable notes shown next to each Settings row. */
@@ -199,7 +201,8 @@ const SETTING_NOTES = {
   [SETTING.WA_TEMPLATE_RESCHEDULE]: 'قالب واتساب: تغيير الموعد (اتركه فارغاً للافتراضي)',
   [SETTING.WA_TEMPLATE_CANCEL]: 'قالب واتساب: إلغاء الموعد (اتركه فارغاً للافتراضي)',
   [SETTING.BOOKING_WINDOW_DAYS]: 'أقصى عدد أيام يمكن الحجز فيها مسبقاً',
-  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها'
+  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها',
+  [SETTING.ANNUAL_EXPORT_YEAR]: 'آخر سنة تم فيها تصدير نسخة Excel بكل البيانات'
 };
 
 let _settingsCache = null;

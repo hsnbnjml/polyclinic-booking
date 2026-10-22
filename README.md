@@ -39,10 +39,10 @@ patient link  →  clinic → doctor → reason → the doctor's real free times
 | Booking | 5 steps, Arabic RTL, phone typed twice, consent, honeypot; **one patient per slot**, enforced under a script lock |
 | Rules | Every reason belongs to one doctor and one or more of that doctor's branches; availability windows per doctor × clinic × reason, per-reason duration, minimum notice, blackouts (one date or `start..end`), daily caps, booking horizon |
 | Reference | Doctor initials + date + the day's running number — `ae-20261018-1` — computed inside the lock so two patients never share one |
-| Reception | Day board, shared colour-coded doctor schedule with per-doctor filters (one or several), statuses, reschedule, block time, patient lookup by phone, audit trail of who changed what |
+| Reception | Day board that refreshes every 60 seconds with a new-booking marker, shared colour-coded doctor schedule with per-doctor filters (one or several), statuses, reschedule, block time, patient lookup by phone, audit trail of who changed what |
 | WhatsApp | Four ready Arabic templates sent with one tap; the reminder carries the branch address and map link and says اليوم / غداً / بعد غد by itself; the wording is editable from the settings page |
 | Reports | Real `.xlsx` and CSV, KPI summary, in-sheet report tabs; scoped to one doctor, any few of them for comparison, or all |
-| Admin | Arabic settings page for branches, doctors, per-doctor reasons, weekly hours, holidays, WhatsApp copy, patient-page copy, pause, backup, audit; archive instead of delete; separate staff/admin codes; per-doctor PINs scope a doctor to their own reasons and schedule; copy a reason to several doctors with a branch choice per copy |
+| Admin | Arabic settings page for branches, doctors, per-doctor reasons, weekly hours, holidays, WhatsApp copy, patient-page copy, pause, backup, annual Excel reminder, audit; archive instead of delete; separate staff/admin codes; per-doctor PINs scope a doctor to their own reasons and schedule; copy a reason to several doctors with a branch choice per copy |
 | Design | One colour in the sheet drives the whole palette (derived darks, tints, press states, focus rings); Cairo type, thumb-first targets, 150–220 ms motion that honours reduced-motion |
 | Automation | Shared Google Calendar mirror, `BLOCK` event → blackout sync, daily agenda e-mail, weekly backup (dated master copy + exported file) |
 | Privacy | The spreadsheet stays private; the public web app never returns patient data — the catalogue endpoint is patient-free by construction. Doctor PINs are hashed in a separate `Access` sheet; the admin payload never returns a hash or salt |
@@ -110,7 +110,7 @@ real logo replaces it. Full walkthrough: `pwa/README.md`.
 ## Run the checks
 
 ```
-node tools/local-test.mjs     # 223 behavioural assertions
+node tools/local-test.mjs     # 225 behavioural assertions
 node tools/check-html.mjs     # front-end and wiring checks
 node tools/check-xlsx.mjs     # the Excel export is a real .xlsx (needs PowerShell)
 ```

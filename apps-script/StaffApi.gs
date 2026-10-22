@@ -59,8 +59,35 @@ function getStaffBoard(dateStr, code) {
     bookings: bookings,
     doctors: dayDoctors(date),
     counts: counts,
-    upcoming: upcoming
+    upcoming: upcoming,
+    annualExportDue: annualExportDue()
   };
+}
+
+/**
+ * Full annual Excel export. Staff already have access to every patient record in
+ * the reports; this records the year and never deletes any booking rows.
+ */
+function apiStaffAnnualExport(code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  try {
+    const result = exportXlsx({}, 'نسخة-سنوية-كل-البيانات');
+    if (!result || !result.ok) {
+      return { ok: false, error: 'BACKUP_FAILED', messageAr: 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.' };
+    }
+    const year = markAnnualExportDone();
+    logInfo('annualExport', 'Staff exported ' + result.rows + ' rows for ' + year + ': ' + result.url);
+    return {
+      ok: true,
+      url: result.url,
+      fileName: result.fileName,
+      rows: result.rows,
+      year: year
+    };
+  } catch (err) {
+    logError('apiStaffAnnualExport', err);
+    return { ok: false, error: 'BACKUP_FAILED', messageAr: 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.' };
+  }
 }
 
 /**

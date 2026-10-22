@@ -440,6 +440,12 @@
       stat(c.activeClinics, 'فروع نشطة') + stat(c.activeDoctors, 'أطباء نشطون') +
       stat(c.activeReasons, 'أسباب زيارة') + stat(c.upcomingBookings, 'حجوزات قادمة') +
       '</div>';
+    if (d.annualExportDue) {
+      html += '<div class="msg info"><b>حان وقت النسخة السنوية.</b><br>' +
+        'نزّل ملف Excel بكل البيانات واحفظه خارج Google Drive. لا يتم حذف أي حجوزات تلقائياً.' +
+        '<div class="actions" style="margin-top:10px"><button class="btn" id="btn-annual" onclick="doAnnualExport()">تصدير كل البيانات Excel</button></div>' +
+        '<div id="annual-result"></div></div>';
+    }
     html += healthCard();
     if (d.settings.bookingsPaused) {
       html += '<div class="msg err"><b>استقبال الحجوزات متوقف الآن.</b><br>' + esc(d.settings.pauseMessage || '') + '</div>';
@@ -1557,6 +1563,23 @@
       toast(msg);
       loadData();
     }).catch(function (err) { busy(el('btn-save-security'), false); toast('خطأ: ' + err); });
+  }
+
+  function doAnnualExport() {
+    var btn = el('btn-annual');
+    if (btn) busy(btn, true, 'جاري تصدير البيانات…');
+    api('adminAnnualExport', S.code).then(function (res) {
+      if (btn) busy(btn, false);
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر إنشاء النسخة السنوية.')); return; }
+      openModal('<h2>النسخة السنوية جاهزة</h2>' +
+        '<p class="hint">' + esc(res.fileName || '') + ' — ' + Number(res.rows || 0) + ' صف. احفظ الملف خارج Google Drive.</p>' +
+        '<div class="actions"><a class="btn wide" href="' + esc(res.url) + '" target="_blank" rel="noopener">فتح ملف Excel</a>' +
+        '<button class="btn ghost wide" onclick="closeModal();loadData()">إغلاق</button></div>');
+      loadData();
+    }).catch(function (err) {
+      if (btn) busy(btn, false);
+      toast('خطأ: ' + err);
+    });
   }
 
   function doBackup() {

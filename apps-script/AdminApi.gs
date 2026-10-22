@@ -326,6 +326,7 @@ function adminAdminPayload() {
     ok: true,
     role: 'admin',
     actorName: 'الإدارة',
+    annualExportDue: annualExportDue(),
     clinics: sortRowsByOrder(clinics).map(adminClinicOut),
     doctors: sortRowsByOrder(doctors).map(function (d) { return adminDoctorOut(d, access); }),
     reasons: sortRowsByOrder(reasons).map(adminReasonOut),
@@ -1383,6 +1384,29 @@ function adminChangePin(code, newPin) {
   else Db.append(SHEET.ACCESS, row);
   adminAudit(actor, 'تغيير كود الطبيب', str(actor.doctor.name_ar));
   return { ok: true };
+}
+
+function adminAnnualExport(code) {
+  const actor = adminRoleFor(code);
+  if (!actor || actor.role !== 'admin') return adminError('ADMIN_ONLY', 'النسخة السنوية متاحة للإدارة فقط.');
+  try {
+    const result = exportXlsx({}, 'نسخة-سنوية-كل-البيانات');
+    if (!result || !result.ok) {
+      return adminError('BACKUP_FAILED', 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.');
+    }
+    const year = markAnnualExportDone();
+    adminAudit(actor, 'نسخة سنوية Excel', result.fileName + ' — ' + result.rows + ' صف');
+    return {
+      ok: true,
+      url: result.url,
+      fileName: result.fileName,
+      rows: result.rows,
+      year: year
+    };
+  } catch (err) {
+    logError('adminAnnualExport', err);
+    return adminError('BACKUP_FAILED', 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.');
+  }
 }
 
 function adminBackup(code) {

@@ -1080,7 +1080,8 @@ const SETTING = {
   WA_TEMPLATE_RESCHEDULE: 'wa_template_reschedule',
   WA_TEMPLATE_CANCEL: 'wa_template_cancel',
   BOOKING_WINDOW_DAYS: 'booking_window_days',
-  MIN_LEAD_HOURS: 'min_lead_hours'
+  MIN_LEAD_HOURS: 'min_lead_hours',
+  ANNUAL_EXPORT_YEAR: 'annual_export_year'
 };
 
 /** Defaults used when a Settings row is missing. Bracket text = placeholder to replace. */
@@ -1115,7 +1116,8 @@ const SETTING_DEFAULTS = {
   [SETTING.WA_TEMPLATE_RESCHEDULE]: '',
   [SETTING.WA_TEMPLATE_CANCEL]: '',
   [SETTING.BOOKING_WINDOW_DAYS]: '14',
-  [SETTING.MIN_LEAD_HOURS]: '4'
+  [SETTING.MIN_LEAD_HOURS]: '4',
+  [SETTING.ANNUAL_EXPORT_YEAR]: ''
 };
 
 /** Human-readable notes shown next to each Settings row. */
@@ -1149,7 +1151,8 @@ const SETTING_NOTES = {
   [SETTING.WA_TEMPLATE_RESCHEDULE]: 'قالب واتساب: تغيير الموعد (اتركه فارغاً للافتراضي)',
   [SETTING.WA_TEMPLATE_CANCEL]: 'قالب واتساب: إلغاء الموعد (اتركه فارغاً للافتراضي)',
   [SETTING.BOOKING_WINDOW_DAYS]: 'أقصى عدد أيام يمكن الحجز فيها مسبقاً',
-  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها'
+  [SETTING.MIN_LEAD_HOURS]: 'أقل مدة قبل الموعد المسموح بالحجز فيها',
+  [SETTING.ANNUAL_EXPORT_YEAR]: 'آخر سنة تم فيها تصدير نسخة Excel بكل البيانات'
 };
 
 let _settingsCache = null;
@@ -1212,6 +1215,21 @@ function pad2(n) {
 
 function todayStr() {
   return formatDateStr(new Date());
+}
+
+/**
+ * The clinic is due a full annual Excel export when the current year has not
+ * been recorded yet. This is a reminder only; no booking data is ever deleted.
+ */
+function annualExportDue() {
+  const last = Number(str(getSettings()[SETTING.ANNUAL_EXPORT_YEAR]));
+  return !last || last < Number(todayStr().slice(0, 4));
+}
+
+function markAnnualExportDone() {
+  const year = todayStr().slice(0, 4);
+  setSetting(SETTING.ANNUAL_EXPORT_YEAR, year);
+  return year;
 }
 
 function formatDateStr(d) {
@@ -3039,8 +3057,35 @@ function getStaffBoard(dateStr, code) {
     bookings: bookings,
     doctors: dayDoctors(date),
     counts: counts,
-    upcoming: upcoming
+    upcoming: upcoming,
+    annualExportDue: annualExportDue()
   };
+}
+
+/**
+ * Full annual Excel export. Staff already have access to every patient record in
+ * the reports; this records the year and never deletes any booking rows.
+ */
+function apiStaffAnnualExport(code) {
+  if (!assertStaff(code)) return staffError(errorMessageAr('STAFF_CODE'));
+  try {
+    const result = exportXlsx({}, 'نسخة-سنوية-كل-البيانات');
+    if (!result || !result.ok) {
+      return { ok: false, error: 'BACKUP_FAILED', messageAr: 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.' };
+    }
+    const year = markAnnualExportDone();
+    logInfo('annualExport', 'Staff exported ' + result.rows + ' rows for ' + year + ': ' + result.url);
+    return {
+      ok: true,
+      url: result.url,
+      fileName: result.fileName,
+      rows: result.rows,
+      year: year
+    };
+  } catch (err) {
+    logError('apiStaffAnnualExport', err);
+    return { ok: false, error: 'BACKUP_FAILED', messageAr: 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.' };
+  }
 }
 
 /**
@@ -4222,6 +4267,7 @@ function adminAdminPayload() {
     ok: true,
     role: 'admin',
     actorName: 'الإدارة',
+    annualExportDue: annualExportDue(),
     clinics: sortRowsByOrder(clinics).map(adminClinicOut),
     doctors: sortRowsByOrder(doctors).map(function (d) { return adminDoctorOut(d, access); }),
     reasons: sortRowsByOrder(reasons).map(adminReasonOut),
@@ -5281,6 +5327,29 @@ function adminChangePin(code, newPin) {
   return { ok: true };
 }
 
+function adminAnnualExport(code) {
+  const actor = adminRoleFor(code);
+  if (!actor || actor.role !== 'admin') return adminError('ADMIN_ONLY', 'النسخة السنوية متاحة للإدارة فقط.');
+  try {
+    const result = exportXlsx({}, 'نسخة-سنوية-كل-البيانات');
+    if (!result || !result.ok) {
+      return adminError('BACKUP_FAILED', 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.');
+    }
+    const year = markAnnualExportDone();
+    adminAudit(actor, 'نسخة سنوية Excel', result.fileName + ' — ' + result.rows + ' صف');
+    return {
+      ok: true,
+      url: result.url,
+      fileName: result.fileName,
+      rows: result.rows,
+      year: year
+    };
+  } catch (err) {
+    logError('adminAnnualExport', err);
+    return adminError('BACKUP_FAILED', 'تعذّر إنشاء ملف Excel. حاول مرة أخرى.');
+  }
+}
+
 function adminBackup(code) {
   const actor = adminRoleFor(code);
   if (!actor || actor.role !== 'admin') return adminError('ADMIN_ONLY', 'النسخ الاحتياطي متاح للإدارة فقط.');
@@ -5559,6 +5628,7 @@ function previewSlots() {
       adminSetDoctorPin: adminSetDoctorPin,
       adminChangePin: adminChangePin,
       adminBackup: adminBackup,
+      adminAnnualExport: adminAnnualExport,
       adminCopyReason: adminCopyReason,
       migrateReasonsToDoctors: migrateReasonsToDoctors,
       // Naming and scope: the same functions the live export uses, so an offline demo
@@ -5580,7 +5650,8 @@ function previewSlots() {
       apiStaffSlots: apiStaffSlots,
       apiStaffCatalog: apiStaffCatalog,
       apiStaffWaMark: apiStaffWaMark,
-      apiStaffKpis: apiStaffKpis
+      apiStaffKpis: apiStaffKpis,
+      apiStaffAnnualExport: apiStaffAnnualExport
     };
   })();
 
@@ -5688,6 +5759,8 @@ function previewSlots() {
     SERVER.setSetting(SERVER.SETTING.REPORT_EMAIL, 'demo@polyclinic.example');
     SERVER.setSetting(SERVER.SETTING.WHATSAPP_NUMBER, '+201000000000');
     SERVER.setSetting(SERVER.SETTING.SUPPORT_PHONE, '0220000000');
+    // Keep the demo focused on daily operations, not the annual reminder.
+    SERVER.setSetting(SERVER.SETTING.ANNUAL_EXPORT_YEAR, String(new Date().getFullYear()));
     SERVER.invalidateSettingsCache();
   }
 
@@ -6228,6 +6301,12 @@ function previewSlots() {
       stat(c.activeClinics, 'فروع نشطة') + stat(c.activeDoctors, 'أطباء نشطون') +
       stat(c.activeReasons, 'أسباب زيارة') + stat(c.upcomingBookings, 'حجوزات قادمة') +
       '</div>';
+    if (d.annualExportDue) {
+      html += '<div class="msg info"><b>حان وقت النسخة السنوية.</b><br>' +
+        'نزّل ملف Excel بكل البيانات واحفظه خارج Google Drive. لا يتم حذف أي حجوزات تلقائياً.' +
+        '<div class="actions" style="margin-top:10px"><button class="btn" id="btn-annual" onclick="doAnnualExport()">تصدير كل البيانات Excel</button></div>' +
+        '<div id="annual-result"></div></div>';
+    }
     html += healthCard();
     if (d.settings.bookingsPaused) {
       html += '<div class="msg err"><b>استقبال الحجوزات متوقف الآن.</b><br>' + esc(d.settings.pauseMessage || '') + '</div>';
@@ -7345,6 +7424,23 @@ function previewSlots() {
       toast(msg);
       loadData();
     }).catch(function (err) { busy(el('btn-save-security'), false); toast('خطأ: ' + err); });
+  }
+
+  function doAnnualExport() {
+    var btn = el('btn-annual');
+    if (btn) busy(btn, true, 'جاري تصدير البيانات…');
+    api('adminAnnualExport', S.code).then(function (res) {
+      if (btn) busy(btn, false);
+      if (!res || !res.ok) { toast(failText(res, 'تعذّر إنشاء النسخة السنوية.')); return; }
+      openModal('<h2>النسخة السنوية جاهزة</h2>' +
+        '<p class="hint">' + esc(res.fileName || '') + ' — ' + Number(res.rows || 0) + ' صف. احفظ الملف خارج Google Drive.</p>' +
+        '<div class="actions"><a class="btn wide" href="' + esc(res.url) + '" target="_blank" rel="noopener">فتح ملف Excel</a>' +
+        '<button class="btn ghost wide" onclick="closeModal();loadData()">إغلاق</button></div>');
+      loadData();
+    }).catch(function (err) {
+      if (btn) busy(btn, false);
+      toast('خطأ: ' + err);
+    });
   }
 
   function doBackup() {

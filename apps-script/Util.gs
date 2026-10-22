@@ -21,6 +21,21 @@ function todayStr() {
   return formatDateStr(new Date());
 }
 
+/**
+ * The clinic is due a full annual Excel export when the current year has not
+ * been recorded yet. This is a reminder only; no booking data is ever deleted.
+ */
+function annualExportDue() {
+  const last = Number(str(getSettings()[SETTING.ANNUAL_EXPORT_YEAR]));
+  return !last || last < Number(todayStr().slice(0, 4));
+}
+
+function markAnnualExportDone() {
+  const year = todayStr().slice(0, 4);
+  setSetting(SETTING.ANNUAL_EXPORT_YEAR, year);
+  return year;
+}
+
 function formatDateStr(d) {
   return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 }

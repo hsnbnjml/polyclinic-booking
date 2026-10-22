@@ -374,6 +374,7 @@
       adminSetDoctorPin: adminSetDoctorPin,
       adminChangePin: adminChangePin,
       adminBackup: adminBackup,
+      adminAnnualExport: adminAnnualExport,
       adminCopyReason: adminCopyReason,
       migrateReasonsToDoctors: migrateReasonsToDoctors,
       // Naming and scope: the same functions the live export uses, so an offline demo
@@ -395,7 +396,8 @@
       apiStaffSlots: apiStaffSlots,
       apiStaffCatalog: apiStaffCatalog,
       apiStaffWaMark: apiStaffWaMark,
-      apiStaffKpis: apiStaffKpis
+      apiStaffKpis: apiStaffKpis,
+      apiStaffAnnualExport: apiStaffAnnualExport
     };
   })();
 
@@ -503,6 +505,8 @@
     SERVER.setSetting(SERVER.SETTING.REPORT_EMAIL, 'demo@polyclinic.example');
     SERVER.setSetting(SERVER.SETTING.WHATSAPP_NUMBER, '+201000000000');
     SERVER.setSetting(SERVER.SETTING.SUPPORT_PHONE, '0220000000');
+    // Keep the demo focused on daily operations, not the annual reminder.
+    SERVER.setSetting(SERVER.SETTING.ANNUAL_EXPORT_YEAR, String(new Date().getFullYear()));
     SERVER.invalidateSettingsCache();
   }
 

@@ -245,7 +245,8 @@ function createFakeEnv() {
     'getPublicConfig', 'getWaTemplates', 'waTemplateSettingKey', 'errorMessageAr', 'sortRowsByOrder',
     'adminMigrateSchema', 'adminLogin', 'adminBootstrap', 'adminGet', 'adminSave', 'adminDelete',
     'adminReorder', 'adminSetDoctorPin', 'adminChangePin', 'adminBackup', 'adminRoleFor', 'adminPinHash',
-    'adminCopyReason', 'migrateReasonsToDoctors', 'splitIds', 'reasonClinicIds', 'isActive'
+    'adminCopyReason', 'migrateReasonsToDoctors', 'splitIds', 'reasonClinicIds', 'isActive',
+    'annualExportDue', 'markAnnualExportDone'
   ];
   const wrapped = '(function(){\n' + source + '\nreturn {' + exported.join(',') + '};\n})()';
   const api = vm.runInContext(wrapped, context, { filename: 'polyclinic.gs' });
@@ -753,6 +754,10 @@ check('each public reason carries one doctor and its branch list',
     r.links.every((l) => l.doctorId === r.doctorId && r.clinicIds.indexOf(l.clinicId) !== -1)));
 check('bootstrap leaks nothing patient-related',
   JSON.stringify(boot).indexOf('01010000001') === -1 && JSON.stringify(boot).indexOf('سارة') === -1);
+check('an annual Excel export is due until it is marked', api.annualExportDue() === true);
+const annualYear = api.markAnnualExportDone();
+check('marking the annual export clears the reminder', api.annualExportDue() === false &&
+  annualYear === api.todayStr().slice(0, 4), annualYear);
 
 /* -------------------------------------------------- */
 section('9. Booking reference — doctor initials, date, running number');
