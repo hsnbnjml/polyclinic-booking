@@ -64,7 +64,8 @@ A Work Google account or managed browser can block Apps Script even when the raw
 the shell hides its load cover only for that message, not for Google's error page. If
 the message does not arrive within one second, a small note appears:
 
-> **لا يظهر التطبيق؟** جرّب فتح الرابط في متصفح شخصي، أو تواصل مع العيادة.
+> **لا يظهر التطبيق؟** جرّب فتح الرابط في متصفح شخصي، أو اتصل بالاستقبال:  
+> `[رقم الاستقبال]`
 
 The note is rendered by Cloudflare outside the iframe, so it remains visible over
 Google's error page. It disappears automatically if the app finishes loading later.
