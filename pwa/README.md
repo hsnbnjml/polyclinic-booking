@@ -62,9 +62,9 @@ The dedicated manifest keeps the correct screen as the launch page.
 A Work Google account or managed browser can block Apps Script even when the raw
 `/exec` link is public. The app sends a `polyclinic-ready` message once its HTML runs;
 the shell hides its load cover only for that message, not for Google's error page. If
-the message does not arrive within one second, a small note appears:
+the message does not arrive within two seconds, a small note appears:
 
-> **لا يظهر التطبيق؟** جرّب فتح الرابط في متصفح شخصي، أو اتصل بالاستقبال:  
+> **لا يظهر التطبيق؟** جرّب فتح الرابط في متصفح آخر، أو اتصل برقم الاستقبال مباشرة:  
 > `[رقم الاستقبال]`
 
 The note is rendered by Cloudflare outside the iframe, so it remains visible over

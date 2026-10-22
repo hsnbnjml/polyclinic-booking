@@ -60,7 +60,7 @@
 
 <div id="slow-note" role="status" aria-live="polite">
   <b>لا يظهر التطبيق؟</b>
-  جرّب فتح الرابط في متصفح شخصي، أو اتصل بالاستقبال:
+  جرّب فتح الرابط في متصفح آخر، أو اتصل برقم الاستقبال مباشرة:
   <span class="phone" dir="ltr">[رقم الاستقبال]</span>
 </div>
 
@@ -90,7 +90,7 @@
   frame.addEventListener('load', function () { boot.style.display = 'none'; });
   setTimeout(function () {
     if (!appReady) slowNote.classList.add('show');
-  }, 1000);
+  }, 2000);
   // If the frame never loads at all, also expose the direct link inside the boot cover.
   setTimeout(function () { document.getElementById('fallback').style.display = 'inline-block'; }, 9000);
 </script>
