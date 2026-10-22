@@ -252,6 +252,12 @@
     }
   }
 
+  // Coming back to the tab refreshes immediately instead of waiting for the
+  // next tick, so the notification is there the moment reception looks again.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) pollBoard();
+  });
+
   /**
    * Silent refresh, once a minute, while the board is visible and no form is open.
    * It keeps the same day and filters, and marks appointments that appeared since
