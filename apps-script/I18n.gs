@@ -16,7 +16,7 @@ const AR = {
   chooseTime: 'اختر الموعد المناسب',
   yourDetails: 'بياناتك',
   name: 'الاسم',
-  nameHint: 'اختياري — يساعد الطاقم على تنظيم الاستقبال',
+  nameHint: 'مطلوب — نستخدمه لتنظيم الاستقبال',
   phone: 'رقم الجوال',
   phoneHint: 'مطلوب — سنتواصل معك على واتساب على هذا الرقم',
   phoneConfirm: 'تأكيد رقم الجوال',
@@ -45,6 +45,7 @@ const AR = {
   addToCalendar: 'أضف الموعد إلى تقويمك',
   errors: {
     MISSING_FIELDS: 'من فضلك أكمل كل الخطوات.',
+    NAME_REQUIRED: 'الاسم مطلوب.',
     CONSENT_REQUIRED: 'لا يمكن إتمام الحجز بدون الموافقة.',
     PHONE_REQUIRED: 'رقم الجوال مطلوب.',
     PHONE_INVALID: 'رقم الجوال غير صحيح. اكتبه بالصيغة 01xxxxxxxxx.',

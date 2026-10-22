@@ -1093,7 +1093,7 @@ const SETTING_DEFAULTS = {
     'أوافق على استخدام اسمي ورقم هاتفي وسبب الزيارة لحجز الموعد والتواصل معي بشأنه فقط.',
   [SETTING.SUCCESS_TEXT_AR]: 'تم حجز موعدك بنجاح. سنتواصل معك على واتساب للتأكيد.',
   [SETTING.BOOKING_SUBTITLE_AR]: 'احجز موعدك في أقل من دقيقة',
-  [SETTING.NAME_HINT_AR]: 'اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.',
+  [SETTING.NAME_HINT_AR]: 'مطلوب — نستخدمه لتنظيم الاستقبال.',
   [SETTING.PHONE_HINT_AR]: 'مطلوب — سنتواصل معك على واتساب على هذا الرقم.',
   [SETTING.EXTRA_LABEL_AR]: 'ملاحظة للطبيب',
   [SETTING.NO_SLOTS_TEXT_AR]: 'لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.',
@@ -1610,7 +1610,7 @@ const AR = {
   chooseTime: 'اختر الموعد المناسب',
   yourDetails: 'بياناتك',
   name: 'الاسم',
-  nameHint: 'اختياري — يساعد الطاقم على تنظيم الاستقبال',
+  nameHint: 'مطلوب — نستخدمه لتنظيم الاستقبال',
   phone: 'رقم الجوال',
   phoneHint: 'مطلوب — سنتواصل معك على واتساب على هذا الرقم',
   phoneConfirm: 'تأكيد رقم الجوال',
@@ -1639,6 +1639,7 @@ const AR = {
   addToCalendar: 'أضف الموعد إلى تقويمك',
   errors: {
     MISSING_FIELDS: 'من فضلك أكمل كل الخطوات.',
+    NAME_REQUIRED: 'الاسم مطلوب.',
     CONSENT_REQUIRED: 'لا يمكن إتمام الحجز بدون الموافقة.',
     PHONE_REQUIRED: 'رقم الجوال مطلوب.',
     PHONE_INVALID: 'رقم الجوال غير صحيح. اكتبه بالصيغة 01xxxxxxxxx.',
@@ -2490,7 +2491,8 @@ function submitBooking(input) {
     return { ok: false, error: 'CONSENT_REQUIRED' };
   }
 
-  const name = str(input.name).slice(0, MAX_NAME_LENGTH); // optional by design
+  const name = str(input.name).slice(0, MAX_NAME_LENGTH);
+  if (!name) return { ok: false, error: 'NAME_REQUIRED' };
   const phoneRaw = str(input.phone).slice(0, 30);
   const phoneConfirm = str(input.phoneConfirm);
   if (!phoneRaw) return { ok: false, error: 'PHONE_REQUIRED' };
@@ -4093,6 +4095,15 @@ function adminMigrateSchema() {
     });
   }
   if (needed) createAllSheets();
+
+  // Name used to be optional. Do not rewrite a custom hint, but replace the old
+  // built-in hint so an upgraded clinic does not still tell patients it is optional.
+  const oldNameHint = 'اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.';
+  const settings = getSettings();
+  if (str(settings[SETTING.NAME_HINT_AR]) === oldNameHint) {
+    setSetting(SETTING.NAME_HINT_AR, SETTING_DEFAULTS[SETTING.NAME_HINT_AR]);
+  }
+
   // Existing installations may still have the old global reasons. Upgrade them
   // lazily on the first settings visit, after the new columns exist.
   try {

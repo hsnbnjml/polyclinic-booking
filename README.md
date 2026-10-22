@@ -110,7 +110,7 @@ real logo replaces it. Full walkthrough: `pwa/README.md`.
 ## Run the checks
 
 ```
-node tools/local-test.mjs     # 222 behavioural assertions
+node tools/local-test.mjs     # 223 behavioural assertions
 node tools/check-html.mjs     # front-end and wiring checks
 node tools/check-xlsx.mjs     # the Excel export is a real .xlsx (needs PowerShell)
 ```

@@ -1105,7 +1105,7 @@ const SETTING_DEFAULTS = {
     'أوافق على استخدام اسمي ورقم هاتفي وسبب الزيارة لحجز الموعد والتواصل معي بشأنه فقط.',
   [SETTING.SUCCESS_TEXT_AR]: 'تم حجز موعدك بنجاح. سنتواصل معك على واتساب للتأكيد.',
   [SETTING.BOOKING_SUBTITLE_AR]: 'احجز موعدك في أقل من دقيقة',
-  [SETTING.NAME_HINT_AR]: 'اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.',
+  [SETTING.NAME_HINT_AR]: 'مطلوب — نستخدمه لتنظيم الاستقبال.',
   [SETTING.PHONE_HINT_AR]: 'مطلوب — سنتواصل معك على واتساب على هذا الرقم.',
   [SETTING.EXTRA_LABEL_AR]: 'ملاحظة للطبيب',
   [SETTING.NO_SLOTS_TEXT_AR]: 'لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.',
@@ -1622,7 +1622,7 @@ const AR = {
   chooseTime: 'اختر الموعد المناسب',
   yourDetails: 'بياناتك',
   name: 'الاسم',
-  nameHint: 'اختياري — يساعد الطاقم على تنظيم الاستقبال',
+  nameHint: 'مطلوب — نستخدمه لتنظيم الاستقبال',
   phone: 'رقم الجوال',
   phoneHint: 'مطلوب — سنتواصل معك على واتساب على هذا الرقم',
   phoneConfirm: 'تأكيد رقم الجوال',
@@ -1651,6 +1651,7 @@ const AR = {
   addToCalendar: 'أضف الموعد إلى تقويمك',
   errors: {
     MISSING_FIELDS: 'من فضلك أكمل كل الخطوات.',
+    NAME_REQUIRED: 'الاسم مطلوب.',
     CONSENT_REQUIRED: 'لا يمكن إتمام الحجز بدون الموافقة.',
     PHONE_REQUIRED: 'رقم الجوال مطلوب.',
     PHONE_INVALID: 'رقم الجوال غير صحيح. اكتبه بالصيغة 01xxxxxxxxx.',
@@ -2502,7 +2503,8 @@ function submitBooking(input) {
     return { ok: false, error: 'CONSENT_REQUIRED' };
   }
 
-  const name = str(input.name).slice(0, MAX_NAME_LENGTH); // optional by design
+  const name = str(input.name).slice(0, MAX_NAME_LENGTH);
+  if (!name) return { ok: false, error: 'NAME_REQUIRED' };
   const phoneRaw = str(input.phone).slice(0, 30);
   const phoneConfirm = str(input.phoneConfirm);
   if (!phoneRaw) return { ok: false, error: 'PHONE_REQUIRED' };
@@ -4105,6 +4107,15 @@ function adminMigrateSchema() {
     });
   }
   if (needed) createAllSheets();
+
+  // Name used to be optional. Do not rewrite a custom hint, but replace the old
+  // built-in hint so an upgraded clinic does not still tell patients it is optional.
+  const oldNameHint = 'اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.';
+  const settings = getSettings();
+  if (str(settings[SETTING.NAME_HINT_AR]) === oldNameHint) {
+    setSetting(SETTING.NAME_HINT_AR, SETTING_DEFAULTS[SETTING.NAME_HINT_AR]);
+  }
+
   // Existing installations may still have the old global reasons. Upgrade them
   // lazily on the first settings visit, after the new columns exist.
   try {
@@ -5926,7 +5937,7 @@ function previewSlots() {
 </script>
 
 <script>
-  var CONFIG = {"clinicName":"[اسم المجمع الطبي]","brandPrimary":"#0f6f6c","brandSecondary":"#f4f7f7","logoUrl":"","whatsappNumber":"+201000000000","supportPhone":"0220000000","consentText":"أوافق على استخدام اسمي ورقم هاتفي وسبب الزيارة لحجز الموعد والتواصل معي بشأنه فقط.","successText":"تم حجز موعدك بنجاح. سنتواصل معك على واتساب للتأكيد.","bookingsPaused":false,"pauseMessage":"الحجز متوقف مؤقتاً. للاستفسار أو لحجز موعد، تواصل مع الاستقبال.","texts":{"subtitle":"احجز موعدك في أقل من دقيقة","nameHint":"اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.","phoneHint":"مطلوب — سنتواصل معك على واتساب على هذا الرقم.","extraLabel":"ملاحظة للطبيب","noSlots":"لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.","slotTaken":"للأسف تم حجز هذا الموعد للتو. اختر موعداً آخر من القائمة."},"windowDays":14};
+  var CONFIG = {"clinicName":"[اسم المجمع الطبي]","brandPrimary":"#0f6f6c","brandSecondary":"#f4f7f7","logoUrl":"","whatsappNumber":"+201000000000","supportPhone":"0220000000","consentText":"أوافق على استخدام اسمي ورقم هاتفي وسبب الزيارة لحجز الموعد والتواصل معي بشأنه فقط.","successText":"تم حجز موعدك بنجاح. سنتواصل معك على واتساب للتأكيد.","bookingsPaused":false,"pauseMessage":"الحجز متوقف مؤقتاً. للاستفسار أو لحجز موعد، تواصل مع الاستقبال.","texts":{"subtitle":"احجز موعدك في أقل من دقيقة","nameHint":"مطلوب — نستخدمه لتنظيم الاستقبال.","phoneHint":"مطلوب — سنتواصل معك على واتساب على هذا الرقم.","extraLabel":"ملاحظة للطبيب","noSlots":"لا توجد مواعيد متاحة لهذا الاختيار حالياً. جرّب طبيباً آخر أو عد لاحقاً.","slotTaken":"للأسف تم حجز هذا الموعد للتو. اختر موعداً آخر من القائمة."},"windowDays":14};
   var LINKS = {"booking":"patient.html","staff":"reception.html"};
   var ADMIN_KEY = 'polyclinic_admin_code';
 
@@ -6115,7 +6126,25 @@ function previewSlots() {
       ensureScheduleSelection();
       render();
     }).catch(function (err) {
-      logout('خطأ في الاتصال: ' + err);
+      // A temporary Apps Script/network failure must not discard the session or
+      // pretend the saved change failed. Keep the code and offer a retry.
+      if (S.data) {
+        var box = el('load-error');
+        if (!box) {
+          box = document.createElement('div');
+          box.id = 'load-error';
+          box.className = 'msg err';
+          el('app').insertBefore(box, el('app').firstChild);
+        }
+        box.innerHTML = 'تعذّر تحديث البيانات: ' + esc(err) +
+          ' <button class="btn ghost mini-btn" onclick="loadData()">إعادة المحاولة</button>';
+        return;
+      }
+      view('<div class="card"><h2>تعذّر تحميل الإعدادات</h2>' +
+        '<div class="msg err">' + esc(err) + '</div>' +
+        '<p class="hint">تحقق من الاتصال ثم أعد المحاولة. لن يتم تسجيل خروجك.</p>' +
+        '<button class="btn" onclick="loadData()">إعادة المحاولة</button> ' +
+        '<button class="btn ghost" onclick="logout()">تسجيل الخروج</button></div>');
     });
   }
 

@@ -110,7 +110,7 @@ The settings page never shows patient data. See `docs/admin-guide-ar.md` for the
 | Decision | Choice |
 |----------|--------|
 | Platform | Google Sheet + Apps Script web app (no paid tier) |
-| Patient identity | phone number mandatory; name optional |
+| Patient identity | phone number is the key; name is mandatory |
 | Confirmation | instant, reception may cancel or reschedule afterwards |
 | Reminders | manual WhatsApp templates fired by staff |
 | Calendars | one shared clinic calendar, colour-coded per doctor |

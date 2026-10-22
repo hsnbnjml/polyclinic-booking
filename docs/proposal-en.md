@@ -28,7 +28,7 @@
 | 3 | Doctor | Only doctors who actually serve that branch are shown |
 | 4 | Visit reason | First examination / consultation / follow-up … |
 | 5 | Time | Only **real** free times appear, driven by that doctor's rules for that visit type |
-| 6 | Details | Name (optional) + phone typed twice + consent |
+| 6 | Details | Name + phone typed twice + consent |
 | 7 | Confirmation | Booking card: doctor, date, time, address, booking reference |
 
 The rule the system runs on, as an example: *first examinations with Dr [name] on Sundays and Wednesdays, 9am–4pm, 45-minute slots, maximum 8 patients a day.* Changing that rule takes two taps in the Arabic settings page — no cost, no developer. Each doctor can also add their own visit reasons and change their own hours with a personal PIN, scoped to their reasons and schedule only.

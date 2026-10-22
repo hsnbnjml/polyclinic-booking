@@ -338,7 +338,25 @@
       ensureScheduleSelection();
       render();
     }).catch(function (err) {
-      logout('خطأ في الاتصال: ' + err);
+      // A temporary Apps Script/network failure must not discard the session or
+      // pretend the saved change failed. Keep the code and offer a retry.
+      if (S.data) {
+        var box = el('load-error');
+        if (!box) {
+          box = document.createElement('div');
+          box.id = 'load-error';
+          box.className = 'msg err';
+          el('app').insertBefore(box, el('app').firstChild);
+        }
+        box.innerHTML = 'تعذّر تحديث البيانات: ' + esc(err) +
+          ' <button class="btn ghost mini-btn" onclick="loadData()">إعادة المحاولة</button>';
+        return;
+      }
+      view('<div class="card"><h2>تعذّر تحميل الإعدادات</h2>' +
+        '<div class="msg err">' + esc(err) + '</div>' +
+        '<p class="hint">تحقق من الاتصال ثم أعد المحاولة. لن يتم تسجيل خروجك.</p>' +
+        '<button class="btn" onclick="loadData()">إعادة المحاولة</button> ' +
+        '<button class="btn ghost" onclick="logout()">تسجيل الخروج</button></div>');
     });
   }
 

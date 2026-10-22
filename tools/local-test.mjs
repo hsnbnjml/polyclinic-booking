@@ -503,29 +503,34 @@ const doubleTap = api.submitBooking({
 check('double-tap is idempotent, not a second booking',
   doubleTap.ok === true && doubleTap.duplicate === true && api.Db.rows(api.SHEET.BOOKINGS).length === 1);
 
+check('patient name is required', api.submitBooking({
+  clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: target.date, start: '09:45',
+  phone: '01006666666', phoneConfirm: '01006666666', consent: 'true'
+}).error === 'NAME_REQUIRED');
+
 check('phone mismatch is caught', api.submitBooking({
   clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: target.date, start: '09:45',
-  phone: '01001234567', phoneConfirm: '01001234568', consent: 'true'
+  name: 'اختبار', phone: '01001234567', phoneConfirm: '01001234568', consent: 'true'
 }).error === 'PHONE_MISMATCH');
 
 check('consent is required', api.submitBooking({
   clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: target.date, start: '09:45',
-  phone: '01005555555', phoneConfirm: '01005555555'
+  name: 'اختبار', phone: '01005555555', phoneConfirm: '01005555555'
 }).error === 'CONSENT_REQUIRED');
 
 check('bad phone is refused', api.submitBooking({
   clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: target.date, start: '09:45',
-  phone: '12', phoneConfirm: '12', consent: 'true'
+  name: 'اختبار', phone: '12', phoneConfirm: '12', consent: 'true'
 }).error === 'PHONE_INVALID');
 
 check('honeypot is refused', api.submitBooking({
   clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: target.date, start: '09:45',
-  phone: '01007777777', phoneConfirm: '01007777777', consent: 'true', trap: 'bot'
+  name: 'اختبار', phone: '01007777777', phoneConfirm: '01007777777', consent: 'true', trap: 'bot'
 }).error === 'REJECTED');
 
 check('a slot outside the doctor\'s hours is refused', api.submitBooking({
   clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: target.date, start: '20:00',
-  phone: '01008888888', phoneConfirm: '01008888888', consent: 'true'
+  name: 'اختبار', phone: '01008888888', phoneConfirm: '01008888888', consent: 'true'
 }).error === 'SLOT_TAKEN');
 
 /* -------------------------------------------------- */
@@ -538,13 +543,13 @@ r1.days.forEach((d) => d.slots.slice(0, 2).forEach((s) => picks.push({ date: d.d
 for (let i = 0; i < 3; i++) {
   const res = api.submitBooking({
     clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: picks[i].date, start: picks[i].start,
-    phone: '01001234567', phoneConfirm: '01001234567', consent: 'true'
+    name: 'مريض التكرار', phone: '01001234567', phoneConfirm: '01001234567', consent: 'true'
   });
   check(`booking ${i + 1} of 3 accepted`, res.ok === true, JSON.stringify(res));
 }
 const fourth = api.submitBooking({
   clinicId: 'C1', doctorId: 'D1', reasonId: 'R1', date: picks[3].date, start: picks[3].start,
-  phone: '01001234567', phoneConfirm: '01001234567', consent: 'true'
+  name: 'مريض التكرار', phone: '01001234567', phoneConfirm: '01001234567', consent: 'true'
 });
 check('fourth future booking for the same phone is blocked',
   fourth.ok === false && fourth.error === 'TOO_MANY_ACTIVE', JSON.stringify(fourth));

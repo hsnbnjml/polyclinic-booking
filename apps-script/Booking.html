@@ -329,7 +329,7 @@
     paintSteps();
     var html = header('بياناتك', esc(S.day.labelAr) + ' — ' + esc(timeLabel(S.slot.start)));
     html += '<div class="card">';
-    html += '<label class="field">الاسم' +
+    html += '<label class="field">الاسم *' +
       '<input id="f-name" type="text" autocomplete="name" maxlength="80" placeholder="اكتب اسمك">' +
       '<span class="why">' + esc(CONFIG.texts.nameHint) + '</span></label>';
 
@@ -374,6 +374,7 @@
     var consent = el('f-consent').checked;
 
     var err = el('form-error');
+    if (!name) { err.innerHTML = alertBox('err', 'الاسم مطلوب.'); el('f-name').focus(); return; }
     if (!phone) { err.innerHTML = alertBox('err', 'رقم الجوال مطلوب.'); el('f-phone').focus(); return; }
     if (digits(phone).length < 8) { err.innerHTML = alertBox('err', 'رقم الجوال غير صحيح.'); el('f-phone').focus(); return; }
     if (digits(phone) !== digits(phone2)) { err.innerHTML = alertBox('err', 'رقم الجوال وتأكيده غير متطابقين.'); el('f-phone2').focus(); return; }

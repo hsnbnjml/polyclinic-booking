@@ -211,6 +211,15 @@ function adminMigrateSchema() {
     });
   }
   if (needed) createAllSheets();
+
+  // Name used to be optional. Do not rewrite a custom hint, but replace the old
+  // built-in hint so an upgraded clinic does not still tell patients it is optional.
+  const oldNameHint = 'اختياري، لكنه يساعد الطاقم على تنظيم الاستقبال.';
+  const settings = getSettings();
+  if (str(settings[SETTING.NAME_HINT_AR]) === oldNameHint) {
+    setSetting(SETTING.NAME_HINT_AR, SETTING_DEFAULTS[SETTING.NAME_HINT_AR]);
+  }
+
   // Existing installations may still have the old global reasons. Upgrade them
   // lazily on the first settings visit, after the new columns exist.
   try {

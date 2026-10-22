@@ -108,7 +108,8 @@ function submitBooking(input) {
     return { ok: false, error: 'CONSENT_REQUIRED' };
   }
 
-  const name = str(input.name).slice(0, MAX_NAME_LENGTH); // optional by design
+  const name = str(input.name).slice(0, MAX_NAME_LENGTH);
+  if (!name) return { ok: false, error: 'NAME_REQUIRED' };
   const phoneRaw = str(input.phone).slice(0, 30);
   const phoneConfirm = str(input.phoneConfirm);
   if (!phoneRaw) return { ok: false, error: 'PHONE_REQUIRED' };
