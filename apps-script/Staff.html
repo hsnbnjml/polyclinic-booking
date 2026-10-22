@@ -57,7 +57,18 @@
       .bar-days { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .bar-days input[type="date"] { grid-column: 1 / -1; width: 100%; }
       .bar-days .btn { width: 100%; }
+      .bar-days .unseen-badge { grid-column: 1 / -1; }
     }
+
+    /* Unseen-booking badge: a red counter that stays until the staff opens it. */
+    .unseen-badge {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      background: #b3261e; color: #fff; border: 1px solid #b3261e; border-radius: 999px;
+      padding: 0 16px; min-height: 44px; font-family: inherit; font-size: 14.5px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(179, 38, 30, .28);
+      transition: transform var(--t-fast) var(--ease);
+    }
+    .unseen-badge:active { transform: scale(.97); }
 
     /* Same motion language as the patient page: instant touch feedback, calm focus rings. */
     .bar input, .bar select { transition: border-color var(--t-fast), box-shadow var(--t-fast); }
@@ -149,7 +160,7 @@
   }
   var S = {
     code: '', date: '', board: null, reschedule: null, hidden: [], reportDoctors: [],
-    newBookings: [], polling: false, pollTimer: null
+    newBookings: [], unseen: [], polling: false, pollTimer: null
   };
 
   // Which doctors the reception chose to hide — one or several, remembered on this
@@ -169,6 +180,7 @@
   function gate() {
     stopPolling();
     S.board = null;
+    S.unseen = [];
     view(
       '<div class="card"><h2>دخول الاستقبال</h2>' +
       '<p class="hint">اكتب كود الاستقبال. الكود موجود في ورقة Settings بند staff_code.</p>' +
@@ -210,6 +222,7 @@
   function load(date) {
     S.date = date || S.date || todayISO();
     S.newBookings = [];
+    S.unseen = [];
     view('<div class="spinner">جاري التحميل…</div>');
     api('apiStaffBoard', S.date, S.code).then(function (res) {
       if (!res || !res.ok) { gate(); return; }
@@ -259,6 +272,11 @@
       var added = (res.bookings || []).filter(function (b) { return !before[b.bookingId]; });
       if (added.length) {
         S.newBookings = added.map(function (b) { return b.bookingId; });
+        // The badge keeps counting until the staff opens the bookings, so it survives
+        // later silent refreshes that would otherwise drop the one-off banner.
+        S.newBookings.forEach(function (id) {
+          if (S.unseen.indexOf(id) === -1) S.unseen.push(id);
+        });
         var first = added[0];
         toast('حجز جديد: ' + (first.name || first.phoneNorm) + ' — ' + first.timeAr + ' — ' + first.doctorAr);
       }
@@ -268,6 +286,23 @@
     }).catch(function () {
       S.polling = false;
     });
+  }
+
+  /**
+   * The staff opened a new booking (the banner's عرض button) or tapped the badge:
+   * clear what was opened, redraw the badge, and land on the booking itself.
+   */
+  function ackUnseen(id) {
+    var first;
+    if (id) {
+      first = id;
+      S.unseen = (S.unseen || []).filter(function (x) { return x !== id; });
+    } else {
+      first = (S.unseen || [])[0];
+      S.unseen = [];
+    }
+    if (S.board) renderBoard(S.board);
+    if (first) scrollToBooking(first);
   }
 
   function staffAnnualExport() {
@@ -297,6 +332,12 @@
     var rosterIds = (board.doctors || []).map(function (d) { return d.id; });
     S.hidden = S.hidden.filter(function (id) { return rosterIds.indexOf(id) !== -1; });
 
+    // The badge counts bookings the staff has not opened yet; drop any that left
+    // the board (cancelled by a colleague, or the staff moved to another day).
+    var onBoard = {};
+    (board.bookings || []).forEach(function (b) { onBoard[b.bookingId] = true; });
+    S.unseen = (S.unseen || []).filter(function (id) { return onBoard[id]; });
+
     el('hdr-date').textContent = board.dateAr;
 
     var html = '';
@@ -307,7 +348,7 @@
         html += '<div class="msg ok" id="new-booking-note"><b>حجز جديد' +
           (S.newBookings.length > 1 ? ' (' + S.newBookings.length + ')' : '') + ':</b> ' +
           esc(firstNew.name || firstNew.phoneNorm) + ' — ' + esc(firstNew.timeAr) + ' — ' + esc(firstNew.doctorAr) +
-          ' <button class="btn ghost mini-btn" onclick="scrollToBooking(\'' + esc(firstNew.bookingId) + '\')">عرض</button></div>';
+          ' <button class="btn ghost mini-btn" onclick="ackUnseen(\'' + esc(firstNew.bookingId) + '\')">عرض</button></div>';
       }
       S.newBookings = [];
     }
@@ -316,6 +357,7 @@
       '<input type="date" id="d-pick" value="' + board.date + '" onchange="load(this.value)">' +
       '<button class="btn ghost" onclick="load(\'' + todayISO() + '\')">اليوم</button>' +
       '<button class="btn ghost" onclick="load(\'' + addDays(board.date, 1) + '\')">الغد ›</button>' +
+      (S.unseen.length ? '<button class="unseen-badge" id="unseen-badge" onclick="ackUnseen()">جديد ' + S.unseen.length + '</button>' : '') +
       '</div>';
 
     if (board.annualExportDue) {
