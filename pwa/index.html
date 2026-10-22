@@ -36,16 +36,30 @@
     animation: spin 1s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  #slow-note {
+    position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 20; display: none; max-width: 560px; margin: 0 auto; padding: 11px 14px;
+    border: 1px solid #f0d48a; border-radius: 13px; background: #fff9e8; color: #6b4a00;
+    box-shadow: 0 6px 20px rgba(16,24,40,.18); font-family: "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
+    font-size: 13.5px; line-height: 1.65; text-align: center;
+  }
+  #slow-note.show { display: block; }
+  #slow-note b { display: block; font-size: 14.5px; margin-bottom: 2px; }
 </style>
 </head>
 <body>
-<iframe id="app" src="__APP_URL____START_QUERY__" title="نظام حجز مواعيد العيادة"></iframe>
+<iframe id="app" title="نظام حجز مواعيد العيادة"></iframe>
 
 <div id="boot">
   <div class="mark"><img src="icons/icon-192.png" alt=""></div>
   <div class="spinner"></div>
   <p>جاري تحميل التطبيق…</p>
   <a class="btn" id="fallback" href="__APP_URL__">افتح التطبيق مباشرة</a>
+</div>
+
+<div id="slow-note" role="status" aria-live="polite">
+  <b>لا يظهر التطبيق؟</b>
+  جرّب فتح الرابط في متصفح شخصي، أو تواصل مع العيادة.
 </div>
 
 <script>
@@ -57,10 +71,25 @@
   var APP_URL = '__APP_URL__' + (START_QUERY || location.search);
   var frame = document.getElementById('app');
   var boot = document.getElementById('boot');
+  var slowNote = document.getElementById('slow-note');
+  var appReady = false;
+
+  // The app sends this after its HTML has actually executed. A Google Workspace
+  // error page never sends it, so the note can appear over the error after 1s.
+  window.addEventListener('message', function (event) {
+    var data = event && event.data;
+    if (!data || data.type !== 'polyclinic-ready') return;
+    appReady = true;
+    slowNote.classList.remove('show');
+  });
+
   frame.src = APP_URL;
   document.getElementById('fallback').href = APP_URL;
   frame.addEventListener('load', function () { boot.style.display = 'none'; });
-  // If the app has not loaded after 9s (offline, blocked frame), offer the direct link.
+  setTimeout(function () {
+    if (!appReady) slowNote.classList.add('show');
+  }, 1000);
+  // If the frame never loads at all, also expose the direct link inside the boot cover.
   setTimeout(function () { document.getElementById('fallback').style.display = 'inline-block'; }, 9000);
 </script>
 </body>

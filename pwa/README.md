@@ -57,6 +57,18 @@ Only staff and doctors install the app; patients open the plain link.
 Do not install from `/staff?page=...` or with an old query link; use the path shown above.
 The dedicated manifest keeps the correct screen as the launch page.
 
+## If Google blocks the embedded app
+
+A Work Google account or managed browser can block Apps Script even when the raw
+`/exec` link is public. The app sends a `polyclinic-ready` message once its HTML runs;
+the shell hides its load cover only for that message, not for Google's error page. If
+the message does not arrive within one second, a small note appears:
+
+> **لا يظهر التطبيق؟** جرّب فتح الرابط في متصفح شخصي، أو تواصل مع العيادة.
+
+The note is rendered by Cloudflare outside the iframe, so it remains visible over
+Google's error page. It disappears automatically if the app finishes loading later.
+
 ## Why the shell also looks cleaner
 
 Google renders its "created by a Google Apps Script user / report abuse" bar only when the

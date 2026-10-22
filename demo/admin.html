@@ -5869,6 +5869,15 @@ function previewSlots() {
 <div id="toast"></div>
 
 <script>
+  // The Cloudflare shell waits for this before hiding its "could not load"
+  // fallback. A Google/Workspace error page never runs this script, so the
+  // fallback can appear even when the iframe itself renders an error.
+  try {
+    if (window.top && window.top !== window) {
+      window.top.postMessage({ type: 'polyclinic-ready' }, '*');
+    }
+  } catch (e) {}
+
   /** google.script.run as a promise. */
   function api(fn) {
     var args = Array.prototype.slice.call(arguments, 1);
